@@ -1,0 +1,24 @@
+id ICON "./assets/logo.ico"
+1 VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "080904E4"
+    BEGIN
+      VALUE "CompanyName", "Blank Coperation"
+      VALUE "FileDescription", "Simple OpenGL application with imgui and spdlog"
+      VALUE "FileVersion", "1.0.0"
+      VALUE "InternalName", "GLFW OpenGL"
+      VALUE "LegalCopyright", "yes"
+      VALUE "OriginalFilename", "glfw_opengl.exe"
+      VALUE "ProductName", "GLFW OpenGL"
+      VALUE "ProductVersion", "1.0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x809, 1252
+  END
+END
