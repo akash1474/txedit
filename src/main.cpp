@@ -1,4 +1,7 @@
+#include "GLFW/glfw3.h"
+#include "imgui.h"
 #include "pch.h"
+#include <filesystem>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_img.h"
 
@@ -8,33 +11,120 @@
 int width{0};
 int height{0};
 
-void draw(GLFWwindow* window)
-{
-    glfwGetWindowSize(window, &width, &height);
-    // Rendering code goes here
-    glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+std::string file_data{0};
+size_t size{0};
 
-    ImGui_ImplOpenGL2_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-    // Render Other Stuff
-
-
-    // Render Imgui Stuff
-
-
-    // End of render
-    ImGui::Render();
-    ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
-    glfwSwapBuffers(window);
-}
+void draw(GLFWwindow* window,ImGuiIO& io);
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
-    draw(window);
+    draw(window,ImGui::GetIO());
 }
+
+void drop_callback(GLFWwindow* window, int count, const char** paths)
+{
+    for (int i = 0;  i < count;  i++){
+        if(std::filesystem::is_directory(paths[i])){
+            GL_INFO("Folder: {}",paths[i]);
+        }else{
+            GL_INFO("File: {}",paths[i]);
+            // std::fstream file(paths[0]);
+            // std::string line;
+            // while(std::getline(file,line)) file_data+=line;
+            std::ifstream t(paths[i]);
+            t.seekg(0, std::ios::end);
+            size = t.tellg();
+            // std::string buffer(size, ' ');
+            file_data.resize(size,' ');
+            t.seekg(0);
+            t.read(&file_data[0], size); 
+        }
+    }
+}
+
+void draw(GLFWwindow* window,ImGuiIO& io)
+{
+    glfwPollEvents();
+    ImGui_ImplOpenGL2_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    // ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+    glfwSetDropCallback(window, drop_callback);
+
+    static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+    dockspace_flags|=ImGuiDockNodeFlags_PassthruCentralNode;
+    static ImGuiWindowFlags window_flags=ImGuiWindowFlags_None;
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    static bool is_open=true;
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(viewport->WorkSize);
+    ImGui::SetNextWindowViewport(viewport->ID);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+    window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+    window_flags |= ImGuiWindowFlags_NoBackground;
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::Begin("Container",&is_open,window_flags);
+    ImGui::PopStyleVar(3);
+    static ImGuiID dockspace_id = ImGui::GetID("DDockSpace");
+    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f));
+
+    if(ImGui::BeginMenuBar()){
+        if(ImGui::BeginMenu("File")){
+            ImGui::MenuItem("New File");
+            ImGui::MenuItem("Open File");
+            ImGui::MenuItem("Open Folder");
+            ImGui::EndMenu();
+        }
+
+        if(ImGui::BeginMenu("Edit")){
+            ImGui::MenuItem("Cut");
+            ImGui::MenuItem("Copy");
+            ImGui::MenuItem("Paste");
+        }
+        ImGui::EndMenuBar();
+    }
+
+    ImGui::End();
+    ImGui::ShowDemoWindow();
+
+    ImGui::Begin("Project");
+    ImGui::End();
+
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::Begin("Editor",0,ImGuiWindowFlags_NoCollapse);
+    ImGui::PopStyleVar();
+    if(size)ImGui::InputTextMultiline("##TextEditor", (char*)file_data.c_str(), file_data.size(),{ImGui::GetWindowSize().x,ImGui::GetWindowSize().y-25});
+    ImGui::End();
+
+
+    ImGui::Begin("Console");
+    ImGui::End();
+
+    ImGui::Render();
+    int display_w, display_h;
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    glViewport(0, 0, display_w, display_h);
+    glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+    ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        GLFWwindow* backup_current_context = glfwGetCurrentContext();
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+        glfwMakeContextCurrent(backup_current_context);
+    }
+
+    glfwMakeContextCurrent(window);
+    glfwSwapBuffers(window);
+}
+
 
 
 int main(void){
@@ -81,7 +171,7 @@ int main(void){
     style.ItemSpacing.y=6.0f;
     style.ScrollbarRounding=2.0f;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
@@ -108,44 +198,11 @@ int main(void){
     io.Fonts->AddFontFromMemoryTTF((void*)data_font, font_data_size,16,&font_config);
     io.Fonts->AddFontFromMemoryTTF((void*)data_icon, icon_data_size,20*2.0f/3.0f,&icon_config,icons_ranges);
 
+
+    StyleColorsDracula();
+
     while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-        ImGui_ImplOpenGL2_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
-
-        ImGui::ShowDemoWindow();
-
-        ImGui::Begin("Project");
-        ImGui::End();
-
-
-        ImGui::Begin("Editor");
-        ImGui::End();
-
-
-        ImGui::Begin("Console");
-        ImGui::End();
-
-        ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-        glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        {
-            GLFWwindow* backup_current_context = glfwGetCurrentContext();
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
-            glfwMakeContextCurrent(backup_current_context);
-        }
-
-        glfwMakeContextCurrent(window);
-        glfwSwapBuffers(window);
+        draw(window,io);
     }
     ImGui_ImplOpenGL2_Shutdown();
     ImGui_ImplGlfw_Shutdown();

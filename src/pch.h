@@ -11,6 +11,7 @@
 #include <queue>
 #include <algorithm>
 #include <sstream>
+#include <iomanip>
 
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
@@ -22,6 +23,7 @@
 
 #include "FontAwesome6.h"
 #include "Log.h"
+#include "utils.h"
 
 //Icon and Font
 #include "fa-solid-900.h"
