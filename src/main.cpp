@@ -1,9 +1,11 @@
 #include "GLFW/glfw3.h"
+#include "MonoLisa-Medium.h"
 #include "imgui.h"
 #include "pch.h"
 #include <filesystem>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_img.h"
+#include "Editor.h"
 
 #define WIDTH 400
 #define HEIGHT 600
@@ -12,7 +14,10 @@ int width{0};
 int height{0};
 
 std::string file_data{0};
+Editor editor;
 size_t size{0};
+
+void keyboardCallback(GLFWwindow* window,int key, int scancode, int action, int mods);
 
 void draw(GLFWwindow* window,ImGuiIO& io);
 
@@ -39,6 +44,7 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
             file_data.resize(size,' ');
             t.seekg(0);
             t.read(&file_data[0], size); 
+            editor.SetBuffer(file_data);
         }
     }
 }
@@ -91,13 +97,25 @@ void draw(GLFWwindow* window,ImGuiIO& io)
     ImGui::ShowDemoWindow();
 
     ImGui::Begin("Project");
+    static int LineSpacing=10.0f;
+    if(ImGui::SliderInt("LineSpacing",&LineSpacing,0, 20)){
+        editor.setLineSpacing(LineSpacing);
+    }
     ImGui::End();
 
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::Begin("Editor",0,ImGuiWindowFlags_NoCollapse);
     ImGui::PopStyleVar();
-    if(size)ImGui::InputTextMultiline("##TextEditor", (char*)file_data.c_str(), file_data.size(),{ImGui::GetWindowSize().x,ImGui::GetWindowSize().y-25});
+
+    if(size){
+        ImGui::PushFont(io.Fonts->Fonts[1]);
+        // ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 10));
+        // ImGui::InputTextMultiline("##TextEditor", (char*)file_data.c_str(), file_data.size(),{ImGui::GetWindowSize().x,ImGui::GetWindowSize().y-25});
+        // ImGui::PopStyleVar();
+        editor.render();
+        ImGui::PopFont();
+    }
     ImGui::End();
 
 
@@ -183,6 +201,7 @@ int main(void){
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     if (!ImGui_ImplOpenGL2_Init()) GL_ERROR("Failed to initit OpenGL 2");
 
+    // glfwSetKeyCallback(window, keyboardCallback);
 
     static const ImWchar icons_ranges[] = {ICON_MIN_FA,ICON_MAX_FA,0};
     ImFontConfig icon_config;
@@ -197,6 +216,8 @@ int main(void){
     font_config.FontDataOwnedByAtlas=false;
     io.Fonts->AddFontFromMemoryTTF((void*)data_font, font_data_size,16,&font_config);
     io.Fonts->AddFontFromMemoryTTF((void*)data_icon, icon_data_size,20*2.0f/3.0f,&icon_config,icons_ranges);
+
+    io.Fonts->AddFontFromMemoryTTF((void*)monolisa_medium, IM_ARRAYSIZE(monolisa_medium),12,&font_config);
 
 
     StyleColorsDracula();
