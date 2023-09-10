@@ -23,6 +23,7 @@ void draw(GLFWwindow* window,ImGuiIO& io);
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
+    editor.reCalculateBounds=true;
     glViewport(0, 0, width, height);
     draw(window,ImGui::GetIO());
 }
