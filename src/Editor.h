@@ -99,7 +99,6 @@ class Editor{
 	ImVec2 mCharacterSize;
 	ImVec2 mEditorPosition;
 	ImVec2 mEditorSize;
-	ImVec2 mCursorPosition;
 	ImRect mEditorBounds;
 	ImVec2 mLinePosition;
 	ImGuiWindow* mEditorWindow{0};
@@ -119,6 +118,7 @@ public:
 	void Backspace();
 	void InsertLine();
 	size_t GetCurrentLineLength(int currLineIndex=-1);
+	size_t GetCurrentLineLengthUptoCursor();
 
 	Editor();
 	~Editor();
