@@ -5,6 +5,7 @@ TODO
 # Line Selection Triple Click
 # Mouse Drag and Selection
 # Bug while clicking on line selects neighbouring lines
+# Handle when key pressed '{' and then '}' is pressed (aka ignore input for '}' after '{')
 
 
 ## Monday 11th Sept 2023

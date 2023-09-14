@@ -155,9 +155,10 @@ bool Editor::render(){
 	static bool isInit=false;
 	if(!isInit){
 		mEditorWindow=ImGui::GetCurrentWindow();	
-		mCharacterSize=ImVec2(ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, " "));
+		mCharacterSize=ImVec2(ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "#",nullptr,nullptr));
 		mLinePosition=ImVec2({mEditorPosition.x+45.0f,0});
 		mLineHeight=mLineSpacing+mCharacterSize.y;
+		GL_WARN("LINE HEIGHT:{}",mLineHeight);
 		isInit=true;
 	}
 	if(mEditorPosition.x!=mEditorWindow->Pos.x || mEditorPosition.y != mEditorWindow->Pos.y) reCalculateBounds=true;
@@ -177,8 +178,6 @@ bool Editor::render(){
 	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x+41.0f,mEditorPosition.y},mEditorBounds.Max, ImColor(26,26,33,255));// Code
 
 
-	mMinLineVisible=ImGui::GetScrollY()/mLineHeight;
-	mLinePosition.y=mLineSpacing*0.5f+(int)(mCurrentLineNo-mMinLineVisible)*mLineHeight;
 
 	if(ImGui::IsKeyPressed(ImGuiKey_DownArrow)){
 		mCurrentLineIndex++;
@@ -223,23 +222,26 @@ bool Editor::render(){
 			mState.mCursorPosition.mColumn++;
 		}
 	}
+	
+	mMinLineVisible=(ImGui::GetScrollY()>0.0f) ? floor(ImGui::GetScrollY()/mLineHeight)+1 : 0.0f;
+	mLinePosition.y=ImGui::GetFrameHeight()+mLineSpacing+(int)floor(mCurrentLineNo-mMinLineVisible)*mLineHeight;
 
-	//Drawing Current Line
+	//Drawing Current Lin
 	mEditorWindow->DrawList->AddRectFilled(mLinePosition,{mEditorBounds.Max.x,mLinePosition.y+mLineHeight}, ImColor(50,50,50,150));// Code
 
-	int start=ImGui::GetScrollY()/mLineHeight;
+	int start=int(mMinLineVisible);
 	if(start>mLines.size()) start=mLines.size();
-	int lineCount=mEditorWindow->Size.y/mLineHeight;
+	int lineCount=(mEditorWindow->Size.y)/mLineHeight;
 	int end=start+lineCount;
 	if(end>mLines.size()) end=mLines.size();
 
 
 
-	int lineNo=1;
+	int lineNo=0;
 	while(start!=end){
 		float posY=mLineSpacing+lineNo*mLineHeight;
-		mEditorWindow->DrawList->AddText({mEditorPosition.x+10.0f,posY},ImColor(72,171,159,255),std::to_string(start+1).c_str());
-		mEditorWindow->DrawList->AddText({mEditorPosition.x+45.0f,posY},ImColor(186,186,186,255),mLines[start].c_str());
+		mEditorWindow->DrawList->AddText({mEditorPosition.x+10.0f,posY+ImGui::GetFrameHeight()+(0.5f*mLineSpacing)},ImColor(72,171,159,255),std::to_string(start+1).c_str());
+		mEditorWindow->DrawList->AddText({mEditorPosition.x+45.0f,posY+ImGui::GetFrameHeight()+(0.5f*mLineSpacing)},ImColor(186,186,186,255),mLines[start].c_str());
 		start++;
 		lineNo++;
 	}
@@ -327,19 +329,20 @@ void Editor::HandleMouseInputs()
 			*/
 			else if (click)
 			{
-				float currLine=(ImGui::GetScrollY()+ImGui::GetMousePos().y-mEditorPosition.y-(mLineSpacing*0.75f))/mLineHeight;
+				float currLine{0.0f};
+				if(ImGui::GetScrollY() > 0.0f){
+					currLine=(int)floor((ImGui::GetScrollY()+ImGui::GetMousePos().y-mEditorPosition.y-mLineSpacing-ImGui::GetFrameHeight())/mLineHeight);
+				}else{
+					currLine=(int)floor((ImGui::GetMousePos().y-mEditorPosition.y-ImGui::GetFrameHeight()-mLineSpacing)/mLineHeight);
+				}
 				mCurrentLineNo=currLine;
-				mMinLineVisible=(ImGui::GetScrollY()-(mLineSpacing*0.75f))/mLineHeight;
-				GL_INFO("MIN LINE NO:{} - {}",mMinLineVisible,floor(mMinLineVisible));
-				currLine-=mMinLineVisible;
+				mMinLineVisible=(ImGui::GetScrollY()/mLineHeight)+1;
+				GL_INFO("ScrollY:{0}  ,MouseY:{1}  ,currLine:{2}  ,minLine:{3}",ImGui::GetScrollY(),ImGui::GetMousePos().y,mCurrentLineNo,mMinLineVisible);
 				mState.mCursorPosition.mColumn=round((ImGui::GetMousePos().x-mEditorPosition.x-45.0f)/mCharacterSize.x);
-				mLinePosition.y=(mLineSpacing*0.5f)+((int)currLine*mLineHeight);
-				mCurrentLineIndex=floor(mCurrentLineNo-1);
+				mCurrentLineIndex=mCurrentLineNo;
 				if(mCurrentLineIndex<0) mCurrentLineIndex=0;
 				mCurrLineLength=GetCurrentLineLength();
 				if(mState.mCursorPosition.mColumn > mCurrLineLength) mState.mCursorPosition.mColumn=mCurrLineLength;
-				GL_INFO("LINE INDEX: {}",mCurrentLineIndex);
-				GL_INFO("Line No:{}  ScrollY:{}, CursorPositionX:{}",mCurrentLineNo,mEditorWindow->Scroll.y,mState.mCursorPosition.mColumn);
 				mSelectionMode=SelectionMode::Normal;
 				mLastClick = (float)ImGui::GetTime();
 			}

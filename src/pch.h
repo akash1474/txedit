@@ -6,12 +6,9 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include <regex>
-#include <stack>
-#include <queue>
-#include <algorithm>
 #include <sstream>
 #include <iomanip>
+#include <cmath>
 
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>

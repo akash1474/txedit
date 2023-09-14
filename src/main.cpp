@@ -7,7 +7,7 @@
 #include "stb_img.h"
 #include "Editor.h"
 
-#define WIDTH 400
+#define WIDTH 700
 #define HEIGHT 600
 
 int width{0};
@@ -35,13 +35,9 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
             GL_INFO("Folder: {}",paths[i]);
         }else{
             GL_INFO("File: {}",paths[i]);
-            // std::fstream file(paths[0]);
-            // std::string line;
-            // while(std::getline(file,line)) file_data+=line;
             std::ifstream t(paths[i]);
             t.seekg(0, std::ios::end);
             size = t.tellg();
-            // std::string buffer(size, ' ');
             file_data.resize(size,' ');
             t.seekg(0);
             t.read(&file_data[0], size); 
@@ -52,6 +48,17 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 
 void draw(GLFWwindow* window,ImGuiIO& io)
 {
+    static bool isFileLoaded=false;
+    if(!isFileLoaded){
+            std::ifstream t("D:/Projects/c++/txedit/src/Editor.cpp");
+            t.seekg(0, std::ios::end);
+            size = t.tellg();
+            file_data.resize(size,' ');
+            t.seekg(0);
+            t.read(&file_data[0], size); 
+            editor.SetBuffer(file_data);
+            isFileLoaded=true;
+    }
     glfwPollEvents();
     ImGui_ImplOpenGL2_NewFrame();
     ImGui_ImplGlfw_NewFrame();
