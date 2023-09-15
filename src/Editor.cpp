@@ -48,7 +48,11 @@ void Editor::InsertCharacter(char newChar) {
     		mLines[mCurrentLineIndex].insert(idx+1, 1, newChar);
     		mCurrLineLength++;
     	}else{
-	        mLines[mCurrentLineIndex].insert(idx, 1, newChar);
+    		if((newChar==')'|| newChar==']' || newChar=='}') && mLines[mCurrentLineIndex][idx]==newChar){
+    			//Avoiding ')' reentry after '(' pressed aka "()"
+    		}else{
+		        mLines[mCurrentLineIndex].insert(idx, 1, newChar);
+    		}
     	}
 	    mState.mCursorPosition.mColumn++;
     	mCurrLineLength++;
@@ -83,6 +87,19 @@ void Editor::Backspace() {
     if (mCurrentLineIndex >= 0 && mCurrentLineIndex < mLines.size() && mState.mCursorPosition.mColumn > 0 && mState.mCursorPosition.mColumn <= GetCurrentLineLength()) {
 	    int idx=GetCurrentLineIndex();
 	    GL_INFO("IDX:{}",idx);
+	    char x=mLines[mCurrentLineIndex][idx];
+	    if((x==')'|| x==']' || x=='}')){
+	    	bool shouldDelete=false;
+	    	char y=mLines[mCurrentLineIndex][idx-1];
+	    	if(x==')' && y=='(') shouldDelete=true;
+	    	else if(x==']' && y=='[') shouldDelete=true;
+	    	else if(x=='}' && y=='{') shouldDelete=true;
+	    	if(shouldDelete){
+		    	mLines[mCurrentLineIndex].erase(idx - 1, 2);
+		    	mCurrLineLength=GetCurrentLineLength();
+		        mState.mCursorPosition.mColumn--;
+	    	}
+	    }
     	if(mLines[mCurrentLineIndex][idx-1]=='\t'){
     		GL_INFO("TAB REMOVE");
     		mLines[mCurrentLineIndex].erase(idx-1, 1);
@@ -158,7 +175,9 @@ bool Editor::render(){
 		mCharacterSize=ImVec2(ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "#",nullptr,nullptr));
 		mLinePosition=ImVec2({mEditorPosition.x+45.0f,0});
 		mLineHeight=mLineSpacing+mCharacterSize.y;
+		mTitleBarHeight=ImGui::GetWindowHeight() - ImGui::GetContentRegionAvail().y;
 		GL_WARN("LINE HEIGHT:{}",mLineHeight);
+		GL_WARN("TITLE HEIGHT:{}",mTitleBarHeight);
 		isInit=true;
 	}
 	if(mEditorPosition.x!=mEditorWindow->Pos.x || mEditorPosition.y != mEditorWindow->Pos.y) reCalculateBounds=true;
@@ -183,14 +202,12 @@ bool Editor::render(){
 		mCurrentLineIndex++;
 		mCurrLineLength=GetCurrentLineLength();
 		if(mState.mCursorPosition.mColumn > mCurrLineLength) mState.mCursorPosition.mColumn=mCurrLineLength;
-		mLinePosition.y+=mLineHeight;
 		mCurrentLineNo++;
 	}else if(ImGui::IsKeyPressed(ImGuiKey_UpArrow)){
 		mCurrentLineNo--;
 		mCurrentLineIndex--;
 		mCurrLineLength=GetCurrentLineLength();
 		if(mState.mCursorPosition.mColumn > mCurrLineLength) mState.mCursorPosition.mColumn=mCurrLineLength;
-		mLinePosition.y-=mLineHeight;
 	}else if(ImGui::IsKeyPressed(ImGuiKey_LeftArrow) && mState.mCursorPosition.mColumn >= 0){
 		if(mState.mCursorPosition.mColumn==0){
 			mCurrentLineNo--;
@@ -198,7 +215,6 @@ bool Editor::render(){
 			mCurrLineLength=GetCurrentLineLength();
 			GL_INFO(mCurrLineLength);
 			mState.mCursorPosition.mColumn=mCurrLineLength;
-			mLinePosition.y-=mLineHeight;
 		}else{
 			if(mLines[mCurrentLineIndex][GetCurrentLineIndex()-1]=='\t') 
 				mState.mCursorPosition.mColumn-=mTabWidth;
@@ -210,7 +226,6 @@ bool Editor::render(){
 			mCurrentLineIndex++;
 			mCurrLineLength=GetCurrentLineLength();
 			mState.mCursorPosition.mColumn=0;
-			mLinePosition.y+=mLineHeight;
 			mCurrentLineNo++;
 		}else if(mState.mCursorPosition.mColumn < mCurrLineLength){
 			if(mState.mCursorPosition.mColumn==0 && mLines[mCurrentLineIndex][0]=='\t')
@@ -222,26 +237,30 @@ bool Editor::render(){
 			mState.mCursorPosition.mColumn++;
 		}
 	}
-	
-	mMinLineVisible=(ImGui::GetScrollY()>0.0f) ? floor(ImGui::GetScrollY()/mLineHeight)+1 : 0.0f;
-	mLinePosition.y=ImGui::GetFrameHeight()+mLineSpacing+(int)floor(mCurrentLineNo-mMinLineVisible)*mLineHeight;
+	mMinLineVisible=(ImGui::GetScrollY())/mLineHeight;
+	if(mMinLineVisible<0.0f) mMinLineVisible=0.0f;
+	mLinePosition.y=mTitleBarHeight+(mLineSpacing*0.5f)+floor(mCurrentLineNo)*mLineHeight;
 
 	//Drawing Current Lin
 	mEditorWindow->DrawList->AddRectFilled(mLinePosition,{mEditorBounds.Max.x,mLinePosition.y+mLineHeight}, ImColor(50,50,50,150));// Code
-
+	mLineHeight=mLineSpacing+mCharacterSize.y;
 	int start=int(mMinLineVisible);
 	if(start>mLines.size()) start=mLines.size();
 	int lineCount=(mEditorWindow->Size.y)/mLineHeight;
-	int end=start+lineCount;
+	int end=start+lineCount+1;
 	if(end>mLines.size()) end=mLines.size();
 
+	if(io.MouseWheel!=0.0f){
+		GL_INFO("SCROLLING:{}",io.MouseWheel);
+		if(ImGui::GetScrollY()>0.0f) mCurrentLineNo+=io.MouseWheel*4;
+	}
 
 
 	int lineNo=0;
 	while(start!=end){
-		float posY=mLineSpacing+lineNo*mLineHeight;
-		mEditorWindow->DrawList->AddText({mEditorPosition.x+10.0f,posY+ImGui::GetFrameHeight()+(0.5f*mLineSpacing)},ImColor(72,171,159,255),std::to_string(start+1).c_str());
-		mEditorWindow->DrawList->AddText({mEditorPosition.x+45.0f,posY+ImGui::GetFrameHeight()+(0.5f*mLineSpacing)},ImColor(186,186,186,255),mLines[start].c_str());
+		float posY=mLineSpacing+(lineNo*mLineHeight)+mTitleBarHeight;
+		mEditorWindow->DrawList->AddText({mEditorPosition.x+10.0f,posY},ImColor(72,171,159,255),std::to_string(start+1).c_str());
+		mEditorWindow->DrawList->AddText({mEditorPosition.x+45.0f,posY},ImColor(186,186,186,255),mLines[start].c_str());
 		start++;
 		lineNo++;
 	}
@@ -329,17 +348,11 @@ void Editor::HandleMouseInputs()
 			*/
 			else if (click)
 			{
-				float currLine{0.0f};
-				if(ImGui::GetScrollY() > 0.0f){
-					currLine=(int)floor((ImGui::GetScrollY()+ImGui::GetMousePos().y-mEditorPosition.y-mLineSpacing-ImGui::GetFrameHeight())/mLineHeight);
-				}else{
-					currLine=(int)floor((ImGui::GetMousePos().y-mEditorPosition.y-ImGui::GetFrameHeight()-mLineSpacing)/mLineHeight);
-				}
-				mCurrentLineNo=currLine;
-				mMinLineVisible=(ImGui::GetScrollY()/mLineHeight)+1;
+				mCurrentLineNo=floor((ImGui::GetMousePos().y-(0.5f*mLineSpacing)-mTitleBarHeight)/mLineHeight);
+				mMinLineVisible=floor(ImGui::GetScrollY()/mLineHeight);
 				GL_INFO("ScrollY:{0}  ,MouseY:{1}  ,currLine:{2}  ,minLine:{3}",ImGui::GetScrollY(),ImGui::GetMousePos().y,mCurrentLineNo,mMinLineVisible);
 				mState.mCursorPosition.mColumn=round((ImGui::GetMousePos().x-mEditorPosition.x-45.0f)/mCharacterSize.x);
-				mCurrentLineIndex=mCurrentLineNo;
+				mCurrentLineIndex=(ImGui::GetScrollY()>0.0f) ? (mCurrentLineNo+mMinLineVisible) : mCurrentLineNo;
 				if(mCurrentLineIndex<0) mCurrentLineIndex=0;
 				mCurrLineLength=GetCurrentLineLength();
 				if(mState.mCursorPosition.mColumn > mCurrLineLength) mState.mCursorPosition.mColumn=mCurrLineLength;

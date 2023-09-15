@@ -7,7 +7,7 @@
 #include "stb_img.h"
 #include "Editor.h"
 
-#define WIDTH 700
+#define WIDTH 900
 #define HEIGHT 600
 
 int width{0};
@@ -109,6 +109,7 @@ void draw(GLFWwindow* window,ImGuiIO& io)
     if(ImGui::SliderInt("LineSpacing",&LineSpacing,0, 20)){
         editor.setLineSpacing(LineSpacing);
     }
+    ImGui::Text("PositionY:%f",ImGui::GetMousePos().y);
     ImGui::End();
 
 

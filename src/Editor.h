@@ -80,11 +80,12 @@ class Editor{
 	EditorState mState;
 
 
-	float mLineSpacing=9.f;
+	float mLineSpacing=12.f;
 	bool mReadOnly=false;
 	int mLineHeight{0};
 	uint8_t mTabWidth{3};
 	uint8_t mCurrLineTabCounts{0};
+	float mTitleBarHeight{0.0f};
 
 
 	std::vector<std::string> mLines;
