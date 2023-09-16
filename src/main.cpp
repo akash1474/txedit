@@ -191,7 +191,6 @@ int main(void){
     // io.IniFilename=nullptr;
     io.LogFilename=nullptr;
 
-
     glfwSwapInterval(1);
     ImGuiStyle& style = ImGui::GetStyle();
     style.FrameRounding = 2.0f;

@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <map>
 
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
