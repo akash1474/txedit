@@ -1,35 +1,28 @@
 #include "imgui.h"
-#include "vector"
-#include "string"
-#include "imgui.h"
 #include "imgui_internal.h"
-#include <stdint.h>
+#include "string"
+#include "vector"
 #include <map>
+#include <stdint.h>
 #include <unordered_map>
 
-class Editor{
-	enum class Pallet{
-		Background=0,
-		BackgroundDark,
-		Text,
-		String,
-		Comment,
-		Max
-	};
+class Editor
+{
+	enum class Pallet { Background = 0, BackgroundDark, Text, String, Comment, Max };
 	std::vector<ImU32> mGruvboxPalletDark;
-	//Google
+	// Google
 
-	void InitPallet(){
+	void InitPallet()
+	{
 		mGruvboxPalletDark.resize((size_t)Pallet::Max);
-		mGruvboxPalletDark[(size_t)Pallet::Background]=ImColor(40,40,40,255); //235
-		mGruvboxPalletDark[(size_t)Pallet::BackgroundDark]=ImColor(29,32,33,255); //235
-		mGruvboxPalletDark[(size_t)Pallet::Text]=ImColor(235,219,178,255);	 //223
-		mGruvboxPalletDark[(size_t)Pallet::String]=ImColor(152,151,26,255); 	 //106
-		mGruvboxPalletDark[(size_t)Pallet::Comment]=ImColor(60,56,54,255);    //237
+		mGruvboxPalletDark[(size_t)Pallet::Background] = ImColor(40, 40, 40, 255);     // 235
+		mGruvboxPalletDark[(size_t)Pallet::BackgroundDark] = ImColor(29, 32, 33, 255); // 235
+		mGruvboxPalletDark[(size_t)Pallet::Text] = ImColor(235, 219, 178, 255);        // 223
+		mGruvboxPalletDark[(size_t)Pallet::String] = ImColor(152, 151, 26, 255);       // 106
+		mGruvboxPalletDark[(size_t)Pallet::Comment] = ImColor(60, 56, 54, 255);        // 237
 	}
 
-	struct Coordinates
-	{
+	struct Coordinates {
 		int mLine, mColumn;
 		Coordinates() : mLine(0), mColumn(0) {}
 		Coordinates(int aLine, int aColumn) : mLine(aLine), mColumn(aColumn)
@@ -37,60 +30,44 @@ class Editor{
 			assert(aLine >= 0);
 			assert(aColumn >= 0);
 		}
-		static Coordinates Invalid() { static Coordinates invalid(-1, -1); return invalid; }
-
-		bool operator ==(const Coordinates& o) const
+		static Coordinates Invalid()
 		{
-			return
-				mLine == o.mLine &&
-				mColumn == o.mColumn;
+			static Coordinates invalid(-1, -1);
+			return invalid;
 		}
 
-		bool operator !=(const Coordinates& o) const
-		{
-			return
-				mLine != o.mLine ||
-				mColumn != o.mColumn;
-		}
+		bool operator==(const Coordinates& o) const { return mLine == o.mLine && mColumn == o.mColumn; }
 
-		bool operator <(const Coordinates& o) const
+		bool operator!=(const Coordinates& o) const { return mLine != o.mLine || mColumn != o.mColumn; }
+
+		bool operator<(const Coordinates& o) const
 		{
-			if (mLine != o.mLine)
-				return mLine < o.mLine;
+			if (mLine != o.mLine) return mLine < o.mLine;
 			return mColumn < o.mColumn;
 		}
 
-		bool operator >(const Coordinates& o) const
+		bool operator>(const Coordinates& o) const
 		{
-			if (mLine != o.mLine)
-				return mLine > o.mLine;
+			if (mLine != o.mLine) return mLine > o.mLine;
 			return mColumn > o.mColumn;
 		}
 
-		bool operator <=(const Coordinates& o) const
+		bool operator<=(const Coordinates& o) const
 		{
-			if (mLine != o.mLine)
-				return mLine < o.mLine;
+			if (mLine != o.mLine) return mLine < o.mLine;
 			return mColumn <= o.mColumn;
 		}
 
-		bool operator >=(const Coordinates& o) const
+		bool operator>=(const Coordinates& o) const
 		{
-			if (mLine != o.mLine)
-				return mLine > o.mLine;
+			if (mLine != o.mLine) return mLine > o.mLine;
 			return mColumn >= o.mColumn;
 		}
 	};
 
-	enum class SelectionMode
-	{
-		Normal,
-		Word,
-		Line
-	};
+	enum class SelectionMode { Normal, Word, Line };
 
-	struct EditorState
-	{
+	struct EditorState {
 		Coordinates mSelectionStart;
 		Coordinates mSelectionEnd;
 		Coordinates mCursorPosition;
@@ -101,8 +78,8 @@ class Editor{
 	EditorState mState;
 
 
-	float mLineSpacing=12.f;
-	bool mReadOnly=false;
+	float mLineSpacing = 12.f;
+	bool mReadOnly = false;
 	int mLineHeight{0};
 	uint8_t mTabWidth{4};
 	uint8_t mCurrLineTabCounts{0};
@@ -125,18 +102,18 @@ class Editor{
 	ImVec2 mLinePosition;
 	ImGuiWindow* mEditorWindow{0};
 
-	inline uint32_t GetCurrentLineIndex();
-	void MoveUp(bool ctrl=false,bool shift=false);
-	void SwapLines(bool up=true);
-	void MoveDown(bool ctrl=false,bool shift=false);
-	void MoveLeft(bool ctrl=false,bool shift=false);
-	void MoveRight(bool ctrl=false,bool shift=false);
+	uint32_t GetCurrentLineIndex();
+	void MoveUp(bool ctrl = false, bool shift = false);
+	void SwapLines(bool up = true);
+	void MoveDown(bool ctrl = false, bool shift = false);
+	void MoveLeft(bool ctrl = false, bool shift = false);
+	void MoveRight(bool ctrl = false, bool shift = false);
 
-public:
-	bool reCalculateBounds=true;
+  public:
+	bool reCalculateBounds = true;
 	void SetBuffer(const std::string& buffer);
 	bool render();
-	void setLineSpacing(float value){this->mLineSpacing=value;}
+	void setLineSpacing(float value) { this->mLineSpacing = value; }
 	void HandleKeyboardInputs();
 	void HandleMouseInputs();
 	void UpdateBounds();
@@ -144,10 +121,10 @@ public:
 	void InsertCharacter(char newChar);
 	void Backspace();
 	void InsertLine();
-	inline uint8_t GetTabWidth(){return this->mTabWidth;}
+	inline uint8_t GetTabWidth() { return this->mTabWidth; }
 
-	size_t GetCurrentLineLength(int currLineIndex=-1);
-	size_t GetCurrentLineLengthUptoCursor();
+	size_t GetCurrentLineLength(int currLineIndex = -1);
+	void UpdateTabCountsUptoCursor();
 
 	Editor();
 	~Editor();

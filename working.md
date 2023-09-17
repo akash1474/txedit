@@ -5,7 +5,10 @@ TODO
 # Build a std::map of theme color
 # shift+(left/right) arrow for letter selection
 # ctrl+shift+(left/right) arrow for word selection
-# FIX insertion error when tabs ahead of mState.mCursorPosition.mColumn
+
+## Sunday 17th Sept 2023
++ FIX insertion error when tabs ahead of mState.mCursorPosition.mColumn
+
 
 ## Saturday 16th Sept 2023
 + Added Word Selection using double click
