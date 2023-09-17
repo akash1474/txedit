@@ -24,9 +24,9 @@ class Editor
 	}
 
 	struct Coordinates {
-		int mLine, mColumn;
+		float mLine, mColumn;
 		Coordinates() : mLine(0), mColumn(0) {}
-		Coordinates(int aLine, int aColumn) : mLine(aLine), mColumn(aColumn)
+		Coordinates(float aLine, float aColumn) : mLine(aLine), mColumn(aColumn)
 		{
 			assert(aLine >= 0);
 			assert(aColumn >= 0);
@@ -76,6 +76,7 @@ class Editor
 
 
 	SelectionMode mSelectionMode{SelectionMode::Normal};
+	float mLineFloatPart{0.0f};
 	EditorState mState;
 
 	//##### LINE BAR #######
@@ -84,10 +85,7 @@ class Editor
 	float mLineBarMaxCountWidth{0};
 	inline uint8_t GetNumberWidth(int number){
 	    uint8_t length = 0;
-	    do {
-	        length++;
-	        number /= 10;
-	    } while (number != 0);
+	    do {length++; number /= 10; } while (number != 0);
 	    return length;
 	}
 
@@ -107,7 +105,6 @@ class Editor
 	int mCurrentLineIndex{0};
 	size_t mCurrLineLength{0};
 	float mMinLineVisible{0.0f};
-	float mCurrentLineNo{0.0f};
 
 	double mLastClick{-1.0f};
 
@@ -125,6 +122,11 @@ class Editor
 	void MoveDown(bool ctrl = false, bool shift = false);
 	void MoveLeft(bool ctrl = false, bool shift = false);
 	void MoveRight(bool ctrl = false, bool shift = false);
+	void Copy();
+	void Paste();
+	void Cut();
+	Coordinates ScreenPosToCoordinates(const ImVec2& mousePosition);
+	float GetSelectionPosFromCoords(const Coordinates& coords)const;
 
   public:
 	bool reCalculateBounds = true;

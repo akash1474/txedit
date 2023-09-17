@@ -7,7 +7,8 @@ TODO
 # Multiline selection
 # Handle Horizontal Scrolling using shift+mouseWheel
 # Smooth Scrolling
-# Copying Selection To ClipBoard
+# Copying/Pasting/Cutting Selection To ClipBoard
+# Setup for seeing current state variables in left pane
 
 ## Sunday 17th Sept 2023
 + FIX insertion error when tabs ahead of mState.mCursorPosition.mColumn

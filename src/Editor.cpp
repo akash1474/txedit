@@ -97,11 +97,24 @@ void Editor::InsertLine()
 	mState.mCursorPosition.mColumn = 0;
 	GetCurrentLineLength();
 	mLinePosition.y += mLineHeight;
-	mCurrentLineNo++;
 }
 
 void Editor::Backspace()
 {
+	if (mSelectionMode == SelectionMode::Word) {
+		mSelectionMode = SelectionMode::Normal;
+
+		mState.mCursorPosition = mState.mSelectionEnd;
+		int end=GetCurrentLineIndex();
+
+		mState.mCursorPosition = mState.mSelectionStart;
+		int start=GetCurrentLineIndex();
+
+		uint8_t word_len = end-start;
+		mLines[mCurrentLineIndex].erase(start, word_len);
+		return;
+	}
+
 	// Inside line
 	if (mCurrentLineIndex >= 0 && mCurrentLineIndex < mLines.size() && mState.mCursorPosition.mColumn > 0 &&
 	    mState.mCursorPosition.mColumn <= GetCurrentLineLength()) {
@@ -109,19 +122,6 @@ void Editor::Backspace()
 		int idx = GetCurrentLineIndex();
 		GL_INFO("BACKSPACE IDX:{}", idx);
 
-		if (mSelectionMode == SelectionMode::Word) {
-			mSelectionMode = SelectionMode::Normal;
-
-			mState.mCursorPosition = mState.mSelectionEnd;
-			int end=GetCurrentLineIndex();
-
-			mState.mCursorPosition = mState.mSelectionStart;
-			int start=GetCurrentLineIndex();
-
-			uint8_t word_len = end-start;
-			mLines[mCurrentLineIndex].erase(idx - word_len, word_len);
-			return;
-		}
 
 		char x = mLines[mCurrentLineIndex][idx];
 		if ((x == ')' || x == ']' || x == '}')) {
@@ -157,7 +157,7 @@ void Editor::Backspace()
 			GL_INFO("EMPTY LINE");
 			mLines.erase(mLines.begin() + mCurrentLineIndex);
 			mCurrentLineIndex--;
-			mCurrentLineNo--;
+			mState.mCursorPosition.mLine--;
 			mState.mCursorPosition.mColumn = GetCurrentLineLength();
 		} else {
 			GL_INFO("LINE BEGIN");
@@ -165,9 +165,8 @@ void Editor::Backspace()
 			mLines[mCurrentLineIndex - 1] += mLines[mCurrentLineIndex];
 			mLines.erase(mLines.begin() + mCurrentLineIndex);
 			mCurrentLineIndex--;
-			mCurrentLineNo--;
-			mState.mCursorPosition.mColumn = tempCursorX;
 			mState.mCursorPosition.mLine--;
+			mState.mCursorPosition.mColumn = tempCursorX;
 		}
 	}
 }
@@ -216,6 +215,12 @@ void Editor::UpdateBounds()
 	reCalculateBounds = false;
 }
 
+float Editor::GetSelectionPosFromCoords(const Coordinates& coords)const{
+	float offset{0.0f};
+	if(coords==mState.mSelectionStart) offset=-1.0f;
+	return mEditorPosition.x + mLineBarWidth + mPaddingLeft - offset + (coords.mColumn * mCharacterSize.x);
+}
+
 bool Editor::render()
 {
 	static bool isInit = false;
@@ -241,28 +246,72 @@ bool Editor::render()
 
 	// BackGrounds
 	mEditorWindow->DrawList->AddRectFilled(mEditorPosition, {mEditorPosition.x + mLineBarWidth, mEditorSize.y}, mGruvboxPalletDark[(size_t)Pallet::Background]); // LineNo
-	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x + mLineBarWidth, mEditorPosition.y}, mEditorBounds.Max,
-	                                       mGruvboxPalletDark[(size_t)Pallet::Background]); // Code
+	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x + mLineBarWidth, mEditorPosition.y}, mEditorBounds.Max,mGruvboxPalletDark[(size_t)Pallet::Background]); // Code
+
 
 	mMinLineVisible = (ImGui::GetScrollY()) / mLineHeight;
 	if (mMinLineVisible < 0.0f) mMinLineVisible = 0.0f;
-	mLinePosition.y = mTitleBarHeight + (mLineSpacing * 0.5f) + floor(mCurrentLineNo - mMinLineVisible) * mLineHeight;
+	mLinePosition.y = mTitleBarHeight + (mLineSpacing * 0.5f) + floor(mState.mCursorPosition.mLine+mLineFloatPart - mMinLineVisible) * mLineHeight;
 
 	// Drawing Current Lin
-	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x,mLinePosition.y}, {mEditorPosition.x+mLineBarWidth, mLinePosition.y + mLineHeight},
-	                                       mGruvboxPalletDark[(size_t)Pallet::Highlight]); // Code
+	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x,mLinePosition.y},{mEditorPosition.x+mLineBarWidth, mLinePosition.y + mLineHeight},mGruvboxPalletDark[(size_t)Pallet::Highlight]); // Code
+
+
+
 	mLineHeight = mLineSpacing + mCharacterSize.y;
 	if (mSelectionMode == SelectionMode::Word) {
-		ImVec2 start(mEditorPosition.x + mLineBarWidth + mPaddingLeft - 1.0f + (mState.mSelectionStart.mColumn * mCharacterSize.x), mLinePosition.y);
-		ImVec2 end(mEditorPosition.x + mLineBarWidth + mPaddingLeft + (mState.mSelectionEnd.mColumn * mCharacterSize.x), mLinePosition.y + mLineHeight);
-		mEditorWindow->DrawList->AddRectFilled(start, end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
+
+		if(mState.mSelectionStart.mLine==mState.mSelectionEnd.mLine){
+
+			ImVec2 start(GetSelectionPosFromCoords(mState.mSelectionStart), mLinePosition.y);
+			ImVec2 end(GetSelectionPosFromCoords(mState.mSelectionEnd), mLinePosition.y + mLineHeight);
+
+			mEditorWindow->DrawList->AddRectFilled(start, end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
+
+		}else if ((mState.mSelectionStart.mLine+1)==mState.mSelectionEnd.mLine){
+
+			ImVec2 start(GetSelectionPosFromCoords(mState.mSelectionStart), mLinePosition.y-mLineHeight);
+			ImVec2 end(mEditorPosition.x+mLineBarWidth+mPaddingLeft+GetCurrentLineLength(mState.mSelectionStart.mLine)*mCharacterSize.x, mLinePosition.y);
+
+			mEditorWindow->DrawList->AddRectFilled(start, end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
+
+
+			start={mEditorPosition.x+mLineBarWidth+mPaddingLeft, mLinePosition.y};
+			end={GetSelectionPosFromCoords(mState.mSelectionEnd), mLinePosition.y + mLineHeight};
+
+			mEditorWindow->DrawList->AddRectFilled(start, end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
+		}else{
+			int start=mState.mSelectionStart.mLine+1;
+			int end=mState.mSelectionEnd.mLine-1;
+
+			ImVec2 p_start(GetSelectionPosFromCoords(mState.mSelectionStart), mLinePosition.y-mLineHeight);
+			ImVec2 p_end(mEditorPosition.x+mLineBarWidth+mPaddingLeft+GetCurrentLineLength(mState.mSelectionStart.mLine)*mCharacterSize.x, mLinePosition.y);
+
+			mEditorWindow->DrawList->AddRectFilled(p_start, p_end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
+
+
+			while(start!=end){
+				ImVec2 p_start(mEditorPosition.x+mLineBarWidth+mPaddingLeft,mLinePosition.y-(end-start+1)*mLineHeight);
+				ImVec2 p_end(p_start.x+GetCurrentLineLength(start)*mCharacterSize.x,mLinePosition.y-(end-start)*mLineHeight);
+				mEditorWindow->DrawList->AddRectFilled(p_start, p_end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
+				start++;
+			}
+
+
+			p_start={mEditorPosition.x+mLineBarWidth+mPaddingLeft, mLinePosition.y};
+			p_end={GetSelectionPosFromCoords(mState.mSelectionEnd), mLinePosition.y + mLineHeight};
+
+			mEditorWindow->DrawList->AddRectFilled(p_start, p_end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
+		}
 	}
+
 
 	int start = int(mMinLineVisible);
 	if (start > mLines.size()) start = mLines.size();
 	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
 	int end = start + lineCount + 1;
 	if (end > mLines.size()) end = mLines.size();
+
 
 	int lineNo = 0;
 	while (start != end) {
@@ -274,10 +323,10 @@ bool Editor::render()
 		lineNo++;
 	}
 
+
 	// Cursor
 	ImVec2 cursorPosition(mEditorPosition.x+mPaddingLeft + mLineBarWidth - 1.0f + (mState.mCursorPosition.mColumn * mCharacterSize.x), mLinePosition.y);
-	mEditorWindow->DrawList->AddRectFilled(cursorPosition, {cursorPosition.x + 2.0f, cursorPosition.y + mLineHeight},
-	                                       ImColor(255, 255, 255, 255));
+	mEditorWindow->DrawList->AddRectFilled(cursorPosition, {cursorPosition.x + 2.0f, cursorPosition.y + mLineHeight},ImColor(255, 255, 255, 255));
 
 	HandleKeyboardInputs();
 	HandleMouseInputs();
@@ -363,27 +412,34 @@ void Editor::HandleMouseInputs()
 			Left mouse button click
 			*/
 			else if (click) {
-				mCurrentLineNo = ((ImGui::GetScrollY() + ImGui::GetMousePos().y - (0.5f * mLineSpacing) - mTitleBarHeight) / mLineHeight);
-				mMinLineVisible = ((ImGui::GetScrollY()) / mLineHeight);
-				GL_INFO("ScrollY:{0}  ,MouseY:{1}  ,currLine:{2}  ,minLine:{3}", ImGui::GetScrollY(), ImGui::GetMousePos().y,
-				        mCurrentLineNo, mMinLineVisible);
-				mState.mCursorPosition.mColumn = round((ImGui::GetMousePos().x - mEditorPosition.x - mLineBarWidth-mPaddingLeft) / mCharacterSize.x);
-				mCurrentLineIndex = floor(mCurrentLineNo - (mMinLineVisible - floor(mMinLineVisible)));
-				if (mCurrentLineIndex < 0) mCurrentLineIndex = 0;
-				mCurrLineLength = GetCurrentLineLength();
-				if (mState.mCursorPosition.mColumn > mCurrLineLength) mState.mCursorPosition.mColumn = mCurrLineLength;
+				mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition=ScreenPosToCoordinates(ImGui::GetMousePos());
 				mSelectionMode = SelectionMode::Normal;
 				mLastClick = (float)ImGui::GetTime();
 			}
+
 			// Mouse left button dragging (=> update selection)
 			else if (ImGui::IsMouseDragging(0) && ImGui::IsMouseDown(0)) {
-				// io.WantCaptureMouse = true;
-				// mState.mState.mCursorPosition = mInteractiveEnd =
-				// ScreenPosToCoordinates(ImGui::GetMousePos());
-				// SetSelection(mInteractiveStart, mInteractiveEnd, mSelectionMode);
+				io.WantCaptureMouse = true;
+				mState.mCursorPosition=mState.mSelectionEnd=ScreenPosToCoordinates(ImGui::GetMousePos());
+				mSelectionMode=SelectionMode::Word;
 			}
 		}
 	}
+}
+
+
+Editor::Coordinates Editor::ScreenPosToCoordinates(const ImVec2& mousePosition) {
+	Coordinates coords;
+	float currentLineNo=(ImGui::GetScrollY() + mousePosition.y - (0.5f * mLineSpacing) - mTitleBarHeight) / mLineHeight;
+	coords.mLine = (int)floor(currentLineNo);	
+	mLineFloatPart=currentLineNo-floor(currentLineNo);
+	coords.mColumn = (int)round((mousePosition.x - mEditorPosition.x - mLineBarWidth-mPaddingLeft) / mCharacterSize.x);
+	mMinLineVisible = ((ImGui::GetScrollY()) / mLineHeight);
+	mCurrentLineIndex = floor(currentLineNo - (mMinLineVisible - floor(mMinLineVisible)));
+	if (mCurrentLineIndex < 0) mCurrentLineIndex = 0;
+	mCurrLineLength=GetCurrentLineLength();
+	if(coords.mColumn > mCurrLineLength) coords.mColumn=mCurrLineLength;
+	return coords;
 }
 
 void Editor::HandleKeyboardInputs()
@@ -400,12 +456,12 @@ void Editor::HandleKeyboardInputs()
 		io.WantCaptureKeyboard = true;
 		io.WantTextInput = true;
 
-		// if (!IsReadOnly() && ctrl && !shift && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Z))) 	Undo(); else if
-		// (!IsReadOnly() && !ctrl && !shift && alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace))) 	Undo(); else
-		// if (!IsReadOnly() && ctrl && !shift && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Y))) 	Redo();
+		// if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Z)))
+		// 	Undo();
+		// else if (!IsReadOnly() && !ctrl && !shift && alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
+		// 	Undo();
+		// else if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Y)))
+		// 	Redo();
 		if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow))) MoveUp();
 		else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow)))
 			MoveDown();
@@ -417,40 +473,38 @@ void Editor::HandleKeyboardInputs()
 			MoveLeft(ctrl, shift);
 		else if (!alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_RightArrow)))
 			MoveRight(ctrl, shift);
-		// else if (!alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_PageUp)))
+		// else if (!alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_PageUp)))
 		// 	MoveUp(GetPageSize() - 4, shift);
-		// else if (!alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_PageDown)))
+		// else if (!alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_PageDown)))
 		// 	MoveDown(GetPageSize() - 4, shift);
-		// else if (!alt && ctrl &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Home))) 	MoveTop(shift);
-		// else if (ctrl && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_End))) 	MoveBottom(shift);
-		// else if (!ctrl && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Home))) 	MoveHome(shift);
-		// else if (!ctrl && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_End))) 	MoveEnd(shift);
-		// else if (!IsReadOnly() && !ctrl && !shift && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete))) 	Delete();
+		// else if (!alt && ctrl && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Home)))
+		// 	MoveTop(shift);
+		// else if (ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_End)))
+		// 	MoveBottom(shift);
+		// else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Home)))
+		// 	MoveHome(shift);
+		// else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_End)))
+		// 	MoveEnd(shift);
+		// else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)))
+		// 	Delete();
 		else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
 			Backspace();
-		// else if (!ctrl && !shift && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Insert))) 	mOverwrite ^=
-		// true; else if (ctrl && !shift && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Insert))) 	Copy(); else if
-		// (ctrl && !shift && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_C))) 	Copy(); else if
-		// (!IsReadOnly() && !ctrl && shift && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Insert))) 	Paste(); else
-		// if (!IsReadOnly() && ctrl && !shift && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_V))) 	Paste(); else if
-		// (ctrl && !shift && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_X))) 	Cut(); else if
-		// (!ctrl && shift && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete))) 	Cut(); else if
-		// (ctrl && !shift && !alt &&
-		// ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_A))) 	SelectAll();
+		// else if (!ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Insert)))
+		// 	mOverwrite ^= true;
+		else if (ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Insert)))
+			Copy();
+		else if (ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_C)))
+			Copy();
+		else if (!IsReadOnly() && !ctrl && shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Insert)))
+			Paste();
+		else if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_V)))
+			Paste();
+		else if (ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_X)))
+			Cut();
+		else if (!ctrl && shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)))
+			Cut();
+		// else if (ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_A)))
+		// 	SelectAll();
 		else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)))
 			InsertLine();
 		else if (!IsReadOnly() && !ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Tab))) {
@@ -475,11 +529,38 @@ void Editor::HandleKeyboardInputs()
 	}
 }
 
+
+void Editor::Copy(){
+	mState.mCursorPosition = mState.mSelectionStart;
+	int start=GetCurrentLineIndex();
+
+	mState.mCursorPosition = mState.mSelectionEnd;
+	int end=GetCurrentLineIndex();
+
+	uint8_t word_len = end-start;
+	std::string selection = mLines[mCurrentLineIndex].substr(start,word_len);
+	ImGui::SetClipboardText(selection.c_str());
+}
+
+
+void Editor::Paste(){
+	if(mSelectionMode==SelectionMode::Word) Backspace();
+	int idx=GetCurrentLineIndex();
+	mLines[mCurrentLineIndex].insert(idx,ImGui::GetClipboardText());
+	mState.mCursorPosition.mColumn+=strlen(ImGui::GetClipboardText());
+}
+
+
+void Editor::Cut(){
+	Copy();
+	Backspace();
+}
+
 void Editor::SwapLines(bool up)
 {
 	int value = up ? -1 : 1;
 	std::swap(mLines[mCurrentLineIndex], mLines[mCurrentLineIndex + value]);
-	mCurrentLineNo += value;
+	mState.mCursorPosition.mLine += value;
 	mCurrentLineIndex += value;
 	mState.mCursorPosition.mLine += value;
 }
@@ -494,7 +575,7 @@ void Editor::MoveUp(bool ctrl, bool shift)
 		return;
 	}
 	if(mCurrentLineIndex==0) return;
-	mCurrentLineNo--;
+	mState.mCursorPosition.mLine--;
 	mCurrentLineIndex--;
 	mCurrLineLength = GetCurrentLineLength();
 	if (mState.mCursorPosition.mColumn > mCurrLineLength) mState.mCursorPosition.mColumn = mCurrLineLength;
@@ -514,7 +595,7 @@ void Editor::MoveDown(bool ctrl, bool shift)
 	mCurrentLineIndex++;
 	mCurrLineLength = GetCurrentLineLength();
 	if (mState.mCursorPosition.mColumn > mCurrLineLength) mState.mCursorPosition.mColumn = mCurrLineLength;
-	mCurrentLineNo++;
+	mState.mCursorPosition.mLine++;
 }
 
 void Editor::MoveLeft(bool ctrl, bool shift)
@@ -527,7 +608,8 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 
 	if(shift && mSelectionMode == SelectionMode::Normal){
 		mSelectionMode=SelectionMode::Word;
-		mState.mSelectionEnd.mColumn=mState.mCursorPosition.mColumn;
+		mState.mSelectionEnd=mState.mCursorPosition;
+		mState.mSelectionStart=mState.mCursorPosition;
 		mState.mSelectionStart.mColumn=(mState.mCursorPosition.mColumn > 0 ?  
 			--mState.mCursorPosition.mColumn :mState.mCursorPosition.mColumn );
 		return;
@@ -558,7 +640,7 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 	}
 
 	if (mState.mCursorPosition.mColumn == 0) {
-		mCurrentLineNo--;
+		mState.mCursorPosition.mLine--;
 		mCurrentLineIndex--;
 		mCurrLineLength = GetCurrentLineLength();
 		mState.mCursorPosition.mColumn = mCurrLineLength;
@@ -589,7 +671,8 @@ void Editor::MoveRight(bool ctrl, bool shift)
 
 	if(shift && mSelectionMode == SelectionMode::Normal){
 		mSelectionMode=SelectionMode::Word;
-		mState.mSelectionStart.mColumn=mState.mCursorPosition.mColumn;
+		mState.mSelectionEnd=mState.mCursorPosition;
+		mState.mSelectionStart=mState.mCursorPosition;
 		mState.mSelectionEnd.mColumn=(++mState.mCursorPosition.mColumn);
 		return;
 	}
@@ -622,7 +705,7 @@ void Editor::MoveRight(bool ctrl, bool shift)
 		mCurrentLineIndex++;
 		mCurrLineLength = GetCurrentLineLength();
 		mState.mCursorPosition.mColumn = 0;
-		mCurrentLineNo++;
+		mState.mCursorPosition.mLine++;
 	} else if (mState.mCursorPosition.mColumn < mCurrLineLength) {
 		if (mState.mCursorPosition.mColumn == 0 && mLines[mCurrentLineIndex][0] == '\t') {
 			mState.mCursorPosition.mColumn += mTabWidth;
