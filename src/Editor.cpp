@@ -7,6 +7,8 @@
 #include <cctype>
 #include <cmath>
 #include <future>
+#include <stdio.h>
+#include <string>
 
 #include "GLFW/glfw3.h"
 #include "Log.h"
@@ -14,7 +16,7 @@
 
 Editor::Editor()
 {
-	// InitPallet();
+	InitPallet();
 	// #undef IM_TABSIZE
 	// #define IM_TABSIZE mTabWidth
 }
@@ -103,14 +105,21 @@ void Editor::Backspace()
 	// Inside line
 	if (mCurrentLineIndex >= 0 && mCurrentLineIndex < mLines.size() && mState.mCursorPosition.mColumn > 0 &&
 	    mState.mCursorPosition.mColumn <= GetCurrentLineLength()) {
+
 		int idx = GetCurrentLineIndex();
 		GL_INFO("BACKSPACE IDX:{}", idx);
 
 		if (mSelectionMode == SelectionMode::Word) {
 			mSelectionMode = SelectionMode::Normal;
-			uint8_t word_len = mState.mSelectionEnd.mColumn - mState.mSelectionStart.mColumn;
-			mLines[mCurrentLineIndex].erase(idx - word_len, word_len);
+
+			mState.mCursorPosition = mState.mSelectionEnd;
+			int end=GetCurrentLineIndex();
+
 			mState.mCursorPosition = mState.mSelectionStart;
+			int start=GetCurrentLineIndex();
+
+			uint8_t word_len = end-start;
+			mLines[mCurrentLineIndex].erase(idx - word_len, word_len);
 			return;
 		}
 
@@ -213,7 +222,9 @@ bool Editor::render()
 	if (!isInit) {
 		mEditorWindow = ImGui::GetCurrentWindow();
 		mCharacterSize = ImVec2(ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "#", nullptr, nullptr));
-		mLinePosition = ImVec2({mEditorPosition.x + 45.0f, 0});
+		mLineBarMaxCountWidth=GetNumberWidth(mLines.size());
+		mLineBarWidth=ImGui::CalcTextSize(std::to_string(mLines.size()).c_str()).x + 2 * mLineBarPadding;
+		mLinePosition = ImVec2({mEditorPosition.x + mLineBarWidth + mPaddingLeft, 0});
 		mLineHeight = mLineSpacing + mCharacterSize.y;
 		mTitleBarHeight = ImGui::GetWindowHeight() - ImGui::GetContentRegionAvail().y;
 		GL_WARN("LINE HEIGHT:{}", mLineHeight);
@@ -227,22 +238,25 @@ bool Editor::render()
 	const ImGuiID id = ImGui::GetID("##Editor");
 	ImGui::ItemSize(mEditorBounds, 0.0f);
 	if (!ImGui::ItemAdd(mEditorBounds, id)) return false;
-	HandleKeyboardInputs();
-	HandleMouseInputs();
 
 	// BackGrounds
-	mEditorWindow->DrawList->AddRectFilled(mEditorPosition, {mEditorPosition.x + 40.0f, mEditorSize.y}, ImColor(37, 37, 56, 255)); // LineNo
-	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x + 41.0f, mEditorPosition.y}, mEditorBounds.Max,
-	                                       ImColor(26, 26, 33, 255)); // Code
+	mEditorWindow->DrawList->AddRectFilled(mEditorPosition, {mEditorPosition.x + mLineBarWidth, mEditorSize.y}, mGruvboxPalletDark[(size_t)Pallet::Background]); // LineNo
+	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x + mLineBarWidth, mEditorPosition.y}, mEditorBounds.Max,
+	                                       mGruvboxPalletDark[(size_t)Pallet::Background]); // Code
 
 	mMinLineVisible = (ImGui::GetScrollY()) / mLineHeight;
 	if (mMinLineVisible < 0.0f) mMinLineVisible = 0.0f;
 	mLinePosition.y = mTitleBarHeight + (mLineSpacing * 0.5f) + floor(mCurrentLineNo - mMinLineVisible) * mLineHeight;
 
 	// Drawing Current Lin
-	mEditorWindow->DrawList->AddRectFilled(mLinePosition, {mEditorBounds.Max.x, mLinePosition.y + mLineHeight},
-	                                       ImColor(50, 50, 50, 150)); // Code
+	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x,mLinePosition.y}, {mEditorPosition.x+mLineBarWidth, mLinePosition.y + mLineHeight},
+	                                       mGruvboxPalletDark[(size_t)Pallet::Highlight]); // Code
 	mLineHeight = mLineSpacing + mCharacterSize.y;
+	if (mSelectionMode == SelectionMode::Word) {
+		ImVec2 start(mEditorPosition.x + mLineBarWidth + mPaddingLeft - 1.0f + (mState.mSelectionStart.mColumn * mCharacterSize.x), mLinePosition.y);
+		ImVec2 end(mEditorPosition.x + mLineBarWidth + mPaddingLeft + (mState.mSelectionEnd.mColumn * mCharacterSize.x), mLinePosition.y + mLineHeight);
+		mEditorWindow->DrawList->AddRectFilled(start, end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
+	}
 
 	int start = int(mMinLineVisible);
 	if (start > mLines.size()) start = mLines.size();
@@ -252,22 +266,21 @@ bool Editor::render()
 
 	int lineNo = 0;
 	while (start != end) {
-		float posY = mLineSpacing + (lineNo * mLineHeight) + mTitleBarHeight;
-		mEditorWindow->DrawList->AddText({mEditorPosition.x + 10.0f, posY}, ImColor(72, 171, 159, 255), std::to_string(start + 1).c_str());
-		mEditorWindow->DrawList->AddText({mEditorPosition.x + 45.0f, posY}, ImColor(186, 186, 186, 255), mLines[start].c_str());
+		float linePosY = mLineSpacing + (lineNo * mLineHeight) + mTitleBarHeight;
+		float linePosX=mEditorPosition.x + mLineBarPadding + (mLineBarMaxCountWidth-GetNumberWidth(start+1))*mCharacterSize.x;
+		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (start==mCurrentLineIndex) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(start + 1).c_str());
+		mEditorWindow->DrawList->AddText({mEditorPosition.x + mLineBarWidth + mPaddingLeft, linePosY}, mGruvboxPalletDark[(size_t)Pallet::Text], mLines[start].c_str());
 		start++;
 		lineNo++;
 	}
-	if (mSelectionMode == SelectionMode::Word) {
-		ImVec2 start(mEditorPosition.x + 45.0f - 1.0f + (mState.mSelectionStart.mColumn * mCharacterSize.x), mLinePosition.y);
-		ImVec2 end(mEditorPosition.x + 45.0f + (mState.mSelectionEnd.mColumn * mCharacterSize.x), mLinePosition.y + mLineHeight);
-		mEditorWindow->DrawList->AddRectFilled(start, end, ImColor(30, 109, 232, 50));
-	}
 
 	// Cursor
-	ImVec2 cursorPosition(mEditorPosition.x + 45.0f - 1.0f + (mState.mCursorPosition.mColumn * mCharacterSize.x), mLinePosition.y);
+	ImVec2 cursorPosition(mEditorPosition.x+mPaddingLeft + mLineBarWidth - 1.0f + (mState.mCursorPosition.mColumn * mCharacterSize.x), mLinePosition.y);
 	mEditorWindow->DrawList->AddRectFilled(cursorPosition, {cursorPosition.x + 2.0f, cursorPosition.y + mLineHeight},
 	                                       ImColor(255, 255, 255, 255));
+
+	HandleKeyboardInputs();
+	HandleMouseInputs();
 	return true;
 }
 
@@ -354,7 +367,7 @@ void Editor::HandleMouseInputs()
 				mMinLineVisible = ((ImGui::GetScrollY()) / mLineHeight);
 				GL_INFO("ScrollY:{0}  ,MouseY:{1}  ,currLine:{2}  ,minLine:{3}", ImGui::GetScrollY(), ImGui::GetMousePos().y,
 				        mCurrentLineNo, mMinLineVisible);
-				mState.mCursorPosition.mColumn = round((ImGui::GetMousePos().x - mEditorPosition.x - 45.0f) / mCharacterSize.x);
+				mState.mCursorPosition.mColumn = round((ImGui::GetMousePos().x - mEditorPosition.x - mLineBarWidth-mPaddingLeft) / mCharacterSize.x);
 				mCurrentLineIndex = floor(mCurrentLineNo - (mMinLineVisible - floor(mMinLineVisible)));
 				if (mCurrentLineIndex < 0) mCurrentLineIndex = 0;
 				mCurrLineLength = GetCurrentLineLength();
@@ -473,10 +486,14 @@ void Editor::SwapLines(bool up)
 
 void Editor::MoveUp(bool ctrl, bool shift)
 {
+	if(mLinePosition.y<(mTitleBarHeight*2)){
+		ImGui::SetScrollY(ImGui::GetScrollY()-mLineHeight);
+	}
 	if (!shift && mSelectionMode != SelectionMode::Normal) {
 		mSelectionMode = SelectionMode::Normal;
 		return;
 	}
+	if(mCurrentLineIndex==0) return;
 	mCurrentLineNo--;
 	mCurrentLineIndex--;
 	mCurrLineLength = GetCurrentLineLength();
@@ -485,10 +502,15 @@ void Editor::MoveUp(bool ctrl, bool shift)
 
 void Editor::MoveDown(bool ctrl, bool shift)
 {
+	if(mLinePosition.y>mEditorWindow->Size.y-(mTitleBarHeight*2)){
+		ImGui::SetScrollY(ImGui::GetScrollY()+mLineHeight);
+	}
+
 	if (!shift && mSelectionMode != SelectionMode::Normal) {
 		mSelectionMode = SelectionMode::Normal;
 		return;
 	}
+	if(mCurrentLineIndex==(int)mLines.size()-1) return;
 	mCurrentLineIndex++;
 	mCurrLineLength = GetCurrentLineLength();
 	if (mState.mCursorPosition.mColumn > mCurrLineLength) mState.mCursorPosition.mColumn = mCurrLineLength;
@@ -503,8 +525,25 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 		return;
 	}
 
-	if (ctrl && mSelectionMode == SelectionMode::Normal) {
+	if(shift && mSelectionMode == SelectionMode::Normal){
+		mSelectionMode=SelectionMode::Word;
+		mState.mSelectionEnd.mColumn=mState.mCursorPosition.mColumn;
+		mState.mSelectionStart.mColumn=(mState.mCursorPosition.mColumn > 0 ?  
+			--mState.mCursorPosition.mColumn :mState.mCursorPosition.mColumn );
+		return;
+	}
+
+
+	//Doesn't consider tab's in between
+	if (ctrl) {
 		int idx = GetCurrentLineIndex();
+
+		// while((idx-1) > 0 && !isalnum(mLines[mCurrentLineIndex][idx-1])){
+		// 	idx--;
+		// 	mState.mCursorPosition.mColumn--;
+		// 	if(idx==0) return;
+		// }
+
 		if (idx > 0 && isalnum(mLines[mCurrentLineIndex][idx - 1])) {
 			GL_INFO("WORD JUMP LEFT");
 			uint8_t count = 0;
@@ -513,6 +552,7 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 				count++;
 			}
 			mState.mCursorPosition.mColumn -= count;
+			if(mSelectionMode==SelectionMode::Word) mState.mSelectionStart=mState.mCursorPosition;
 			return;
 		}
 	}
@@ -534,7 +574,10 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 			mState.mCursorPosition.mColumn--;
 		}
 	}
+	if(shift && mSelectionMode==SelectionMode::Word) mState.mSelectionStart.mColumn=mState.mCursorPosition.mColumn;
 }
+
+// int GetNextWordCursorPosition()
 
 void Editor::MoveRight(bool ctrl, bool shift)
 {
@@ -544,8 +587,22 @@ void Editor::MoveRight(bool ctrl, bool shift)
 		return;
 	}
 
-	if (ctrl && mSelectionMode == SelectionMode::Normal) {
+	if(shift && mSelectionMode == SelectionMode::Normal){
+		mSelectionMode=SelectionMode::Word;
+		mState.mSelectionStart.mColumn=mState.mCursorPosition.mColumn;
+		mState.mSelectionEnd.mColumn=(++mState.mCursorPosition.mColumn);
+		return;
+	}
+
+	if (ctrl) {
 		int idx = GetCurrentLineIndex();
+		// int size=mLines[mCurrentLineIndex].size();
+		// while(idx < size && !isalnum(mLines[mCurrentLineIndex][idx])){
+		// 	idx++;
+		// 	mState.mCursorPosition.mColumn++;
+		// 	if(idx==size) return;
+		// }
+		
 		if (isalnum(mLines[mCurrentLineIndex][idx])) {
 			GL_INFO("WORD JUMP RIGHT");
 			uint8_t count = 0;
@@ -554,9 +611,11 @@ void Editor::MoveRight(bool ctrl, bool shift)
 				count++;
 			}
 			mState.mCursorPosition.mColumn += count;
+			if(mSelectionMode==SelectionMode::Word) mState.mSelectionEnd=mState.mCursorPosition;
 			return;
 		}
 	}
+
 
 	mCurrLineLength=GetCurrentLineLength();
 	if (mState.mCursorPosition.mColumn == mCurrLineLength) {
@@ -572,5 +631,9 @@ void Editor::MoveRight(bool ctrl, bool shift)
 		} else {
 			mState.mCursorPosition.mColumn++;
 		}
+	}
+
+	if(shift && mSelectionMode==SelectionMode::Word){
+		mState.mSelectionEnd.mColumn=mState.mCursorPosition.mColumn;
 	}
 }

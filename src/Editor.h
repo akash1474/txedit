@@ -8,18 +8,19 @@
 
 class Editor
 {
-	enum class Pallet { Background = 0, BackgroundDark, Text, String, Comment, Max };
+	enum class Pallet { Background = 0, BackgroundDark, Text, String, Comment,Highlight, Max };
 	std::vector<ImU32> mGruvboxPalletDark;
 	// Google
 
 	void InitPallet()
 	{
 		mGruvboxPalletDark.resize((size_t)Pallet::Max);
-		mGruvboxPalletDark[(size_t)Pallet::Background] = ImColor(40, 40, 40, 255);     // 235
+		mGruvboxPalletDark[(size_t)Pallet::Background] = ImColor(29,32,33, 255);     // 235
 		mGruvboxPalletDark[(size_t)Pallet::BackgroundDark] = ImColor(29, 32, 33, 255); // 235
 		mGruvboxPalletDark[(size_t)Pallet::Text] = ImColor(235, 219, 178, 255);        // 223
 		mGruvboxPalletDark[(size_t)Pallet::String] = ImColor(152, 151, 26, 255);       // 106
-		mGruvboxPalletDark[(size_t)Pallet::Comment] = ImColor(60, 56, 54, 255);        // 237
+		mGruvboxPalletDark[(size_t)Pallet::Comment] = ImColor(146,131,116,255);        // 237
+		mGruvboxPalletDark[(size_t)Pallet::Highlight] = ImColor(54,51,50,255);        // 237
 	}
 
 	struct Coordinates {
@@ -77,10 +78,26 @@ class Editor
 	SelectionMode mSelectionMode{SelectionMode::Normal};
 	EditorState mState;
 
+	//##### LINE BAR #######
+	float mLineBarWidth{0.0f}; //init -> num_count+2*mLineBarPadding
+	float mLineBarPadding{15.0f};
+	float mLineBarMaxCountWidth{0};
+	inline uint8_t GetNumberWidth(int number){
+	    uint8_t length = 0;
+	    do {
+	        length++;
+	        number /= 10;
+	    } while (number != 0);
+	    return length;
+	}
 
-	float mLineSpacing = 12.f;
+
+
+	//###### EDITOR SPACE ######
+	float mLineSpacing = 10.f;
 	bool mReadOnly = false;
 	int mLineHeight{0};
+	float mPaddingLeft{5.0f};
 	uint8_t mTabWidth{4};
 	uint8_t mCurrLineTabCounts{0};
 	float mTitleBarHeight{0.0f};
