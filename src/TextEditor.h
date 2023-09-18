@@ -1,4 +1,5 @@
 #pragma once
+
 #include <string>
 #include <vector>
 #include <array>
@@ -12,6 +13,7 @@
 class TextEditor
 {
 public:
+	float mLineSpacing;
 	enum class PaletteIndex
 	{
 		Default,
@@ -347,7 +349,6 @@ private:
 	void HandleMouseInputs();
 	void Render();
 
-	float mLineSpacing;
 	Lines mLines;
 	EditorState mState;
 	UndoBuffer mUndoBuffer;

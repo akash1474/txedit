@@ -1139,7 +1139,7 @@ void TextEditor::Render(const char* aTitle, const ImVec2& aSize, bool aBorder)
 	if (mHandleMouseInputs)
 		HandleMouseInputs();
 
-	// ColorizeInternal();
+	ColorizeInternal();
 	Render();
 
 	if (mHandleKeyboardInputs)
@@ -1224,6 +1224,7 @@ void TextEditor::EnterCharacter(ImWchar aChar, bool aShift)
 	{
 		if (aChar == '\t' && mState.mSelectionStart.mLine != mState.mSelectionEnd.mLine)
 		{
+
 			auto start = mState.mSelectionStart;
 			auto end = mState.mSelectionEnd;
 			auto originalEnd = end;

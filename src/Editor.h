@@ -24,9 +24,9 @@ class Editor
 	}
 
 	struct Coordinates {
-		float mLine, mColumn;
+		int mLine, mColumn;
 		Coordinates() : mLine(0), mColumn(0) {}
-		Coordinates(float aLine, float aColumn) : mLine(aLine), mColumn(aColumn)
+		Coordinates(int aLine, int aColumn) : mLine(aLine), mColumn(aColumn)
 		{
 			assert(aLine >= 0);
 			assert(aColumn >= 0);
@@ -72,7 +72,10 @@ class Editor
 		Coordinates mSelectionStart;
 		Coordinates mSelectionEnd;
 		Coordinates mCursorPosition;
+		bool mCursorDirectionChanged=false;
 	};
+
+
 
 
 	SelectionMode mSelectionMode{SelectionMode::Normal};
@@ -125,7 +128,7 @@ class Editor
 	void Copy();
 	void Paste();
 	void Cut();
-	Coordinates ScreenPosToCoordinates(const ImVec2& mousePosition);
+	Coordinates MapScreenPosToCoordinates(const ImVec2& mousePosition);
 	float GetSelectionPosFromCoords(const Coordinates& coords)const;
 
   public:
@@ -142,8 +145,11 @@ class Editor
 	void InsertLine();
 	inline uint8_t GetTabWidth() { return this->mTabWidth; }
 
-	size_t GetCurrentLineLength(int currLineIndex = -1);
 	void UpdateTabCountsUptoCursor();
+
+	size_t GetCurrentLineLength(int currLineIndex = -1);
+	Editor::EditorState* GetEditorState(){return &mState; }
+
 
 	Editor();
 	~Editor();

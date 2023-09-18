@@ -5,6 +5,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "Editor.h"
 #include "stb_img.h"
+// #include "TextEditor.h"
 
 #define WIDTH 900
 #define HEIGHT 600
@@ -14,6 +15,9 @@ int height{0};
 
 std::string file_data{0};
 Editor editor;
+// TextEditor editor;
+
+
 size_t size{0};
 
 void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -49,6 +53,7 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 {
 	static bool isFileLoaded = false;
 	if (!isFileLoaded) {
+        // editor.mLineSpacing=2.0f;
 		std::ifstream t("D:/Projects/c++/txedit/src/Editor.cpp");
 		t.seekg(0, std::ios::end);
 		size = t.tellg();
@@ -56,6 +61,7 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 		t.seekg(0);
 		t.read(&file_data[0], size);
 		editor.SetBuffer(file_data);
+        // editor.SetText(file_data);
 		isFileLoaded = true;
 	}
 	glfwPollEvents();
@@ -96,6 +102,7 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 			ImGui::MenuItem("Cut");
 			ImGui::MenuItem("Copy");
 			ImGui::MenuItem("Paste");
+            ImGui::EndMenu();
 		}
 		ImGui::EndMenuBar();
 	}
@@ -104,11 +111,18 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	ImGui::ShowDemoWindow();
 
 	ImGui::Begin("Project");
+
+
 	static int LineSpacing = 10.0f;
 	if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
 		editor.setLineSpacing(LineSpacing);
 	}
-	ImGui::Text("PositionY:%f", ImGui::GetMousePos().y);
+	ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
+    ImGui::Text("mCursorPosition: X:%d  Y:%d",editor.GetEditorState()->mCursorPosition.mColumn,editor.GetEditorState()->mCursorPosition.mLine);
+    ImGui::Text("mSelectionStart: X:%d  Y:%d",editor.GetEditorState()->mSelectionStart.mColumn,editor.GetEditorState()->mSelectionStart.mLine);
+    ImGui::Text("mSelectionEnd:   X:%d  Y:%d",editor.GetEditorState()->mSelectionEnd.mColumn,editor.GetEditorState()->mSelectionEnd.mLine);
+
+
 	ImGui::End();
 
 
@@ -121,7 +135,8 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 		// ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 10));
 		// ImGui::InputTextMultiline("##TextEditor", (char*)file_data.c_str(),
 		// file_data.size(),{ImGui::GetWindowSize().x,ImGui::GetWindowSize().y-25}); ImGui::PopStyleVar();
-		editor.render();
+		// editor.Render("Editor.cpp");
+        editor.render();
 		ImGui::PopFont();
 	}
 	ImGui::End();
