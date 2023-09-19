@@ -35,7 +35,7 @@ class Editor
 		bool mHasCompleted=false;
 	public:
 		bool hasStarted=false;
-		Animation(float duration=1.0f):mDuration(duration){}
+		Animation(float duration=0.75f):mDuration(duration){}
 
 		void start(){
 			mHasCompleted=false;

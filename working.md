@@ -1,6 +1,5 @@
 [------------------------------ __TODO__ ---------------------------------]
 # [ FEATURE ] Highlighting all occurances of selected word in buffer
-# [ FEATURE ] Handle Horizontal Scrolling using `shift+mouseWheel`
 # [ FEATURE ] Smooth Scrolling
 # [ FEATURE ] (Ctrl+D) Find Next occurances of current word in file
 # [  DEBUG  ] Setup for seeing current state variables in left pane
@@ -19,13 +18,14 @@
 ########################################################################################
 
 
-## Monday 18th Sept 2023
+## Tuesday 19th Sept 2023
 + [ FEATURE ] `ctrl+shift+(left/right)` arrow for word selection
 + [ FEATURE ] Copying/Cutting/Deleting Line Selection
 + [ FEATURE ] Pasting Multiline Text
 + [ FEATURE ] Snapping to nearest tab
 + [ FEATURE ] Scrolling To a Line Number
 + [ FEATURE ] Swapping Multiple Lines using `Ctrl+Shift+(up/down)`
++ [ FEATURE ] Handle Horizontal Scrolling using `shift+mouseWheel`
 
 
 ########################################################################################

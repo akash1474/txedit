@@ -291,7 +291,7 @@ void Editor::UpdateBounds()
 float Editor::GetSelectionPosFromCoords(const Coordinates& coords)const{
 	float offset{0.0f};
 	if(coords==mState.mSelectionStart) offset=-1.0f;
-	return mEditorPosition.x + mLineBarWidth + mPaddingLeft - offset + (coords.mColumn * mCharacterSize.x);
+	return mLinePosition.x - offset + (coords.mColumn * mCharacterSize.x);
 }
 
 
@@ -326,7 +326,6 @@ bool Editor::render()
 	if (!ImGui::ItemAdd(mEditorBounds, id)) return false;
 
 	// BackGrounds
-	mEditorWindow->DrawList->AddRectFilled(mEditorPosition, {mEditorPosition.x + mLineBarWidth, mEditorSize.y}, mGruvboxPalletDark[(size_t)Pallet::Background]); // LineNo
 	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x + mLineBarWidth, mEditorPosition.y}, mEditorBounds.Max,mGruvboxPalletDark[(size_t)Pallet::Background]); // Code
 
 	if(mScrollAnimation.hasStarted){
@@ -342,18 +341,15 @@ bool Editor::render()
 	}
 
 	if (io.MouseWheel != 0.0f) {
-		GL_INFO("SCROLLY:{} LineY:{}",ImGui::GetScrollY(),mLinePosition.y);
-		// ImGui::SetScrollY(ImGui::GetScrollY()+mLineHeight*io.MouseWheel);
+		GL_INFO("SCROLLX:{} SCROLLY:{}",ImGui::GetScrollX(),ImGui::GetScrollY());
 	}
 
 
 	mMinLineVisible = fmax(0.0f,ImGui::GetScrollY() / mLineHeight) ;
 	mLinePosition.y = (mTitleBarHeight + (mLineSpacing * 0.5f) + (mState.mCursorPosition.mLine-floor(mMinLineVisible)) * mLineHeight);
+	mLinePosition.x = mEditorPosition.x + mLineBarWidth + mPaddingLeft-ImGui::GetScrollX();
 
 
-	// Drawing Current Lin
-	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x,mLinePosition.y},{mEditorPosition.x+mLineBarWidth, mLinePosition.y + mLineHeight},mGruvboxPalletDark[(size_t)Pallet::Highlight]); // Code
-	mLineHeight = mLineSpacing + mCharacterSize.y;
 
 
 	if (mSelectionMode == SelectionMode::Word || mSelectionMode==SelectionMode::Line) {
@@ -378,12 +374,12 @@ bool Editor::render()
 			}
 
 			ImVec2 start(GetSelectionPosFromCoords(selectionStart), mLinePosition.y-mLineHeight);
-			ImVec2 end(mEditorPosition.x+mLineBarWidth+mPaddingLeft+GetCurrentLineLength(selectionStart.mLine)*mCharacterSize.x+mCharacterSize.x, mLinePosition.y);
+			ImVec2 end(mLinePosition.x+GetCurrentLineLength(selectionStart.mLine)*mCharacterSize.x+mCharacterSize.x, mLinePosition.y);
 
 			mEditorWindow->DrawList->AddRectFilled(start, end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
 
 
-			start={mEditorPosition.x+mLineBarWidth+mPaddingLeft, mLinePosition.y};
+			start={mLinePosition.x, mLinePosition.y};
 			end={GetSelectionPosFromCoords(selectionEnd), mLinePosition.y + mLineHeight};
 
 			mEditorWindow->DrawList->AddRectFilled(start, end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
@@ -404,7 +400,7 @@ bool Editor::render()
 			}
 
 			ImVec2 p_start(GetSelectionPosFromCoords(selectionStart), mLinePosition.y-(diff+1)*mLineHeight);
-			ImVec2 p_end(mEditorPosition.x+mLineBarWidth+mPaddingLeft+GetCurrentLineLength(selectionStart.mLine)*mCharacterSize.x+mCharacterSize.x, mLinePosition.y-diff*mLineHeight);
+			ImVec2 p_end(mLinePosition.x+GetCurrentLineLength(selectionStart.mLine)*mCharacterSize.x+mCharacterSize.x, mLinePosition.y-diff*mLineHeight);
 
 			mEditorWindow->DrawList->AddRectFilled(p_start, p_end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
 
@@ -412,7 +408,7 @@ bool Editor::render()
 			while(start<end){
 				diff=end-start;
 
-				ImVec2 p_start(mEditorPosition.x+mLineBarWidth+mPaddingLeft,mLinePosition.y-diff*mLineHeight);
+				ImVec2 p_start(mLinePosition.x,mLinePosition.y-diff*mLineHeight);
 				ImVec2 p_end(p_start.x+GetCurrentLineLength(start)*mCharacterSize.x+mCharacterSize.x,mLinePosition.y-(diff-1)*mLineHeight);
 
 				mEditorWindow->DrawList->AddRectFilled(p_start, p_end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
@@ -420,7 +416,7 @@ bool Editor::render()
 			}
 
 
-			p_start={mEditorPosition.x+mLineBarWidth+mPaddingLeft, mLinePosition.y};
+			p_start={mLinePosition.x, mLinePosition.y};
 			p_end={GetSelectionPosFromCoords(selectionEnd), mLinePosition.y + mLineHeight};
 
 			mEditorWindow->DrawList->AddRectFilled(p_start, p_end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
@@ -440,19 +436,47 @@ bool Editor::render()
 	int lineNo = 0;
 	while (start != end) {
 		float linePosY = mLineSpacing + (lineNo * mLineHeight) + mTitleBarHeight;
-		float linePosX=mEditorPosition.x + mLineBarPadding + (mLineBarMaxCountWidth-GetNumberWidth(start+1))*mCharacterSize.x;
-
-		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (start==mCurrentLineIndex) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(start + 1).c_str());
-		mEditorWindow->DrawList->AddText({mEditorPosition.x + mLineBarWidth + mPaddingLeft, linePosY}, mGruvboxPalletDark[(size_t)Pallet::Text], mLines[start].c_str());
+		mEditorWindow->DrawList->AddText({mLinePosition.x, linePosY}, mGruvboxPalletDark[(size_t)Pallet::Text], mLines[start].c_str());
 
 		start++;
 		lineNo++;
 	}
 
 
+
 	// Cursor
-	ImVec2 cursorPosition(mEditorPosition.x+mPaddingLeft + mLineBarWidth - 1.0f + (mState.mCursorPosition.mColumn * mCharacterSize.x), mLinePosition.y);
+	ImVec2 cursorPosition(mLinePosition.x - 1.0f + (mState.mCursorPosition.mColumn * mCharacterSize.x), mLinePosition.y);
 	mEditorWindow->DrawList->AddRectFilled(cursorPosition, {cursorPosition.x + 2.0f, cursorPosition.y + mLineHeight},ImColor(255, 255, 255, 255));
+
+
+
+
+	start = std::min(int(mMinLineVisible),(int)mLines.size());
+	lineCount = (mEditorWindow->Size.y) / mLineHeight;
+	end = std::min(start + lineCount + 1,(int)mLines.size());
+
+	//Line Number Background
+	mEditorWindow->DrawList->AddRectFilled(mEditorPosition, {mEditorPosition.x + mLineBarWidth, mEditorSize.y}, mGruvboxPalletDark[(size_t)Pallet::Background]); // LineNo
+	// Highlight Current Lin
+	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x,mLinePosition.y},{mEditorPosition.x+mLineBarWidth, mLinePosition.y + mLineHeight},mGruvboxPalletDark[(size_t)Pallet::Highlight]); // Code
+	mLineHeight = mLineSpacing + mCharacterSize.y;
+
+	if(ImGui::GetScrollX()>0.0f){
+		ImVec2 pos_start{mEditorPosition.x+mLineBarWidth,0.0f};
+		mEditorWindow->DrawList->AddRectFilledMultiColor(pos_start,{pos_start.x+10.0f,mEditorWindow->Size.y}, ImColor(19,21,21,130),ImColor(19,21,21,0),ImColor(19,21,21,0),ImColor(19,21,21,130));
+	}
+
+	lineNo = 0;
+	while (start != end) {
+		float linePosY = mLineSpacing + (lineNo * mLineHeight) + mTitleBarHeight;
+		float linePosX=mEditorPosition.x + mLineBarPadding + (mLineBarMaxCountWidth-GetNumberWidth(start+1))*mCharacterSize.x;
+
+		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (start==mCurrentLineIndex) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(start + 1).c_str());
+
+		start++;
+		lineNo++;
+	}
+
 
 	HandleKeyboardInputs();
 	HandleMouseInputs();
@@ -569,7 +593,7 @@ Editor::Coordinates Editor::MapScreenPosToCoordinates(const ImVec2& mousePositio
 	if(coords.mLine > mLines.size()-2) coords.mLine=mLines.size()-2;
 
 	mLineFloatPart=currentLineNo-floor(currentLineNo);
-	coords.mColumn = std::max(0,(int)round((mousePosition.x - mEditorPosition.x - mLineBarWidth-mPaddingLeft) / mCharacterSize.x));
+	coords.mColumn = std::max(0,(int)round((ImGui::GetScrollX()+mousePosition.x - mEditorPosition.x - mLineBarWidth-mPaddingLeft) / mCharacterSize.x));
 
 	int col=0;
 	size_t i=0;
@@ -689,6 +713,25 @@ void Editor::HandleKeyboardInputs()
 				mCurrLineLength = GetCurrentLineLength();
 
 				mState.mCursorPosition.mColumn += mTabWidth;
+				return;
+			}
+
+			if(mSelectionMode==SelectionMode::Line){
+
+				int value=shift ? -1 : 1;
+
+				if(shift){
+					if(mLines[mCurrentLineIndex][0]!='\t') return;
+					mLines[mCurrentLineIndex].erase(0,1);
+				}
+				else
+					mLines[mCurrentLineIndex].insert(mLines[mCurrentLineIndex].begin(), 1, '\t');
+
+
+				mCurrLineLength = GetCurrentLineLength();
+				mState.mCursorPosition.mColumn += mTabWidth*value;
+				mState.mSelectionStart.mColumn += mTabWidth*value;
+				mState.mSelectionEnd.mColumn +=mTabWidth*value;
 			}
 
 		}
@@ -708,6 +751,7 @@ void Editor::HandleKeyboardInputs()
 
 
 void Editor::Copy(){
+	if(mSelectionMode==SelectionMode::Normal) return;
 
 	Coordinates selectionStart=mState.mSelectionStart;
 	Coordinates selectionEnd=mState.mSelectionEnd;

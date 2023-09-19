@@ -132,7 +132,7 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("Editor", 0, ImGuiWindowFlags_NoCollapse);
+	ImGui::Begin("Editor", 0, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_HorizontalScrollbar);
 	ImGui::PopStyleVar();
 
 	if (size) {
