@@ -22,9 +22,11 @@
 #include "FontAwesome6.h"
 #include "Log.h"
 #include "utils.h"
+#include "Timer.h"
 
 //Icon and Font
 #include "fa-solid-900.h"
 #include "recursive_linear_medium.h"
 #include "monolisa_medium.h"
 #include "images.h"
+

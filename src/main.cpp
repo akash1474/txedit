@@ -122,6 +122,11 @@ void draw(GLFWwindow* window, ImGuiIO& io)
     ImGui::Text("mSelectionStart: X:%d  Y:%d",editor.GetEditorState()->mSelectionStart.mColumn,editor.GetEditorState()->mSelectionStart.mLine);
     ImGui::Text("mSelectionEnd:   X:%d  Y:%d",editor.GetEditorState()->mSelectionEnd.mColumn,editor.GetEditorState()->mSelectionEnd.mLine);
 
+    ImGui::Spacing();
+    static int v{1};
+    ImGui::Text("Goto Line: "); ImGui::SameLine(); 
+    if(ImGui::InputInt("##ScrollToLine", &v,1,100,ImGuiInputTextFlags_EnterReturnsTrue))
+        editor.ScrollToLineNumber(v);
 
 	ImGui::End();
 

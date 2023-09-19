@@ -23,6 +23,44 @@ class Editor
 		mGruvboxPalletDark[(size_t)Pallet::Highlight] = ImColor(54,51,50,255);        // 237
 	}
 
+
+
+	class Animation{
+		float mTick{0.0f};
+		float mDuration{0.0f};
+
+		//Animation Function
+		inline float EaseOutQuadraticFn(float t) { return 1.0f - pow(1.0f - t, 4);}
+
+		bool mHasCompleted=false;
+	public:
+		bool hasStarted=false;
+		Animation(float duration=1.0f):mDuration(duration){}
+
+		void start(){
+			mHasCompleted=false;
+			hasStarted=true;
+		}
+
+		float update(){
+			if(mHasCompleted) return 1.0f;
+		    mTick += ImGui::GetIO().DeltaTime;
+		    float t = fminf(mTick / mDuration, 1.0f);
+		    if(t>=1.0f){
+		    	mHasCompleted=true;
+		    	hasStarted=false;
+		    	mTick=0.0f;
+		    	return 1.0f;
+		    }
+		    return EaseOutQuadraticFn(t);
+		}
+	};
+
+	Animation mScrollAnimation;
+	float mScrollAmount{0.0f};
+	float mInitialScrollY{0.0f};
+
+
 	struct Coordinates {
 		int mLine, mColumn;
 		Coordinates() : mLine(0), mColumn(0) {}
@@ -119,17 +157,24 @@ class Editor
 	ImVec2 mLinePosition;
 	ImGuiWindow* mEditorWindow{0};
 
-	uint32_t GetCurrentLineIndex();
-	void MoveUp(bool ctrl = false, bool shift = false);
+
 	void SwapLines(bool up = true);
+
+	void MoveUp(bool ctrl = false, bool shift = false);
 	void MoveDown(bool ctrl = false, bool shift = false);
 	void MoveLeft(bool ctrl = false, bool shift = false);
 	void MoveRight(bool ctrl = false, bool shift = false);
+
 	void Copy();
 	void Paste();
 	void Cut();
+
 	Coordinates MapScreenPosToCoordinates(const ImVec2& mousePosition);
 	float GetSelectionPosFromCoords(const Coordinates& coords)const;
+
+
+	uint8_t GetTabCountsUptoCursor(const Coordinates& coords)const;
+	uint32_t GetCurrentLineIndex(const Coordinates& cursorPosition)const;
 
   public:
 	bool reCalculateBounds = true;
@@ -143,9 +188,10 @@ class Editor
 	void InsertCharacter(char newChar);
 	void Backspace();
 	void InsertLine();
+	void ScrollToLineNumber(int lineNo);
+
 	inline uint8_t GetTabWidth() { return this->mTabWidth; }
 
-	void UpdateTabCountsUptoCursor();
 
 	size_t GetCurrentLineLength(int currLineIndex = -1);
 	Editor::EditorState* GetEditorState(){return &mState; }

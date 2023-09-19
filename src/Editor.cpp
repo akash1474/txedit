@@ -8,11 +8,13 @@
 #include <cmath>
 #include <future>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string>
 
 #include "GLFW/glfw3.h"
 #include "Log.h"
 #include "imgui.h"
+
 
 Editor::Editor()
 {
@@ -53,7 +55,7 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 // Function to insert a character at a specific position in a line
 void Editor::InsertCharacter(char newChar)
 {
-	int idx = GetCurrentLineIndex();
+	int idx = GetCurrentLineIndex(mState.mCursorPosition);
 	GL_INFO("INSERT IDX:{}",idx);
 
 	if (mCurrentLineIndex >= 0 && mCurrentLineIndex < mLines.size() && mState.mCursorPosition.mColumn >= 0 &&
@@ -89,7 +91,7 @@ void Editor::InsertCharacter(char newChar)
 
 void Editor::InsertLine()
 {
-	int idx = GetCurrentLineIndex();
+	int idx = GetCurrentLineIndex(mState.mCursorPosition);
 	reCalculateBounds = true;
 
 
@@ -120,16 +122,44 @@ void Editor::Backspace()
 	if (mSelectionMode == SelectionMode::Word || mSelectionMode==SelectionMode::Line) {
 		mSelectionMode = SelectionMode::Normal;
 
-		if(mState.mSelectionStart > mState.mSelectionEnd) std::swap(mState.mSelectionStart,mState.mSelectionEnd);
+		if(mState.mSelectionStart > mState.mSelectionEnd)
+			std::swap(mState.mSelectionStart,mState.mSelectionEnd);
 
-		mState.mCursorPosition = mState.mSelectionEnd;
-		int end=GetCurrentLineIndex();
+		uint8_t end=GetCurrentLineIndex(mState.mSelectionEnd);
+		uint8_t start=GetCurrentLineIndex(mState.mSelectionStart);
 
 		mState.mCursorPosition = mState.mSelectionStart;
-		int start=GetCurrentLineIndex();
+		mCurrentLineIndex=mState.mSelectionStart.mLine;
 
-		uint8_t word_len = end-start;
-		mLines[mCurrentLineIndex].erase(start, word_len);
+
+		//Words on Single Line
+		if(mState.mSelectionStart.mLine==mState.mSelectionEnd.mLine){
+			uint8_t word_len = end-start;
+			GL_INFO("WORD LEN:{}",word_len);
+			mLines[mCurrentLineIndex].erase(start, word_len);
+		}
+
+		else{
+
+			//end
+			uint8_t start=0;
+			uint8_t end=GetCurrentLineIndex(mState.mSelectionEnd);
+			uint8_t word_len=end-start;
+			std::string remainingStr=mLines[mState.mSelectionEnd.mLine].substr(end,mLines[mState.mSelectionEnd.mLine].size()-end);
+			mLines.erase(mLines.begin()+mState.mSelectionEnd.mLine);
+
+			//start
+			start=GetCurrentLineIndex(mState.mSelectionStart);
+			end=mLines[mState.mSelectionStart.mLine].size();
+			word_len=end-start;
+			mLines[mState.mSelectionStart.mLine].erase(start, word_len);
+			mLines[mState.mSelectionStart.mLine].append(remainingStr);
+
+			if((mState.mSelectionEnd.mLine - mState.mSelectionStart.mLine) > 1)
+				mLines.erase(mLines.begin()+mState.mSelectionStart.mLine+1,mLines.begin()+mState.mSelectionEnd.mLine);
+
+		}
+
 		return;
 	}
 
@@ -137,7 +167,7 @@ void Editor::Backspace()
 	if (mCurrentLineIndex >= 0 && mCurrentLineIndex < mLines.size() && mState.mCursorPosition.mColumn > 0 &&
 	    mState.mCursorPosition.mColumn <= GetCurrentLineLength()) {
 
-		int idx = GetCurrentLineIndex();
+		int idx = GetCurrentLineIndex(mState.mCursorPosition);
 		GL_INFO("BACKSPACE IDX:{}", idx);
 
 
@@ -217,29 +247,31 @@ size_t Editor::GetCurrentLineLength(int currLineIndex)
 }
 
 
-void Editor::UpdateTabCountsUptoCursor()
+uint8_t Editor::GetTabCountsUptoCursor(const Coordinates& coords)const
 {
-	mCurrLineTabCounts = 0;
+	uint8_t tabCounts = 0;
 
 	int width = 0;
 	int i = 0;
 
-	for (i = 0; width < mState.mCursorPosition.mColumn; i++) {
-		if (mLines[mCurrentLineIndex][i] == '\t') {
-			mCurrLineTabCounts++;
+	for (i = 0; width < coords.mColumn; i++) {
+		if (mLines[coords.mLine][i] == '\t') {
+			tabCounts++;
 			width += mTabWidth;
 			continue;
 		}
 		width++;
 	}
+
+	return tabCounts;
 }
 
 
-uint32_t Editor::GetCurrentLineIndex()
+uint32_t Editor::GetCurrentLineIndex(const Coordinates& cursorPosition)const
 {
-	UpdateTabCountsUptoCursor();
+	uint8_t tabCounts=GetTabCountsUptoCursor(cursorPosition);
 	//(mTabWidth-1) as each tab replaced by mTabWidth containing one '/t' for each tabcount
-	int val = mState.mCursorPosition.mColumn - (mCurrLineTabCounts * (mTabWidth - 1));
+	int val = cursorPosition.mColumn - (tabCounts * (mTabWidth - 1));
 	return val > 0 ? val : 0;
 }
 
@@ -262,9 +294,6 @@ float Editor::GetSelectionPosFromCoords(const Coordinates& coords)const{
 	return mEditorPosition.x + mLineBarWidth + mPaddingLeft - offset + (coords.mColumn * mCharacterSize.x);
 }
 
-float EasingFunction(float t) {
-    return 1.0f - (1.0f - t) * (1.0f - t);
-}
 
 bool Editor::render()
 {
@@ -300,20 +329,17 @@ bool Editor::render()
 	mEditorWindow->DrawList->AddRectFilled(mEditorPosition, {mEditorPosition.x + mLineBarWidth, mEditorSize.y}, mGruvboxPalletDark[(size_t)Pallet::Background]); // LineNo
 	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x + mLineBarWidth, mEditorPosition.y}, mEditorBounds.Max,mGruvboxPalletDark[(size_t)Pallet::Background]); // Code
 
-	// static float animationTime=0.0f;
-	// static float scrollDuration=4.0f;
-	// static float scrollAmount=80.0f;
-	// static float currentAmount=0.0f;
+	if(mScrollAnimation.hasStarted){
+		static bool isFirst=true;
 
-    // float deltaTime = 1.0f / io.Framerate;
-    // animationTime += deltaTime;
-    // currentAmount += deltaTime*scrollAmount;
-    // float t = fminf(animationTime / scrollDuration, 1.0f);
-    // float t = fminf(currentAmount / scrollAmount, 1.0f);
+		if(isFirst){
+			mInitialScrollY=ImGui::GetScrollY();
+			isFirst=false;
+		}
 
-	// ImGui::SetScrollY(EasingFunction(t)*currentAmount);
-    // if(animationTime>=scrollDuration) animationTime=0.0f;
-    // if(currentAmount>=scrollAmount) currentAmount=0.0f;
+		ImGui::SetScrollY(mInitialScrollY+(mScrollAnimation.update()*mScrollAmount));
+		if(!mScrollAnimation.hasStarted) isFirst=true;
+	}
 
 	if (io.MouseWheel != 0.0f) {
 		GL_INFO("SCROLLY:{} LineY:{}",ImGui::GetScrollY(),mLinePosition.y);
@@ -470,7 +496,7 @@ void Editor::HandleMouseInputs()
 					else
 						mSelectionMode = SelectionMode::Word;
 
-					int idx = GetCurrentLineIndex();
+					int idx = GetCurrentLineIndex(mState.mCursorPosition);
 					int start_idx{idx};
 					int end_idx{idx};
 					bool a = true, b = true;
@@ -535,13 +561,30 @@ void Editor::HandleMouseInputs()
 
 
 Editor::Coordinates Editor::MapScreenPosToCoordinates(const ImVec2& mousePosition) {
+	// OpenGL::ScopedTimer timer("MouseClick");
 	Coordinates coords;
 
 	float currentLineNo=(ImGui::GetScrollY() + mousePosition.y - (0.5f * mLineSpacing) - mTitleBarHeight) / mLineHeight;
-	coords.mLine = (int)floor(currentLineNo - (mMinLineVisible - floor(mMinLineVisible)));	
+	coords.mLine = std::max(0,(int)floor(currentLineNo - (mMinLineVisible - floor(mMinLineVisible))));	
+	if(coords.mLine > mLines.size()-2) coords.mLine=mLines.size()-2;
 
 	mLineFloatPart=currentLineNo-floor(currentLineNo);
 	coords.mColumn = std::max(0,(int)round((mousePosition.x - mEditorPosition.x - mLineBarWidth-mPaddingLeft) / mCharacterSize.x));
+
+	int col=0;
+	size_t i=0;
+	while(i < mLines[coords.mLine].size()){
+		if(mLines[coords.mLine][i]=='\t') {
+			col+=mTabWidth;
+			if(coords.mColumn > (col-mTabWidth) && coords.mColumn < col){
+				coords.mColumn=col-mTabWidth;
+				break;
+			}
+		}
+		else col++;
+
+		i++;
+	}
 
 	mCurrentLineIndex = std::max(coords.mLine,0);
 
@@ -550,6 +593,26 @@ Editor::Coordinates Editor::MapScreenPosToCoordinates(const ImVec2& mousePositio
 
 	return coords;
 }
+
+
+void Editor::ScrollToLineNumber(int lineNo){
+	lineNo=std::max(1,lineNo);
+	if(lineNo > mLines.size()) lineNo=mLines.size();
+
+	mCurrentLineIndex=lineNo-1;
+	mState.mCursorPosition.mLine=lineNo-1;
+	mState.mCursorPosition.mColumn=GetCurrentLineLength();
+
+	int totalLines=0;
+	totalLines=lineNo-(int)floor(mMinLineVisible);
+	float lineCount=floor((mEditorWindow->Size.y) / mLineHeight)*0.5f;
+	totalLines-=lineCount;
+	mScrollAmount=totalLines*mLineHeight;
+
+	mInitialScrollY=ImGui::GetScrollY();
+	mScrollAnimation.start();
+}
+
 
 void Editor::HandleKeyboardInputs()
 {
@@ -619,7 +682,7 @@ void Editor::HandleKeyboardInputs()
 		else if (!IsReadOnly() && !ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Tab))) {
 
 			if (mSelectionMode == SelectionMode::Normal) {
-				int idx = GetCurrentLineIndex();
+				int idx = GetCurrentLineIndex(mState.mCursorPosition);
 				GL_INFO("IDX:", idx);
 
 				mLines[mCurrentLineIndex].insert(mLines[mCurrentLineIndex].begin() + idx, 1, '\t');
@@ -645,26 +708,100 @@ void Editor::HandleKeyboardInputs()
 
 
 void Editor::Copy(){
-	mState.mCursorPosition = mState.mSelectionStart;
-	int start=GetCurrentLineIndex();
 
-	mState.mCursorPosition = mState.mSelectionEnd;
-	int end=GetCurrentLineIndex();
+	Coordinates selectionStart=mState.mSelectionStart;
+	Coordinates selectionEnd=mState.mSelectionEnd;
 
-	uint8_t word_len = end-start;
-	std::string selection = mLines[mCurrentLineIndex].substr(start,word_len);
-	ImGui::SetClipboardText(selection.c_str());
+	if(selectionStart>selectionEnd) std::swap(selectionStart,selectionEnd);
+
+	if(selectionStart.mLine==selectionEnd.mLine)
+	{
+		uint32_t start=GetCurrentLineIndex(selectionStart);
+		uint32_t end=GetCurrentLineIndex(selectionEnd);
+		uint8_t word_len = end-start;
+
+		std::string selection = mLines[mCurrentLineIndex].substr(start,word_len);
+		ImGui::SetClipboardText(selection.c_str());
+	}
+
+	else{
+
+		std::string copyStr;
+
+		//start
+		uint8_t start=GetCurrentLineIndex(selectionStart);
+		uint8_t end=mLines[selectionStart.mLine].size();
+
+		uint8_t word_len=end-start;
+		copyStr+=mLines[selectionStart.mLine].substr(start,word_len); copyStr+='\n';
+
+		int startLine=selectionStart.mLine+1;
+
+		while(startLine < selectionEnd.mLine){
+			copyStr+=mLines[startLine];
+			copyStr+='\n';
+			startLine++;
+		}
+
+		//end
+		start=0;
+		end=GetCurrentLineIndex(selectionEnd);
+		word_len=end-start;
+
+		copyStr+=mLines[selectionEnd.mLine].substr(start,word_len);
+
+		ImGui::SetClipboardText(copyStr.c_str());
+	}
 }
 
 
 void Editor::Paste(){
 	if(mSelectionMode==SelectionMode::Word) Backspace();
-	int idx=GetCurrentLineIndex();
+	int idx=GetCurrentLineIndex(mState.mCursorPosition);
 
-	mLines[mCurrentLineIndex].insert(idx,ImGui::GetClipboardText());
-	mState.mCursorPosition.mColumn+=strlen(ImGui::GetClipboardText());
+	std::string data=ImGui::GetClipboardText();
+	size_t foundIndex=data.find('\n');
+	bool isMultiLineText=foundIndex!=std::string::npos;
+
+	if(!isMultiLineText){
+		mLines[mCurrentLineIndex].insert(idx,data);
+		mState.mCursorPosition.mColumn+=data.size();
+		return;
+	}
+
+
+	//Inserting into currentline
+	std::string segment=data.substr(0,foundIndex);
+
+	size_t word_len=mLines[mCurrentLineIndex].size()-idx;
+	std::string end_segment=mLines[mCurrentLineIndex].substr(idx,word_len);
+	mLines[mCurrentLineIndex].erase(idx,word_len);
+
+	mLines[mCurrentLineIndex].insert(idx,segment);
+
+	std::string line;
+	int lineIndex=mCurrentLineIndex+1;
+	for(size_t i=(foundIndex+1);i<data.size();i++){
+		if(data[i]=='\r') continue;
+		if(data[i]=='\n'){
+			mLines.insert(mLines.begin()+lineIndex,line);
+			line.clear();
+			lineIndex++;
+		}
+		else line+=data[i];
+	}
+
+
+
+	//last string
+	mLines.insert(mLines.begin()+lineIndex,line);
+
+	mCurrentLineIndex=lineIndex;
+	mState.mCursorPosition.mColumn=GetCurrentLineLength();
+	mState.mCursorPosition.mLine=mCurrentLineIndex;
+
+	mLines[mCurrentLineIndex].append(end_segment);
 }
-
 
 void Editor::Cut(){
 	Copy();
@@ -674,8 +811,38 @@ void Editor::Cut(){
 void Editor::SwapLines(bool up)
 {
 	int value = up ? -1 : 1;
-	std::swap(mLines[mCurrentLineIndex], mLines[mCurrentLineIndex + value]);
 
+	if(mSelectionMode==SelectionMode::Normal){
+
+		if(mCurrentLineIndex==0 && up)  return;
+		if(mCurrentLineIndex==mLines.size()-2 && !up) return;
+
+		std::swap(mLines[mCurrentLineIndex], mLines[mCurrentLineIndex + value]);
+
+	}else{
+
+		if(mState.mSelectionStart > mState.mSelectionEnd) std::swap(mState.mSelectionStart,mState.mSelectionEnd);
+
+		int startLine=mState.mSelectionStart.mLine;
+		int endLine=mState.mSelectionEnd.mLine;
+
+
+		if(startLine==0 && up) return;
+		if(endLine==mLines.size()-2 && !up) return;
+
+		if(up){
+			std::string aboveLine=mLines[startLine-1];
+			mLines.erase(mLines.begin()+startLine-1);
+			mLines.insert(mLines.begin()+endLine,aboveLine);
+		}else{
+			std::string belowLine=mLines[endLine+1];
+			mLines.erase(mLines.begin()+endLine+1);
+			mLines.insert(mLines.begin()+startLine,belowLine);
+		}
+	}
+
+	mState.mSelectionStart.mLine += value;
+	mState.mSelectionEnd.mLine += value;
 	mState.mCursorPosition.mLine += value;
 	mCurrentLineIndex += value;
 }
@@ -751,7 +918,7 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 
 	//Doesn't consider tab's in between
 	if (ctrl) {
-		int idx = GetCurrentLineIndex();
+		int idx = GetCurrentLineIndex(mState.mCursorPosition);
 
 		// while((idx-1) > 0 && !isalnum(mLines[mCurrentLineIndex][idx-1])){
 		// 	idx--;
@@ -784,7 +951,7 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 		mState.mCursorPosition.mColumn = mCurrLineLength;
 
 	} else {
-		int idx=GetCurrentLineIndex();
+		int idx=GetCurrentLineIndex(mState.mCursorPosition);
 
 		if (idx == 0 && mLines[mCurrentLineIndex][0] == '\t') {
 			mState.mCursorPosition.mColumn = 0;
@@ -830,7 +997,7 @@ void Editor::MoveRight(bool ctrl, bool shift)
 	}
 
 	if (ctrl) {
-		int idx = GetCurrentLineIndex();
+		int idx = GetCurrentLineIndex(mState.mCursorPosition);
 		// int size=mLines[mCurrentLineIndex].size();
 		// while(idx < size && !isalnum(mLines[mCurrentLineIndex][idx])){
 		// 	idx++;
@@ -868,7 +1035,7 @@ void Editor::MoveRight(bool ctrl, bool shift)
 
 		if (mState.mCursorPosition.mColumn == 0 && mLines[mCurrentLineIndex][0] == '\t') {
 			mState.mCursorPosition.mColumn += mTabWidth;
-		} else if (mLines[mCurrentLineIndex][GetCurrentLineIndex()] == '\t') {
+		} else if (mLines[mCurrentLineIndex][GetCurrentLineIndex(mState.mCursorPosition)] == '\t') {
 			mState.mCursorPosition.mColumn += mTabWidth;
 		} else {
 			mState.mCursorPosition.mColumn++;
