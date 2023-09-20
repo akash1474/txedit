@@ -1,3 +1,4 @@
+#include "Timer.h"
 #include "pch.h"
 #include "Editor.h"
 
@@ -238,6 +239,8 @@ void Editor::Backspace()
 size_t Editor::GetCurrentLineLength(int currLineIndex)
 {
 	if (currLineIndex == -1) currLineIndex = mCurrentLineIndex;
+	if(mLines[currLineIndex].empty()) return 0;
+
 	mCurrLineTabCounts = 0;
 
 	int max = mLines[currLineIndex].size();
@@ -342,6 +345,7 @@ bool Editor::render()
 
 	if (io.MouseWheel != 0.0f) {
 		GL_INFO("SCROLLX:{} SCROLLY:{}",ImGui::GetScrollX(),ImGui::GetScrollY());
+		SearchWordInCurrentVisibleBuffer();
 	}
 
 
@@ -442,6 +446,9 @@ bool Editor::render()
 		lineNo++;
 	}
 
+	if(mFoundWordLength>0 && mSelectionMode!=SelectionMode::Line)
+		HighlightCurrentWordInBuffer();
+
 
 
 	// Cursor
@@ -520,33 +527,10 @@ void Editor::HandleMouseInputs()
 					else
 						mSelectionMode = SelectionMode::Word;
 
+					#ifdef GL_DEBUG
 					int idx = GetCurrentLineIndex(mState.mCursorPosition);
-					int start_idx{idx};
-					int end_idx{idx};
-					bool a = true, b = true;
-					while ((a || b)) {
-						char chr{0};
-						if (start_idx == 0 || start_idx < 0) {
-							a = false;
-							start_idx = 0;
-						} else {
-							chr = mLines[mCurrentLineIndex][start_idx - 1];
-						}
-						if (a && (isalnum(chr) || chr == '_')) start_idx--;
-						else
-							a = false;
-						if (end_idx >= mLines[mCurrentLineIndex].size()) {
-							b = false;
-							end_idx = mLines[mCurrentLineIndex].size();
-						} else {
-							chr = mLines[mCurrentLineIndex][end_idx];
-							if (b && (isalnum(chr) || chr == '_')) {
-								end_idx++;
-							} else {
-								b = false;
-							}
-						}
-					}
+					#endif
+					auto [start_idx,end_idx] = GetIndexOfWordAtCursor(mState.mCursorPosition);
 					GL_WARN("SELECTION IDX:{} START:{} END:{}", idx, start_idx, end_idx);
 					GL_INFO("TAB COUNT:{}", mCurrLineTabCounts);
 
@@ -566,6 +550,8 @@ void Editor::HandleMouseInputs()
 				mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition=MapScreenPosToCoordinates(ImGui::GetMousePos());
 				mSelectionMode = SelectionMode::Normal;
 
+				SearchWordInCurrentVisibleBuffer();
+
 				mState.mCursorDirectionChanged=false;
 				mLastClick = (float)ImGui::GetTime();
 			}
@@ -583,6 +569,123 @@ void Editor::HandleMouseInputs()
 	}
 }
 
+void Editor::HighlightCurrentWordInBuffer() const {
+	bool isNormalMode=mSelectionMode==SelectionMode::Normal;
+	for(const Coordinates& coord:mFoundWords){
+		if(coord.mLine==mState.mSelectionStart.mLine && coord.mColumn==mState.mSelectionStart.mColumn) continue;
+
+		float offset=(mSelectionMode==SelectionMode::Normal) ? (mCharacterSize.y+1.0f+mLineSpacing) : 0.5f*mLineSpacing;
+		float linePosY = (mTitleBarHeight  + (coord.mLine-floor(mMinLineVisible)) * mLineHeight)+offset;
+
+		ImVec2 start{mLinePosition.x+coord.mColumn*mCharacterSize.x-!isNormalMode,linePosY};
+		ImVec2 end{start.x+mFoundWordLength*mCharacterSize.x+(!isNormalMode*2),linePosY+(isNormalMode ? 0 : mLineHeight)};
+
+		if(isNormalMode)
+			ImGui::GetCurrentWindow()->DrawList->AddLine(start,end, mGruvboxPalletDark[(size_t)Pallet::YellowLight]);
+		else
+			ImGui::GetCurrentWindow()->DrawList->AddRect(start,end, mGruvboxPalletDark[(size_t)Pallet::YellowLight]);
+	}
+}
+
+void Editor::FindNextOccuranceOfWord(){
+	auto [start_idx,end_idx]=GetIndexOfWordAtCursor(mState.mCursorPosition);
+	if(start_idx==end_idx) return;
+
+	std::string currentWord=mLines[mState.mCursorPosition.mLine].substr(start_idx,end_idx-start_idx);
+	mFoundWordLength=currentWord.size();
+
+
+
+}
+
+
+void Editor::SearchWordInCurrentVisibleBuffer(){
+
+	OpenGL::ScopedTimer timer("WordSearch");
+	mFoundWords.clear();
+	mFoundWordLength=0;
+
+	auto [start_idx,end_idx]=GetIndexOfWordAtCursor(mState.mCursorPosition);
+	if(start_idx==end_idx) return;
+
+
+	int start = std::min(int(mMinLineVisible),(int)mLines.size()-1);
+	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
+	int end = std::min(start + lineCount + 1,(int)mLines.size()-1);
+
+
+	std::string currentWord=mLines[mState.mCursorPosition.mLine].substr(start_idx,end_idx-start_idx);
+	mFoundWordLength=currentWord.size();
+
+
+	GL_WARN("Searching: {}",currentWord);
+
+
+	while(start<=end){
+        const std::string& line = mLines[start];
+        size_t wordIdx = 0;
+
+        while ((wordIdx = line.find(currentWord, wordIdx)) != std::string::npos) {
+
+            size_t startIndex = wordIdx;
+            size_t endIndex = wordIdx + currentWord.length() - 1;
+
+            if(
+            	(startIndex>0 && isalnum(line[startIndex-1])) || 
+            	(endIndex < line.size()-2 && isalnum(line[endIndex+1]))
+            )
+            {
+            	wordIdx=endIndex+1;
+            	continue;
+            }
+
+            GL_TRACE("Line {} : Found '{}' at [{},{}] ",start+1,currentWord,startIndex,endIndex);
+
+            mFoundWords.push_back({start,GetColumnNumberFromIndex(startIndex,start)-1});
+            wordIdx = endIndex + 1;
+        }
+
+		start++;
+	}
+
+}
+
+
+std::pair<int,int> Editor::GetIndexOfWordAtCursor(const Coordinates& coords)const{
+
+	int idx = GetCurrentLineIndex(coords);
+	int start_idx{idx};
+	int end_idx{idx};
+	bool a = true, b = true;
+	while ((a || b)) {
+		char chr{0};
+		if (start_idx == 0 || start_idx < 0) {
+			a = false;
+			start_idx = 0;
+		} else 
+			chr = mLines[coords.mLine][start_idx - 1];
+
+
+		if (a && (isalnum(chr) || chr == '_')) start_idx--;
+		else a = false;
+
+		if (end_idx >= mLines[coords.mLine].size()) {
+
+			b = false;
+			end_idx = mLines[coords.mLine].size();
+
+		} else {
+			chr = mLines[coords.mLine][end_idx];
+
+			if (b && (isalnum(chr) || chr == '_')) end_idx++;
+			else b = false;
+
+		}
+	}
+	return {start_idx,end_idx};	
+}
+
+
 
 Editor::Coordinates Editor::MapScreenPosToCoordinates(const ImVec2& mousePosition) {
 	// OpenGL::ScopedTimer timer("MouseClick");
@@ -590,11 +693,12 @@ Editor::Coordinates Editor::MapScreenPosToCoordinates(const ImVec2& mousePositio
 
 	float currentLineNo=(ImGui::GetScrollY() + mousePosition.y - (0.5f * mLineSpacing) - mTitleBarHeight) / mLineHeight;
 	coords.mLine = std::max(0,(int)floor(currentLineNo - (mMinLineVisible - floor(mMinLineVisible))));	
-	if(coords.mLine > mLines.size()-2) coords.mLine=mLines.size()-2;
+	if(coords.mLine > mLines.size()-1) coords.mLine=mLines.size()-1;
 
 	mLineFloatPart=currentLineNo-floor(currentLineNo);
 	coords.mColumn = std::max(0,(int)round((ImGui::GetScrollX()+mousePosition.x - mEditorPosition.x - mLineBarWidth-mPaddingLeft) / mCharacterSize.x));
 
+	//Snapping to nearest tab char
 	int col=0;
 	size_t i=0;
 	while(i < mLines[coords.mLine].size()){
@@ -610,13 +714,30 @@ Editor::Coordinates Editor::MapScreenPosToCoordinates(const ImVec2& mousePositio
 		i++;
 	}
 
-	mCurrentLineIndex = std::max(coords.mLine,0);
+	mCurrentLineIndex = coords.mLine;
 
 	mCurrLineLength=GetCurrentLineLength();
+	GL_INFO(mCurrLineLength);
 	if(coords.mColumn > mCurrLineLength) coords.mColumn=mCurrLineLength;
 
 	return coords;
 }
+
+
+int Editor::GetColumnNumberFromIndex(int idx,int lineIdx){
+	if(lineIdx>=mLines.size()) return 0;
+	if(idx<0) return 0;
+	if(idx>mLines[lineIdx].size()-1) return GetCurrentLineLength(lineIdx);
+
+	int column{0};
+	for(int i=0;i<=idx;i++){
+		if(mLines[lineIdx][i]=='\t') column+=mTabWidth;
+		else column++;
+	}
+
+	return column;
+}
+
 
 
 void Editor::ScrollToLineNumber(int lineNo){
@@ -722,6 +843,8 @@ void Editor::HandleKeyboardInputs()
 
 				if(shift){
 					if(mLines[mCurrentLineIndex][0]!='\t') return;
+					if(mState.mSelectionStart.mColumn==0)
+						mState.mSelectionStart.mColumn+=mTabWidth;
 					mLines[mCurrentLineIndex].erase(0,1);
 				}
 				else
@@ -732,6 +855,39 @@ void Editor::HandleKeyboardInputs()
 				mState.mCursorPosition.mColumn += mTabWidth*value;
 				mState.mSelectionStart.mColumn += mTabWidth*value;
 				mState.mSelectionEnd.mColumn +=mTabWidth*value;
+				return;
+			}
+
+
+			if(mSelectionMode==SelectionMode::Word && mState.mSelectionStart.mLine!=mState.mSelectionEnd.mLine){
+				GL_INFO("INDENTING");
+
+
+				int startLine=mState.mSelectionStart.mLine;
+				int endLine=mState.mSelectionEnd.mLine;
+
+				if(startLine>endLine) std::swap(startLine,endLine);
+
+
+				int value=shift ? -1 : 1;
+				while(startLine<=endLine){
+
+					if(shift){
+						if(mLines[startLine][0]!='\t') return;
+						mLines[startLine].erase(0,1);
+					}
+					else
+						mLines[startLine].insert(mLines[startLine].begin(), 1, '\t');
+
+
+					startLine++;
+				}
+				mState.mSelectionStart.mColumn += mTabWidth*value;
+				mState.mSelectionEnd.mColumn +=mTabWidth*value;
+				mState.mCursorPosition.mColumn+=mTabWidth*value;
+
+
+
 			}
 
 		}
@@ -859,7 +1015,7 @@ void Editor::SwapLines(bool up)
 	if(mSelectionMode==SelectionMode::Normal){
 
 		if(mCurrentLineIndex==0 && up)  return;
-		if(mCurrentLineIndex==mLines.size()-2 && !up) return;
+		if(mCurrentLineIndex==mLines.size()-1 && !up) return;
 
 		std::swap(mLines[mCurrentLineIndex], mLines[mCurrentLineIndex + value]);
 
@@ -872,7 +1028,7 @@ void Editor::SwapLines(bool up)
 
 
 		if(startLine==0 && up) return;
-		if(endLine==mLines.size()-2 && !up) return;
+		if(endLine==mLines.size()-1 && !up) return;
 
 		if(up){
 			std::string aboveLine=mLines[startLine-1];
@@ -932,7 +1088,8 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 {
 	if (!shift && mSelectionMode != SelectionMode::Normal) {
 		mSelectionMode = SelectionMode::Normal;
-		mState.mCursorPosition = mState.mSelectionStart;
+		if(mState.mSelectionStart < mState.mSelectionEnd)
+			mState.mCursorPosition = mState.mSelectionStart;
 		return;
 	}
 
@@ -986,7 +1143,7 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 		}
 	}
 
-	if (mState.mCursorPosition.mColumn == 0) {
+	if (mState.mCursorPosition.mColumn == 0 && mState.mCursorPosition.mLine>0) {
 
 		mState.mCursorPosition.mLine--;
 		mCurrentLineIndex--;
@@ -994,7 +1151,7 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 		mCurrLineLength = GetCurrentLineLength();
 		mState.mCursorPosition.mColumn = mCurrLineLength;
 
-	} else {
+	} else if(mState.mCursorPosition.mColumn > 0) {
 		int idx=GetCurrentLineIndex(mState.mCursorPosition);
 
 		if (idx == 0 && mLines[mCurrentLineIndex][0] == '\t') {
@@ -1016,7 +1173,8 @@ void Editor::MoveRight(bool ctrl, bool shift)
 {
 	if (!shift && mSelectionMode != SelectionMode::Normal) {
 		mSelectionMode = SelectionMode::Normal;
-		mState.mCursorPosition = mState.mSelectionEnd;
+		if(mState.mSelectionStart > mState.mSelectionEnd)
+			mState.mCursorPosition = mState.mSelectionStart;
 		return;
 	}
 
@@ -1092,3 +1250,7 @@ void Editor::MoveRight(bool ctrl, bool shift)
 	}
 
 }
+
+
+
+

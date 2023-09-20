@@ -1,9 +1,8 @@
 [------------------------------ __TODO__ ---------------------------------]
-# [ FEATURE ] Highlighting all occurances of selected word in buffer
+# [   BUG   ] Fix Last Line length
 # [ FEATURE ] Smooth Scrolling
 # [ FEATURE ] (Ctrl+D) Find Next occurances of current word in file
 # [  DEBUG  ] Setup for seeing current state variables in left pane
-# [ FEATURE ] Using TAB or SHIFT+TAB for indentation of currently selected line
 # [ FEATURE ] Use AddItem(size) at top and bottom of visible window for smooth scrolling
 # [ FEATURE ] Search and Replace
 # [ FEATURE ] File Operations
@@ -12,6 +11,15 @@
 # [ FEATURE ] Tabs and Split Views
 # [ FEATURE ] Full-Screen Mode
 # [ FEATURE ] Auto-Save and Backup
+
+
+
+########################################################################################
+
+
+## Tuesday 20th Sept 2023
++ [ FEATURE ] Using TAB or SHIFT+TAB for indentation of currently selected line
++ [ FEATURE ] Highlighting all occurances of selected word in buffer
 
 
 

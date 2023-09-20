@@ -4,11 +4,22 @@
 #include "vector"
 #include <map>
 #include <stdint.h>
+#include <tuple>
 #include <unordered_map>
 
 class Editor
 {
-	enum class Pallet { Background = 0, BackgroundDark, Text, String, Comment,Highlight, Max };
+	enum class Pallet { 
+		Background = 0, 
+		BackgroundDark, 
+		Text, 
+		String, 
+		Comment,
+		Highlight,
+		YellowLight,
+		YellowDark, 
+		Max 
+	};
 	std::vector<ImU32> mGruvboxPalletDark;
 	// Google
 
@@ -21,6 +32,8 @@ class Editor
 		mGruvboxPalletDark[(size_t)Pallet::String] = ImColor(152, 151, 26, 255);       // 106
 		mGruvboxPalletDark[(size_t)Pallet::Comment] = ImColor(146,131,116,255);        // 237
 		mGruvboxPalletDark[(size_t)Pallet::Highlight] = ImColor(54,51,50,255);        // 237
+		mGruvboxPalletDark[(size_t)Pallet::YellowLight] = ImColor(250,189,47,255);        // 237
+		mGruvboxPalletDark[(size_t)Pallet::YellowDark] = ImColor(215,153,33,255);        // 237
 	}
 
 
@@ -171,6 +184,17 @@ class Editor
 
 	Coordinates MapScreenPosToCoordinates(const ImVec2& mousePosition);
 	float GetSelectionPosFromCoords(const Coordinates& coords)const;
+
+	int GetColumnNumberFromIndex(int idx,int lineIdx);
+	std::pair<int,int> GetIndexOfWordAtCursor(const Coordinates& coords)const;
+
+
+	std::vector<Coordinates> mFoundWords;
+	size_t mFoundWordLength{0};
+	void SearchWordInCurrentVisibleBuffer();
+	void HighlightCurrentWordInBuffer() const;
+
+	void FindNextOccuranceOfWord();
 
 
 	uint8_t GetTabCountsUptoCursor(const Coordinates& coords)const;
