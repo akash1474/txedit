@@ -1,17 +1,24 @@
 [------------------------------ __TODO__ ---------------------------------]
 # [   BUG   ] Fix Last Line length
+# [   BUG   ] Scrolling when left and right key pressed at start and end of line
 # [ FEATURE ] Smooth Scrolling
-# [ FEATURE ] (Ctrl+D) Find Next occurances of current word in file
-# [  DEBUG  ] Setup for seeing current state variables in left pane
+# [ FEATURE ] Support For UTF-8 characters
 # [ FEATURE ] Use AddItem(size) at top and bottom of visible window for smooth scrolling
 # [ FEATURE ] Search and Replace
 # [ FEATURE ] File Operations
-# [ FEATURE ] Search and Replace
 # [ FEATURE ] Line Numbers and Column Indicators
 # [ FEATURE ] Tabs and Split Views
 # [ FEATURE ] Full-Screen Mode
 # [ FEATURE ] Auto-Save and Backup
 
+########################################################################################
+
+
+## Tuesday 21th Sept 2023
++ [ FEATURE ] (Ctrl+D) Find Next occurances of current word in file
++ [ FEATURE ] Auto-Indentation (Add '\t' if '{' is encountered on currentline)
++ [   BUG   ] Fix MiddleLines Not unindenting on SHIFT+TAB
++ [   BUG   ] Selecting Word and using CTRL+D causes error
 
 
 ########################################################################################

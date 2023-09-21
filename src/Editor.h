@@ -48,7 +48,7 @@ class Editor
 		bool mHasCompleted=false;
 	public:
 		bool hasStarted=false;
-		Animation(float duration=0.75f):mDuration(duration){}
+		Animation(float duration=0.5f):mDuration(duration){}
 
 		void start(){
 			mHasCompleted=false;
@@ -189,12 +189,27 @@ class Editor
 	std::pair<int,int> GetIndexOfWordAtCursor(const Coordinates& coords)const;
 
 
-	std::vector<Coordinates> mFoundWords;
-	size_t mFoundWordLength{0};
+	struct SearchState{
+		std::string mWord;
+		std::vector<Coordinates> mFoundPositions;
+		bool mIsGlobal=false;
+		int mIdx=0;
+		bool isValid()const {return mWord.length()>0;}
+		void reset(){
+			mWord.clear();
+			mFoundPositions.clear();
+			mIsGlobal=false;
+			mIdx=0;
+		}
+	};
+
+	SearchState mSearchState;
+
 	void SearchWordInCurrentVisibleBuffer();
 	void HighlightCurrentWordInBuffer() const;
 
-	void FindNextOccuranceOfWord();
+	void FindAllOccurancesOfWord(std::string word);
+	void HandleDoubleClick();
 
 
 	uint8_t GetTabCountsUptoCursor(const Coordinates& coords)const;
