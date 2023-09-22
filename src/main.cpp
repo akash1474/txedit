@@ -3,9 +3,8 @@
 #include "imgui.h"
 #include <filesystem>
 #define STB_IMAGE_IMPLEMENTATION
-#include "Editor.h"
+#include "TextEditor.h"
 #include "stb_img.h"
-// #include "TextEditor.h"
 
 #define WIDTH 900
 #define HEIGHT 600
@@ -15,7 +14,6 @@ int height{0};
 
 std::string file_data{0};
 Editor editor;
-// TextEditor editor;
 
 
 size_t size{0};
@@ -53,15 +51,13 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 {
 	static bool isFileLoaded = false;
 	if (!isFileLoaded) {
-        // editor.mLineSpacing=2.0f;
-		std::ifstream t("D:/Projects/c++/txedit/src/Editor.cpp");
+		std::ifstream t("D:/Projects/c++/txedit/src/TextEditor.cpp");
 		t.seekg(0, std::ios::end);
 		size = t.tellg();
 		file_data.resize(size, ' ');
 		t.seekg(0);
 		t.read(&file_data[0], size);
 		editor.SetBuffer(file_data);
-        // editor.SetText(file_data);
 		isFileLoaded = true;
 	}
 	glfwPollEvents();
@@ -137,10 +133,6 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 
 	if (size) {
 		ImGui::PushFont(io.Fonts->Fonts[1]);
-		// ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 10));
-		// ImGui::InputTextMultiline("##TextEditor", (char*)file_data.c_str(),
-		// file_data.size(),{ImGui::GetWindowSize().x,ImGui::GetWindowSize().y-25}); ImGui::PopStyleVar();
-		// editor.Render("Editor.cpp");
         editor.render();
 		ImGui::PopFont();
 	}
@@ -184,7 +176,7 @@ int main(void)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
 
-	window = glfwCreateWindow(WIDTH, HEIGHT, "File Transfer", NULL, NULL);
+	window = glfwCreateWindow(WIDTH, HEIGHT, "TxEdit", NULL, NULL);
 	glfwSetWindowSizeLimits(window, 330, 500, GLFW_DONT_CARE, GLFW_DONT_CARE);
 	if (!window) {
 		glfwTerminate();

@@ -4,6 +4,7 @@ bin/
 compile_commands.json
 *.vcxproj
 *.ini
+*.exe
 !packages/imgui/premake5.lua
 !packages/glfw/premake5.lua
 !packages/lunasvg/premake5.lua

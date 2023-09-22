@@ -1,5 +1,7 @@
 [------------------------------ __TODO__ ---------------------------------]
 # [   BUG   ] Fix Last Line length
+# [ FEATURE ] Using Ctrl+Click to place multiple cursors
+# [ FEATURE ] Ctrl+D Selection and Editing at multiple positions
 # [   BUG   ] Scrolling when left and right key pressed at start and end of line
 # [ FEATURE ] Smooth Scrolling
 # [ FEATURE ] Support For UTF-8 characters

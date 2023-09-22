@@ -1,402 +1,230 @@
-// A simple Lexer meant to demonstrate a few theoretical concepts. It can
-// support several parser concepts and is very fast (though speed is not its
-// design goal).
-//
-// J. Arrieta, Nabla Zero Labs
-//
-// This code is released under the MIT License.
-//
-// Copyright 2018 Nabla Zero Labs
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish ,distribute, sublicense, and / or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-#include "pch.h"
+#include "Lexer.h"
+#include "iostream"
+#include "cstring"
+#include <cctype>
 
-class Token {
- public:
-  enum class Kind {
-    Number,
-    Identifier,
-    LeftParen,
-    RightParen,
-    LeftSquare,
-    RightSquare,
-    LeftCurly,
-    RightCurly,
-    LessThan,
-    GreaterThan,
-    Equal,
-    Plus,
-    Minus,
-    Asterisk,
-    Slash,
-    Hash,
-    Dot,
-    Comma,
-    Colon,
-    Semicolon,
-    SingleQuote,
-    DoubleQuote,
-    Comment,
-    Pipe,
-    End,
-    Unexpected,
-  };
-
-  Token(Kind kind) noexcept : m_kind{kind} {}
-
-  Token(Kind kind, const char* beg, std::size_t len) noexcept
-      : m_kind{kind}, m_lexeme(beg, len) {}
-
-  Token(Kind kind, const char* beg, const char* end) noexcept
-      : m_kind{kind}, m_lexeme(beg, std::distance(beg, end)) {}
-
-  Kind kind() const noexcept { return m_kind; }
-
-  void kind(Kind kind) noexcept { m_kind = kind; }
-
-  bool is(Kind kind) const noexcept { return m_kind == kind; }
-
-  bool is_not(Kind kind) const noexcept { return m_kind != kind; }
-
-  bool is_one_of(Kind k1, Kind k2) const noexcept { return is(k1) || is(k2); }
-
-  template <typename... Ts>
-  bool is_one_of(Kind k1, Kind k2, Ts... ks) const noexcept {
-    return is(k1) || is_one_of(k2, ks...);
-  }
-
-  std::string_view lexeme() const noexcept { return m_lexeme; }
-
-  void lexeme(std::string_view lexeme) noexcept {
-    m_lexeme = std::move(lexeme);
-  }
-
- private:
-  Kind             m_kind{};
-  std::string_view m_lexeme{};
+const char* keywords[] = {
+    "alignas", "alignof", "and", "and_eq", "asm", "auto", "bitand", "bitor", "bool", "break",
+    "case", "catch", "char", "char8_t", "char16_t", "char32_t", "class", "compl", "concept", "const",
+    "consteval", "constexpr", "constinit", "const_cast", "continue", "co_await", "co_return", "co_yield", "decltype", "default",
+    "delete", "do", "double", "dynamic_cast", "else", "enum", "explicit", "export", "extern", "false",
+    "float", "for", "friend", "goto", "if", "import", "inline", "int", "long", "module",
+    "mutable", "namespace", "new", "noexcept", "not", "not_eq", "nullptr", "operator", "or", "or_eq",
+    "private", "protected", "public", "register", "reinterpret_cast", "requires", "return", "short", "signed", "sizeof",
+    "static", "static_assert", "static_cast", "struct", "switch", "synchronized", "template", "this", "thread_local", "throw",
+    "true", "try", "typedef", "typeid", "typename", "union", "unsigned", "using", "virtual", "void",
+    "volatile", "wchar_t", "while", "xor", "xor_eq", "int8_t", "int16_t", "int32_t", "int64_t", "uint8_t",
+    "uint16_t", "uint32_t", "uint64_t",
 };
 
-class Lexer {
- public:
-  Lexer(const char* beg) noexcept : m_beg{beg} {}
 
-  Token next() noexcept;
+Lexer::Lexer(std::string content) : mContent(content), mContentLength(content.size()) {
+    mLiteralTokens.emplace_back(OpenParen,"(");
+    mLiteralTokens.emplace_back(CloseParen,")");
+    mLiteralTokens.emplace_back(OpenCurly,"{");
+    mLiteralTokens.emplace_back(CloseCurly,"}");
+    mLiteralTokens.emplace_back(OpenSquare,"[");
+    mLiteralTokens.emplace_back(CloseSquare,"]");
+    mLiteralTokens.emplace_back(SemiColon,";");
+}
 
- private:
-  Token identifier() noexcept;
-  Token number() noexcept;
-  Token slash_or_comment() noexcept;
-  Token atom(Token::Kind) noexcept;
 
-  char peek() const noexcept { return *m_beg; }
-  char get() noexcept { return *m_beg++; }
-
-  const char* m_beg = nullptr;
-};
-
-bool is_space(char c) noexcept {
-  switch (c) {
-    case ' ':
-    case '\t':
-    case '\r':
-    case '\n':
-      return true;
+const char* Lexer::GetTokenType(int type)
+{
+    switch (type) {
+    case Symbol:
+        return "Symbol";
+        break;
+    case HashInclude:
+        return "HashInclude";
+        break;
+    case HeaderName:
+        return "HeaderName";
+        break;
+    case OpenParen:
+        return "OpenParen";
+        break;
+    case CloseParen:
+        return "CloseParen";
+        break;
+    case OpenCurly:
+        return "OpenCurly";
+        break;
+    case CloseCurly:
+        return "CloseCurly";
+        break;
+    case OpenSquare:
+        return "OpenSquare";
+        break;
+    case CloseSquare:
+        return "CloseSquare";
+        break;
+    case Comment:
+        return "Comment";
+        break;
+    case SemiColon:
+        return "SemiColon";
+        break;
+    case Keyword:
+        return "Keyword";
+        break;
+    case String:
+        return "String";
+        break;
+    case End:
+        return "End";
+        break;
+    case Invalid:
+        return "Invalid";
+        break;
     default:
-      return false;
-  }
-}
-
-bool is_digit(char c) noexcept {
-  switch (c) {
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-      return true;
-    default:
-      return false;
-  }
-}
-
-bool is_identifier_char(char c) noexcept {
-  switch (c) {
-    case 'a':
-    case 'b':
-    case 'c':
-    case 'd':
-    case 'e':
-    case 'f':
-    case 'g':
-    case 'h':
-    case 'i':
-    case 'j':
-    case 'k':
-    case 'l':
-    case 'm':
-    case 'n':
-    case 'o':
-    case 'p':
-    case 'q':
-    case 'r':
-    case 's':
-    case 't':
-    case 'u':
-    case 'v':
-    case 'w':
-    case 'x':
-    case 'y':
-    case 'z':
-    case 'A':
-    case 'B':
-    case 'C':
-    case 'D':
-    case 'E':
-    case 'F':
-    case 'G':
-    case 'H':
-    case 'I':
-    case 'J':
-    case 'K':
-    case 'L':
-    case 'M':
-    case 'N':
-    case 'O':
-    case 'P':
-    case 'Q':
-    case 'R':
-    case 'S':
-    case 'T':
-    case 'U':
-    case 'V':
-    case 'W':
-    case 'X':
-    case 'Y':
-    case 'Z':
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-    case '_':
-      return true;
-    default:
-      return false;
-  }
-}
-
-Token Lexer::atom(Token::Kind kind) noexcept { return Token(kind, m_beg++, 1); }
-
-Token Lexer::next() noexcept {
-  while (is_space(peek())) get();
-
-  switch (peek()) {
-    case '\0':
-      return Token(Token::Kind::End, m_beg, 1);
-    default:
-      return atom(Token::Kind::Unexpected);
-    case 'a':
-    case 'b':
-    case 'c':
-    case 'd':
-    case 'e':
-    case 'f':
-    case 'g':
-    case 'h':
-    case 'i':
-    case 'j':
-    case 'k':
-    case 'l':
-    case 'm':
-    case 'n':
-    case 'o':
-    case 'p':
-    case 'q':
-    case 'r':
-    case 's':
-    case 't':
-    case 'u':
-    case 'v':
-    case 'w':
-    case 'x':
-    case 'y':
-    case 'z':
-    case 'A':
-    case 'B':
-    case 'C':
-    case 'D':
-    case 'E':
-    case 'F':
-    case 'G':
-    case 'H':
-    case 'I':
-    case 'J':
-    case 'K':
-    case 'L':
-    case 'M':
-    case 'N':
-    case 'O':
-    case 'P':
-    case 'Q':
-    case 'R':
-    case 'S':
-    case 'T':
-    case 'U':
-    case 'V':
-    case 'W':
-    case 'X':
-    case 'Y':
-    case 'Z':
-      return identifier();
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-      return number();
-    case '(':
-      return atom(Token::Kind::LeftParen);
-    case ')':
-      return atom(Token::Kind::RightParen);
-    case '[':
-      return atom(Token::Kind::LeftSquare);
-    case ']':
-      return atom(Token::Kind::RightSquare);
-    case '{':
-      return atom(Token::Kind::LeftCurly);
-    case '}':
-      return atom(Token::Kind::RightCurly);
-    case '<':
-      return atom(Token::Kind::LessThan);
-    case '>':
-      return atom(Token::Kind::GreaterThan);
-    case '=':
-      return atom(Token::Kind::Equal);
-    case '+':
-      return atom(Token::Kind::Plus);
-    case '-':
-      return atom(Token::Kind::Minus);
-    case '*':
-      return atom(Token::Kind::Asterisk);
-    case '/':
-      return slash_or_comment();
-    case '#':
-      return atom(Token::Kind::Hash);
-    case '.':
-      return atom(Token::Kind::Dot);
-    case ',':
-      return atom(Token::Kind::Comma);
-    case ':':
-      return atom(Token::Kind::Colon);
-    case ';':
-      return atom(Token::Kind::Semicolon);
-    case '\'':
-      return atom(Token::Kind::SingleQuote);
-    case '"':
-      return atom(Token::Kind::DoubleQuote);
-    case '|':
-      return atom(Token::Kind::Pipe);
-  }
-}
-
-Token Lexer::identifier() noexcept {
-  const char* start = m_beg;
-  get();
-  while (is_identifier_char(peek())) get();
-  return Token(Token::Kind::Identifier, start, m_beg);
-}
-
-Token Lexer::number() noexcept {
-  const char* start = m_beg;
-  get();
-  while (is_digit(peek())) get();
-  return Token(Token::Kind::Number, start, m_beg);
-}
-
-Token Lexer::slash_or_comment() noexcept {
-  const char* start = m_beg;
-  get();
-  if (peek() == '/') {
-    get();
-    start = m_beg;
-    while (peek() != '\0') {
-      if (get() == '\n') {
-        return Token(Token::Kind::Comment, start,
-                     std::distance(start, m_beg) - 1);
-      }
+        return "Invalid Symbol";
     }
-    return Token(Token::Kind::Unexpected, m_beg, 1);
-  } else {
-    return Token(Token::Kind::Slash, start, 1);
-  }
 }
 
-std::ostream& operator<<(std::ostream& os, const Token::Kind& kind) {
-  static const char* const names[]{
-      "Number",      "Identifier",  "LeftParen",  "RightParen", "LeftSquare",
-      "RightSquare", "LeftCurly",   "RightCurly", "LessThan",   "GreaterThan",
-      "Equal",       "Plus",        "Minus",      "Asterisk",   "Slash",
-      "Hash",        "Dot",         "Comma",      "Colon",      "Semicolon",
-      "SingleQuote", "DoubleQuote", "Comment",    "Pipe",       "End",
-      "Unexpected",
-  };
-  return os << names[static_cast<int>(kind)];
+
+inline void Lexer::mEscapeWhiteSpace()
+{
+    while (mCursorPos < mContentLength && isspace(mContent[mCursorPos])) {
+        mNextCharacter();
+    }
 }
 
-// int main() {
-//   auto code =
-//       "x = 2\n"
-//       "// This is a comment.\n"
-//       "var x\n"
-//       "var y\n"
-//       "var f = function(x, y) { sin(x) * sin(y) + x * y; }\n"
-//       "der(f, x)\n"
-//       "var g = function(x, y) { 2 * (x + der(f, y)); } // der(f, y) is a "
-//       "matrix\n"
-//       "var r{3}; // Vector of three elements\n"
-//       "var J{12, 12}; // Matrix of 12x12 elements\n"
-//       "var dot = function(u{:}, v{:}) -> scalar {\n"
-//       "          return u[i] * v[i]; // Einstein notation\n"
-//       "}\n"
-//       "var norm = function(u{:}) -> scalar { return sqrt(dot(u, u)); }\n"
-//       "<end>";
+bool Lexer::mStartsWith(const char* prefix){
+    int len=strlen(prefix);
+    if(len==0) return true;
+    if(mCursorPos+len-1>=mContentLength) return false;
 
-//   Lexer lex(code);
-//   for (auto token = lex.next();
-//        not token.is_one_of(Token::Kind::End, Token::Kind::Unexpected);
-//        token = lex.next()) {
-//     std::cout << std::setw(12) << token.kind() << " |" << token.lexeme()
-//               << "|\n";
-//   }
-// }
+    for(int i=0;i<len;i++){
+        if(mContent[mCursorPos+i]!=prefix[i]) return false;
+    }
+    return true;
+}
+
+void Lexer::mNextCharacter(int count) {
+    char x = mContent[mCursorPos];
+    mCursorPos+=count;
+    if (x == '\n') {
+        mLine++;
+        mLineStart = mCursorPos;
+    }
+}
+
+Lexer::Token Lexer::mGetNextToken()
+{
+    mEscapeWhiteSpace();
+    Token tkn;
+    tkn.type = End;
+    tkn.text = &mContent[mCursorPos];
+
+    if (mCursorPos > mContentLength) return tkn;
+
+    if (mContent[mCursorPos] == '#') {
+        tkn.type = HashInclude;
+        tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
+        while (mCursorPos < mContentLength && mContent[mCursorPos] != ' ' ) {
+            tkn.text_len++;
+            mNextCharacter();
+        }
+        return tkn;
+    }
+
+    if ( mLastToken().type==HashInclude && (mContent[mCursorPos] == '"' || mContent[mCursorPos] == '<') )
+    {
+        tkn.type=HeaderName;
+        tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
+        while(mContentLength > mCursorPos && mContent[mCursorPos]!='\n'){
+            tkn.text_len++;
+            mNextCharacter();
+        }
+        if(mCursorPos < mContentLength) mNextCharacter();
+        return tkn;
+    } 
+
+    if(mStartsWith("//")){
+        tkn.type=Comment;
+        tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
+        while(mContentLength > mCursorPos && mContent[mCursorPos]!='\n'){
+            tkn.text_len++;
+            mNextCharacter();
+        }
+        if(mCursorPos < mContentLength) mNextCharacter();
+        return tkn;
+    }
+
+    if(mContent[mCursorPos]=='"'){
+        tkn.type=String;
+        tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
+        tkn.text_len++;
+        mCursorPos++;
+        while(mContentLength > mCursorPos && mContent[mCursorPos]!='"'){
+            tkn.text_len++;
+            mCursorPos++;
+        }
+        mCursorPos++;
+        tkn.text_len++;
+        return tkn;
+    }
+
+
+    for(const LiteralToken& lToken:mLiteralTokens){
+        if(mStartsWith(lToken.text)){
+            tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
+            int len=strlen(lToken.text);
+            tkn.type=lToken.type;
+            tkn.text_len=len;
+            mCursorPos+=len;
+            return tkn;
+        }
+    }
+
+    if(mLastToken().type==)
+
+
+    if (mIsSymbolStart(mContent[mCursorPos])) {
+        tkn.type = Symbol;
+        tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
+        while (mCursorPos < mContentLength && mIsIdentifier(mContent[mCursorPos])) {
+            tkn.text_len++;
+            mNextCharacter();
+        }
+        for(int i=0;i<sizeof(keywords)/sizeof(keywords[0]);i++){
+            if(strlen(keywords[i])==tkn.text_len && memcmp(tkn.text,keywords[i],tkn.text_len)){
+                tkn.type=Keyword;
+            }
+        }
+        return tkn;
+    }
+
+    tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
+    mCursorPos++;
+    tkn.type = Invalid;
+    tkn.text_len = 1;
+
+    return tkn;
+}
+
+void Lexer::Tokenize()
+{
+    Token tkn;
+    tkn = mGetNextToken();
+    mTokens.push_back(tkn);
+    while (tkn.type != End) {
+        fprintf(stderr, "%.*s, (%s) [ %d, %d ]\n", (int)tkn.text_len, tkn.text, GetTokenType(tkn.type),tkn.location.mColumn,tkn.location.mLine);
+        tkn = mGetNextToken();
+        mTokens.push_back(tkn);
+    }
+}
+
+int main()
+{
+    std::string content = "  #include <iostream>\n"
+                          "//This is comment\n"
+                          "int main(){\n"
+                          "     std::cout << \"Google\" << std::endl;\n"
+                          "     return 0;\n"
+                          "}\n";
+    Lexer lexer(content);
+    lexer.Tokenize();
+    return 0;
+}
