@@ -104,7 +104,9 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	}
 
 	ImGui::End();
+	#ifdef GL_DEBUG
 	ImGui::ShowDemoWindow();
+
 
 	ImGui::Begin("Project");
 
@@ -113,11 +115,28 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
 		editor.setLineSpacing(LineSpacing);
 	}
+
+    ImGui::Spacing();
 	ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
+    ImGui::Spacing();
     ImGui::Text("mCursorPosition: X:%d  Y:%d",editor.GetEditorState()->mCursorPosition.mColumn,editor.GetEditorState()->mCursorPosition.mLine);
     ImGui::Text("mSelectionStart: X:%d  Y:%d",editor.GetEditorState()->mSelectionStart.mColumn,editor.GetEditorState()->mSelectionStart.mLine);
     ImGui::Text("mSelectionEnd:   X:%d  Y:%d",editor.GetEditorState()->mSelectionEnd.mColumn,editor.GetEditorState()->mSelectionEnd.mLine);
 
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+    static std::string mode;
+    switch(editor.GetSelectionMode()){
+	    case 0: mode="Normal";break;
+	    case 1: mode="Word";break;
+	    case 2: mode="Line";break;
+    }
+    ImGui::Text("SelectionMode: %s",mode.c_str());
+
+
+
+    ImGui::Spacing();
     ImGui::Spacing();
     static int v{1};
     ImGui::Text("Goto Line: "); ImGui::SameLine(); 
@@ -125,10 +144,11 @@ void draw(GLFWwindow* window, ImGuiIO& io)
         editor.ScrollToLineNumber(v);
 
 	ImGui::End();
-
+	#endif
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("Editor", 0, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_HorizontalScrollbar);
+	ImGui::SetNextWindowContentSize(ImVec2(ImGui::GetContentRegionMax().x + 1500.0f, 0));
+	ImGui::Begin("Editor", 0, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_HorizontalScrollbar|ImGuiWindowFlags_AlwaysAutoResize);
 	ImGui::PopStyleVar();
 
 	if (size) {
@@ -138,9 +158,10 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	}
 	ImGui::End();
 
-
+	#ifdef GL_DEBUG
 	ImGui::Begin("Console");
 	ImGui::End();
+	#endif
 
 	ImGui::Render();
 	int display_w, display_h;

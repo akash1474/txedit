@@ -11,7 +11,6 @@
 #include "Coordinates.h"
 #include "Animation.h"
 
-
 class Editor
 {
 	enum class Pallet { 
@@ -161,6 +160,7 @@ class Editor
 	void InsertCharacter(char newChar);
 	void Backspace();
 	void InsertLine();
+	int GetSelectionMode()const{return (int)mSelectionMode;};
 	void ScrollToLineNumber(int lineNo);
 
 	inline uint8_t GetTabWidth() { return this->mTabWidth; }

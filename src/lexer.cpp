@@ -1,22 +1,34 @@
+#include "pch.h"
 #include "Lexer.h"
 #include "iostream"
 #include "cstring"
 #include <cctype>
+#include <ctype.h>
 
 const char* keywords[] = {
-    "alignas", "alignof", "and", "and_eq", "asm", "auto", "bitand", "bitor", "bool", "break",
-    "case", "catch", "char", "char8_t", "char16_t", "char32_t", "class", "compl", "concept", "const",
-    "consteval", "constexpr", "constinit", "const_cast", "continue", "co_await", "co_return", "co_yield", "decltype", "default",
-    "delete", "do", "double", "dynamic_cast", "else", "enum", "explicit", "export", "extern", "false",
-    "float", "for", "friend", "goto", "if", "import", "inline", "int", "long", "module",
-    "mutable", "namespace", "new", "noexcept", "not", "not_eq", "nullptr", "operator", "or", "or_eq",
-    "private", "protected", "public", "register", "reinterpret_cast", "requires", "return", "short", "signed", "sizeof",
-    "static", "static_assert", "static_cast", "struct", "switch", "synchronized", "template", "this", "thread_local", "throw",
-    "true", "try", "typedef", "typeid", "typename", "union", "unsigned", "using", "virtual", "void",
-    "volatile", "wchar_t", "while", "xor", "xor_eq", "int8_t", "int16_t", "int32_t", "int64_t", "uint8_t",
-    "uint16_t", "uint32_t", "uint64_t",
+    "and", "asm", "for", "new", "not", "xor",
+    "else", "goto","case", "enum", "this", "true", "class",
+    "union","catch", "const", "decltype", "delete", "export", "inline", "module", "return",
+    "bitand", "bitor", "compl", "import", "not_eq", "or_eq", "typeid", "typename", "volatile",
+    "alignas", "bitxor", "concept", "private", "protected", "requires", "sizeof", "static", "switch", "virtual",
+    "alignof", "co_await", "co_return", "co_yield", "dynamic_cast", "namespace", "reinterpret_cast", "noexcept", "nullptr", "operator",
+    "consteval", "constexpr", "constinit", "const_cast", "continue", "explicit", "extern", "register", "static_assert", "thread_local",
+    "catchs", "integers", 
+    "catched", "integrate",
+    "catching", "integral",
 };
 
+const char* data_type[]= {
+    "short","int","char","long","bool", "char8_t", "char16_t", "char32_t",
+    "int8_t", "int16_t", "int32_t", "int64_t", "uint8_t", "uint16_t",
+    "uint32_t", "uint64_t", "float", "double", "signed", "unsigned",
+    "wchar_t","map","vector","set","string","unordered_map",
+    "pair","list","deque","stack","queue","array"
+};
+
+
+#define SIZE_KEYWORD sizeof(keywords)/sizeof(keywords[0])
+#define SIZE_DATATYPE sizeof(data_type)/sizeof(data_type[0])
 
 Lexer::Lexer(std::string content) : mContent(content), mContentLength(content.size()) {
     mLiteralTokens.emplace_back(OpenParen,"(");
@@ -26,6 +38,23 @@ Lexer::Lexer(std::string content) : mContent(content), mContentLength(content.si
     mLiteralTokens.emplace_back(OpenSquare,"[");
     mLiteralTokens.emplace_back(CloseSquare,"]");
     mLiteralTokens.emplace_back(SemiColon,";");
+    mLiteralTokens.emplace_back(Operator,"+");
+    mLiteralTokens.emplace_back(Operator,"-");
+    mLiteralTokens.emplace_back(Operator,"/");
+    mLiteralTokens.emplace_back(Operator,"*");
+    mLiteralTokens.emplace_back(Operator,"&");
+    mLiteralTokens.emplace_back(Operator,"|");
+    mLiteralTokens.emplace_back(Operator,"!=");
+    mLiteralTokens.emplace_back(Operator,"!");
+    mLiteralTokens.emplace_back(Operator,"=");
+    mLiteralTokens.emplace_back(Operator,">>");
+    mLiteralTokens.emplace_back(Operator,"<<");
+    mLiteralTokens.emplace_back(Operator,"<=");
+    mLiteralTokens.emplace_back(Operator,">=");
+    mLiteralTokens.emplace_back(Operator,"<");
+    mLiteralTokens.emplace_back(Operator,">");
+    mLiteralTokens.emplace_back(Operator,".");
+    mLiteralTokens.emplace_back(ScopeResolution,"::");
 }
 
 
@@ -68,8 +97,26 @@ const char* Lexer::GetTokenType(int type)
     case Keyword:
         return "Keyword";
         break;
+    case DataType:
+        return "DataType";
+        break;
     case String:
         return "String";
+        break;
+    case Number:
+        return "Number";
+        break;
+    case ScopeResolution:
+        return "ScopeResolution";
+        break;
+    case Function:
+        return "Function";
+        break;
+    case Operator:
+        return "Operator";
+        break;
+    case TabSpace:
+        return "TabSpace";
         break;
     case End:
         return "End";
@@ -108,6 +155,12 @@ void Lexer::mNextCharacter(int count) {
         mLine++;
         mLineStart = mCursorPos;
     }
+    if(x=='\t'){
+        Token tkn;
+        tkn.type=TabSpace;
+        tkn.location=Coordinates(mLine,mLineStart-mCursorPos-count);
+        mTokens.push_back(tkn);
+    }
 }
 
 Lexer::Token Lexer::mGetNextToken()
@@ -119,6 +172,8 @@ Lexer::Token Lexer::mGetNextToken()
 
     if (mCursorPos > mContentLength) return tkn;
 
+
+    //#include
     if (mContent[mCursorPos] == '#') {
         tkn.type = HashInclude;
         tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
@@ -129,6 +184,7 @@ Lexer::Token Lexer::mGetNextToken()
         return tkn;
     }
 
+    //HeaderName
     if ( mLastToken().type==HashInclude && (mContent[mCursorPos] == '"' || mContent[mCursorPos] == '<') )
     {
         tkn.type=HeaderName;
@@ -141,6 +197,8 @@ Lexer::Token Lexer::mGetNextToken()
         return tkn;
     } 
 
+
+    //COmment
     if(mStartsWith("//")){
         tkn.type=Comment;
         tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
@@ -152,6 +210,8 @@ Lexer::Token Lexer::mGetNextToken()
         return tkn;
     }
 
+
+    //String
     if(mContent[mCursorPos]=='"'){
         tkn.type=String;
         tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
@@ -167,6 +227,7 @@ Lexer::Token Lexer::mGetNextToken()
     }
 
 
+    //mLiteralTokens
     for(const LiteralToken& lToken:mLiteralTokens){
         if(mStartsWith(lToken.text)){
             tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
@@ -178,9 +239,20 @@ Lexer::Token Lexer::mGetNextToken()
         }
     }
 
-    if(mLastToken().type==)
+    //Numbers
+    if(isdigit(mContent[mCursorPos])){
+        tkn.type=Number;
+        tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
+        while(mCursorPos < mContentLength && mContent[mCursorPos]!=';'){
+            tkn.text_len++;
+            mNextCharacter();
+        }
+        return tkn;
+    }
 
 
+
+    //Identifier/Symbols
     if (mIsSymbolStart(mContent[mCursorPos])) {
         tkn.type = Symbol;
         tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
@@ -188,11 +260,28 @@ Lexer::Token Lexer::mGetNextToken()
             tkn.text_len++;
             mNextCharacter();
         }
-        for(int i=0;i<sizeof(keywords)/sizeof(keywords[0]);i++){
-            if(strlen(keywords[i])==tkn.text_len && memcmp(tkn.text,keywords[i],tkn.text_len)){
+        for(int i=0;i<SIZE_KEYWORD;i++){
+            if(strlen(keywords[i])==tkn.text_len && memcmp(tkn.text,keywords[i],tkn.text_len)==0){
                 tkn.type=Keyword;
+                return tkn;
             }
         }
+
+        for(int i=0;i<SIZE_DATATYPE;i++){
+            if(strlen(data_type[i])==tkn.text_len && memcmp(tkn.text,data_type[i],tkn.text_len)==0){
+                tkn.type=DataType;
+                return tkn;
+            }
+        }
+
+
+        mEscapeWhiteSpace();
+        //Function
+        if(mLastToken().type==DataType && tkn.type==Symbol && mContent[mCursorPos]=='('){
+            tkn.type=Function;
+            return tkn;
+        }
+
         return tkn;
     }
 
@@ -216,15 +305,17 @@ void Lexer::Tokenize()
     }
 }
 
-int main()
-{
-    std::string content = "  #include <iostream>\n"
-                          "//This is comment\n"
-                          "int main(){\n"
-                          "     std::cout << \"Google\" << std::endl;\n"
-                          "     return 0;\n"
-                          "}\n";
-    Lexer lexer(content);
-    lexer.Tokenize();
-    return 0;
-}
+// int main()
+// {
+//     std::string content = "  #include <iostream>\n"
+//                           "//This is comment\n"
+//                           "int main(){\n"
+//                           "     int max=1458;\n"
+//                           "     float offset=2.04f;\n"
+//                           "     std::cout << \"Google\" << std::endl;\n"
+//                           "     return 0;\n"
+//                           "}\n";
+//     Lexer lexer(content);
+//     lexer.Tokenize();
+//     return 0;
+// }

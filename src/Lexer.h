@@ -20,7 +20,13 @@ class Lexer
         Comment,
         SemiColon,
         Keyword,
+        DataType,
+        ScopeResolution,
+        Function,
+        Operator,
         String,
+        Number,
+        TabSpace,
         Invalid
     };
 

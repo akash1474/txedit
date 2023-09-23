@@ -1,7 +1,8 @@
 [------------------------------ __TODO__ ---------------------------------]
-# [   BUG   ] Fix Last Line length
 # [ FEATURE ] Using Ctrl+Click to place multiple cursors
 # [ FEATURE ] Ctrl+D Selection and Editing at multiple positions
+# [ FEATURE ] Scroll if mouse out of bounds
+# [   BUG   ] Fix Horizontal Scrolling Amount (Content Partly Clipped)
 # [   BUG   ] Scrolling when left and right key pressed at start and end of line
 # [ FEATURE ] Smooth Scrolling
 # [ FEATURE ] Support For UTF-8 characters
@@ -16,7 +17,24 @@
 ########################################################################################
 
 
-## Tuesday 21th Sept 2023
+##  Saturday 24th Sept 2023
++ [ IMPROVEMENT ] Improved Carriage Return and Auto indentation
++ [ IMPROVEMENT ] Lexer
++ [     BUG     ] Fix Last Line length
++ [     BUG     ] Calculate lineposition based on editor position.y
+
+
+########################################################################################
+
+
+##  Friday 23th Sept 2023
++ [ FEATURE ] Working on Lexer
+
+
+########################################################################################
+
+
+## Thursday 21th Sept 2023
 + [ FEATURE ] (Ctrl+D) Find Next occurances of current word in file
 + [ FEATURE ] Auto-Indentation (Add '\t' if '{' is encountered on currentline)
 + [   BUG   ] Fix MiddleLines Not unindenting on SHIFT+TAB
@@ -26,7 +44,7 @@
 ########################################################################################
 
 
-## Tuesday 20th Sept 2023
+## Wednersday 20th Sept 2023
 + [ FEATURE ] Using TAB or SHIFT+TAB for indentation of currently selected line
 + [ FEATURE ] Highlighting all occurances of selected word in buffer
 

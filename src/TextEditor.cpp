@@ -41,7 +41,7 @@ void Editor::SetBuffer(const std::string& text)
 		} else currLine += chr;
 		
 	}
-
+	if(currLine.size()>400) currLine="";
 	mLines.push_back(currLine);
 }
 
@@ -112,15 +112,25 @@ void Editor::InsertLine()
 		mLines.insert(mLines.begin() + mCurrentLineIndex, std::string(""));
 	}
 
-	int prev_idx=mCurrentLineIndex-1;
+	int prev_line=mCurrentLineIndex-1;
 	uint8_t tabCounts=GetTabCountsUptoCursor(mState.mCursorPosition);
 
-	if(mLines[prev_idx].size()>0){
+	if(mLines[prev_line].size()>0){
 		std::string begin="";
 		while(begin.size()<tabCounts) begin+='\t';
 
-		if(mLines[prev_idx][mLines[prev_idx].size()-1]=='{') {begin+='\t';tabCounts++;}
-		mLines[mCurrentLineIndex].insert(0,begin.c_str());
+		bool isOpenParen=false;
+		if(mLines[prev_line].back()=='{') {
+			isOpenParen=true;
+			begin+='\t';
+			tabCounts++;
+		}
+		if(isOpenParen && mLines[mCurrentLineIndex].size() > 0 && mLines[mCurrentLineIndex].back()=='}'){
+			mLines.insert(mLines.begin()+mCurrentLineIndex,begin);
+			mLines[mCurrentLineIndex+1].insert(0,begin.substr(0,begin.size()-1));
+		}else{
+			mLines[mCurrentLineIndex].insert(0,begin.c_str());
+		}
 	}
 	GetCurrentLineLength();
 	mState.mCursorPosition.mLine++;
@@ -294,8 +304,9 @@ void Editor::UpdateBounds()
 {
 	GL_WARN("UPDATING BOUNDS");
 	mEditorPosition = mEditorWindow->Pos;
+	GL_INFO("EditorPosition: x:{} y:{}",mEditorPosition.x,mEditorPosition.y);
 
-	mEditorSize = ImVec2(mEditorWindow->ContentRegionRect.Max.x, mLines.size() * (mLineSpacing + mCharacterSize.y) + 50.0f);
+	mEditorSize = ImVec2(mEditorWindow->ContentRegionRect.Max.x, mLines.size() * (mLineSpacing + mCharacterSize.y) + mTitleBarHeight+0.5*mLineSpacing);
 	mEditorBounds = ImRect(mEditorPosition, ImVec2(mEditorPosition.x + mEditorSize.x, mEditorPosition.y + mEditorSize.y));
 
 	reCalculateBounds = false;
@@ -314,14 +325,18 @@ bool Editor::render()
 	static bool isInit = false;
 	if (!isInit) {
 		mEditorWindow = ImGui::GetCurrentWindow();
+		mEditorPosition = mEditorWindow->Pos;
+
 		mCharacterSize = ImVec2(ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "#", nullptr, nullptr));
 
 		mLineBarMaxCountWidth=GetNumberWidth(mLines.size());
 		mLineBarWidth=ImGui::CalcTextSize(std::to_string(mLines.size()).c_str()).x + 2 * mLineBarPadding;
 
-		mLinePosition = ImVec2({mEditorPosition.x + mLineBarWidth + mPaddingLeft, 0});
+		mLinePosition = ImVec2({mEditorPosition.x + mLineBarWidth + mPaddingLeft, mEditorPosition.y});
 		mLineHeight = mLineSpacing + mCharacterSize.y;
+
 		mTitleBarHeight = ImGui::GetWindowHeight() - ImGui::GetContentRegionAvail().y;
+		mSelectionMode = SelectionMode::Normal;
 
 		GL_WARN("LINE HEIGHT:{}", mLineHeight);
 		GL_WARN("TITLE HEIGHT:{}", mTitleBarHeight);
@@ -361,7 +376,7 @@ bool Editor::render()
 
 
 	mMinLineVisible = fmax(0.0f,ImGui::GetScrollY() / mLineHeight) ;
-	mLinePosition.y = (mTitleBarHeight + (mLineSpacing * 0.5f) + (mState.mCursorPosition.mLine-floor(mMinLineVisible)) * mLineHeight);
+	mLinePosition.y = (mEditorPosition.y+mTitleBarHeight + (mLineSpacing * 0.5f) + (mState.mCursorPosition.mLine-floor(mMinLineVisible)) * mLineHeight);
 	mLinePosition.x = mEditorPosition.x + mLineBarWidth + mPaddingLeft-ImGui::GetScrollX();
 
 
@@ -385,7 +400,7 @@ bool Editor::render()
 
 			float prevLinePositonY=mLinePosition.y;
 			if(mState.mCursorDirectionChanged){
-				mLinePosition.y = (mTitleBarHeight + (mLineSpacing * 0.5f) + (selectionEnd.mLine-floor(mMinLineVisible)) * mLineHeight);
+				mLinePosition.y = (mEditorPosition.y+mTitleBarHeight + (mLineSpacing * 0.5f) + (selectionEnd.mLine-floor(mMinLineVisible)) * mLineHeight);
 			}
 
 			ImVec2 start(GetSelectionPosFromCoords(selectionStart), mLinePosition.y-mLineHeight);
@@ -411,7 +426,7 @@ bool Editor::render()
 
 			float prevLinePositonY=mLinePosition.y;
 			if(mState.mCursorDirectionChanged){
-				mLinePosition.y = (mTitleBarHeight + (mLineSpacing * 0.5f) + (selectionEnd.mLine-floor(mMinLineVisible)) * mLineHeight);
+				mLinePosition.y = (mEditorPosition.y+mTitleBarHeight + (mLineSpacing * 0.5f) + (selectionEnd.mLine-floor(mMinLineVisible)) * mLineHeight);
 			}
 
 			ImVec2 p_start(GetSelectionPosFromCoords(selectionStart), mLinePosition.y-(diff+1)*mLineHeight);
@@ -450,7 +465,7 @@ bool Editor::render()
 
 	int lineNo = 0;
 	while (start != end) {
-		float linePosY = mLineSpacing + (lineNo * mLineHeight) + mTitleBarHeight;
+		float linePosY = mEditorPosition.y+mLineSpacing + (lineNo * mLineHeight) + mTitleBarHeight;
 		mEditorWindow->DrawList->AddText({mLinePosition.x, linePosY}, mGruvboxPalletDark[(size_t)Pallet::Text], mLines[start].c_str());
 
 		start++;
@@ -488,8 +503,7 @@ bool Editor::render()
 	if(isTrue){
 		bool isNormalMode=mSelectionMode==SelectionMode::Normal;
 		for(const auto& coord:mSearchState.mFoundPositions){
-
-			float linePosY = (mTitleBarHeight  + (coord.mLine-floor(mMinLineVisible)) * mLineHeight)+0.5f*mLineSpacing;
+			float linePosY = (mEditorPosition.y+mTitleBarHeight  + (coord.mLine-floor(mMinLineVisible)) * mLineHeight)+0.5f*mLineSpacing;
 			ImVec2 start{mEditorPosition.x,linePosY};
 			ImVec2 end{mEditorPosition.x+4.0f,linePosY+(isNormalMode ? 0 : mLineHeight)};
 
@@ -504,7 +518,7 @@ bool Editor::render()
 
 	lineNo = 0;
 	while (start != end) {
-		float linePosY = mLineSpacing + (lineNo * mLineHeight) + mTitleBarHeight;
+		float linePosY =mEditorPosition.y+ mLineSpacing + (lineNo * mLineHeight) + mTitleBarHeight;
 		float linePosX=mEditorPosition.x + mLineBarPadding + (mLineBarMaxCountWidth-GetNumberWidth(start+1))*mCharacterSize.x;
 
 		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (start==mCurrentLineIndex) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(start + 1).c_str());
@@ -526,12 +540,15 @@ void Editor::HandleDoubleClick(){
 		else
 			mSelectionMode = SelectionMode::Word;
 
-		#ifdef GL_DEBUG
+	#ifdef GL_DEBUG
 		int idx = GetCurrentLineIndex(mState.mCursorPosition);
-		#endif
+	#endif
 		auto [start_idx,end_idx] = GetIndexOfWordAtCursor(mState.mCursorPosition);
+		if(start_idx==end_idx) return;
+	#ifdef GL_DEBUG
 		GL_WARN("SELECTION IDX:{} START:{} END:{}", idx, start_idx, end_idx);
 		GL_INFO("TAB COUNT:{}", mCurrLineTabCounts);
+	#endif
 
 		mState.mSelectionStart = Coordinates(mState.mCursorPosition.mLine, start_idx + (mCurrLineTabCounts * (mTabWidth - 1)));
 		mState.mSelectionEnd = Coordinates(mState.mCursorPosition.mLine, end_idx + (mCurrLineTabCounts * (mTabWidth - 1)));
@@ -592,6 +609,7 @@ void Editor::HandleMouseInputs()
 
 			//Mouse Click And Dragging
 			else if (ImGui::IsMouseDragging(0) && ImGui::IsMouseDown(0)) {
+				if((ImGui::GetMousePos().y-mEditorPosition.y) < mTitleBarHeight) return;
 
 				io.WantCaptureMouse = true;
 				if(mSearchState.isValid()) mSearchState.reset();
@@ -615,7 +633,7 @@ void Editor::HighlightCurrentWordInBuffer() const {
 		if(mSearchState.mIsGlobal && (coord.mLine < minLine || coord.mLine > minLine+count)) break;
 
 		float offset=(mSelectionMode==SelectionMode::Normal) ? (mCharacterSize.y+1.0f+mLineSpacing) : 0.5f*mLineSpacing;
-		float linePosY = (mTitleBarHeight  + (coord.mLine-floor(mMinLineVisible)) * mLineHeight)+offset;
+		float linePosY = (mEditorPosition.y+mTitleBarHeight  + (coord.mLine-floor(mMinLineVisible)) * mLineHeight)+offset;
 
 		ImVec2 start{mLinePosition.x+coord.mColumn*mCharacterSize.x-!isNormalMode,linePosY};
 		ImVec2 end{start.x+mSearchState.mWord.size()*mCharacterSize.x+(!isNormalMode*2),linePosY+(isNormalMode ? 0 : mLineHeight)};
@@ -631,8 +649,8 @@ void Editor::HighlightCurrentWordInBuffer() const {
 
 void Editor::FindAllOccurancesOfWord(std::string word){
 
-	mSearchState.reset();
 	mSearchState.mIsGlobal=true;
+	mSearchState.mFoundPositions.clear();
 
 	int start = std::min(0,(int)mLines.size()-1);
 	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
@@ -759,7 +777,7 @@ Coordinates Editor::MapScreenPosToCoordinates(const ImVec2& mousePosition) {
 	// OpenGL::ScopedTimer timer("MouseClick");
 	Coordinates coords;
 
-	float currentLineNo=(ImGui::GetScrollY() + mousePosition.y - (0.5f * mLineSpacing) - mTitleBarHeight) / mLineHeight;
+	float currentLineNo=(ImGui::GetScrollY() + (mousePosition.y-mEditorPosition.y) - (0.5f * mLineSpacing) - mTitleBarHeight) / mLineHeight;
 	coords.mLine = std::max(0,(int)floor(currentLineNo - (mMinLineVisible - floor(mMinLineVisible))));	
 	if(coords.mLine > mLines.size()-1) coords.mLine=mLines.size()-1;
 
@@ -785,7 +803,6 @@ Coordinates Editor::MapScreenPosToCoordinates(const ImVec2& mousePosition) {
 	mCurrentLineIndex = coords.mLine;
 
 	mCurrLineLength=GetCurrentLineLength();
-	GL_INFO(mCurrLineLength);
 	if(coords.mColumn > mCurrLineLength) coords.mColumn=mCurrLineLength;
 
 	return coords;
@@ -880,16 +897,18 @@ void Editor::HandleKeyboardInputs()
 			MoveRight(ctrl, shift);
 		else if (!alt && ctrl && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_D))){
 
-			bool condition=mSelectionMode==SelectionMode::Word && mSearchState.mFoundPositions.empty();
+			bool condition=(mSelectionMode==SelectionMode::Word) && mSearchState.mFoundPositions.empty();
 
 			if(mSelectionMode==SelectionMode::Normal || condition){
 				if(!condition) HandleDoubleClick();
+				if(mState.mSelectionStart==mState.mSelectionEnd) return;
 				
 				if(condition){
 					int start_idx=GetCurrentLineIndex(mState.mSelectionStart);
 					int end_idx=GetCurrentLineIndex(mState.mSelectionEnd);
 
 					if(start_idx>end_idx) std::swap(start_idx,end_idx);
+					mSearchState.reset();
 					mSearchState.mWord=mLines[mState.mCursorPosition.mLine].substr(start_idx,end_idx-start_idx);
 					GL_INFO("Search: {}",mSearchState.mWord);
 				}
@@ -901,7 +920,7 @@ void Editor::HandleKeyboardInputs()
 				});
 
 				if(it!=mSearchState.mFoundPositions.end())
-					mSearchState.mIdx=std::distance(mSearchState.mFoundPositions.begin(),it)+1;
+					mSearchState.mIdx=std::min((int)mSearchState.mFoundPositions.size()-1,(int)std::distance(mSearchState.mFoundPositions.begin(),it)+1);
 			}else{
 				GL_INFO("Finding Next");
 				const Coordinates& coord=mSearchState.mFoundPositions[mSearchState.mIdx];
@@ -909,6 +928,7 @@ void Editor::HandleKeyboardInputs()
 
 				mState.mSelectionStart=mState.mSelectionEnd=coord;
 				mState.mSelectionEnd.mColumn=coord.mColumn+mSearchState.mWord.size();
+				GL_INFO("[{}  {} {}]",mState.mSelectionStart.mColumn,mState.mSelectionEnd.mColumn,mSearchState.mWord.size());
 
 				mState.mCursorPosition=mState.mSelectionEnd;
 				mSearchState.mIdx++;
