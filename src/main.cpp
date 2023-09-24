@@ -127,12 +127,26 @@ void draw(GLFWwindow* window, ImGuiIO& io)
     ImGui::Spacing();
     ImGui::Spacing();
     static std::string mode;
+    ImColor color;
     switch(editor.GetSelectionMode()){
-	    case 0: mode="Normal";break;
-	    case 1: mode="Word";break;
-	    case 2: mode="Line";break;
+	    case 0: 
+	    	mode="Normal";
+	    	color=ImColor(50,206,187,255);
+	    	break;
+	    case 1: 
+	    	mode="Word";
+	    	color=ImColor(233,196,106,255);
+	    	break;
+	    case 2: 
+	    	mode="Line";
+	    	color=ImColor(231,111,81,255);
+	    	break;
     }
-    ImGui::Text("SelectionMode: %s",mode.c_str());
+    ImGui::Text("SelectionMode: ");
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Text,color.Value);
+    ImGui::Text("%s", mode.c_str());
+    ImGui::PopStyleColor();
 
 
 

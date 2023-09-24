@@ -19,6 +19,7 @@ class Editor
 		Text, 
 		String, 
 		Comment,
+		Indentation,
 		Highlight,
 		YellowLight,
 		YellowDark, 
@@ -35,6 +36,7 @@ class Editor
 		mGruvboxPalletDark[(size_t)Pallet::Text] = ImColor(235, 219, 178, 255);        // 223
 		mGruvboxPalletDark[(size_t)Pallet::String] = ImColor(152, 151, 26, 255);       // 106
 		mGruvboxPalletDark[(size_t)Pallet::Comment] = ImColor(146,131,116,255);        // 237
+		mGruvboxPalletDark[(size_t)Pallet::Indentation] = ImColor(60,56,54,255);        // 237
 		mGruvboxPalletDark[(size_t)Pallet::Highlight] = ImColor(54,51,50,255);        // 237
 		mGruvboxPalletDark[(size_t)Pallet::YellowLight] = ImColor(250,189,47,255);        // 237
 		mGruvboxPalletDark[(size_t)Pallet::YellowDark] = ImColor(215,153,33,255);        // 237
@@ -79,6 +81,8 @@ class Editor
 
 
 	//###### EDITOR SPACE ######
+
+
 	float mLineSpacing = 10.f;
 	bool mReadOnly = false;
 	int mLineHeight{0};
@@ -148,8 +152,11 @@ class Editor
 	uint8_t GetTabCountsUptoCursor(const Coordinates& coords)const;
 	uint32_t GetCurrentLineIndex(const Coordinates& cursorPosition)const;
 
+	bool IsCursorVisible();
+
   public:
 	bool reCalculateBounds = true;
+	float maxLineWidth{0.0f}; //max horizontal scroll;
 	void SetBuffer(const std::string& buffer);
 	bool render();
 	void setLineSpacing(float value) { this->mLineSpacing = value; }
@@ -161,7 +168,7 @@ class Editor
 	void Backspace();
 	void InsertLine();
 	int GetSelectionMode()const{return (int)mSelectionMode;};
-	void ScrollToLineNumber(int lineNo);
+	void ScrollToLineNumber(int lineNo,bool animate=true);
 
 	inline uint8_t GetTabWidth() { return this->mTabWidth; }
 

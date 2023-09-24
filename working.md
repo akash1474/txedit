@@ -1,10 +1,8 @@
 [------------------------------ __TODO__ ---------------------------------]
 # [ FEATURE ] Using Ctrl+Click to place multiple cursors
 # [ FEATURE ] Ctrl+D Selection and Editing at multiple positions
-# [ FEATURE ] Scroll if mouse out of bounds
-# [   BUG   ] Fix Horizontal Scrolling Amount (Content Partly Clipped)
-# [   BUG   ] Scrolling when left and right key pressed at start and end of line
 # [ FEATURE ] Smooth Scrolling
+# [ FEATURE ] Using Custum Title Bar
 # [ FEATURE ] Support For UTF-8 characters
 # [ FEATURE ] Use AddItem(size) at top and bottom of visible window for smooth scrolling
 # [ FEATURE ] Search and Replace
@@ -17,7 +15,18 @@
 ########################################################################################
 
 
-##  Saturday 24th Sept 2023
+##  Sunday 24th Sept 2023
++ [   BUG   ] Scrolling when left and right key pressed at start and end of line
++ [   BUG   ] Fix Horizontal Scrolling Amount (Content Partly Clipped)
++ [ FEATURE ] Scroll if word selection using mouse and mouse out of bounds
++ [ FEATURE ] Scroll To Cursor Position if cursor not visible
++ [ FEATURE ] Render a line for indentation
+
+
+########################################################################################
+
+
+##  Saturday 23th Sept 2023
 + [ IMPROVEMENT ] Improved Carriage Return and Auto indentation
 + [ IMPROVEMENT ] Lexer
 + [     BUG     ] Fix Last Line length
@@ -27,7 +36,7 @@
 ########################################################################################
 
 
-##  Friday 23th Sept 2023
+##  Friday 22th Sept 2023
 + [ FEATURE ] Working on Lexer
 
 

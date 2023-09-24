@@ -30,7 +30,7 @@ Editor::~Editor() {}
 void Editor::SetBuffer(const std::string& text)
 {
 	mLines.clear();
-	std::string currLine;
+	std::string currLine="";
 
 	for (auto chr : text) {
 		if (chr == '\r') continue;
@@ -39,7 +39,6 @@ void Editor::SetBuffer(const std::string& text)
 			mLines.push_back(currLine);
 			currLine.clear();
 		} else currLine += chr;
-		
 	}
 	if(currLine.size()>400) currLine="";
 	mLines.push_back(currLine);
@@ -163,7 +162,7 @@ void Editor::Backspace()
 
 		else{
 
-			//end
+			//Two Lines or More Lines
 			uint8_t start=0;
 			uint8_t end=GetCurrentLineIndex(mState.mSelectionEnd);
 			uint8_t word_len=end-start;
@@ -180,6 +179,11 @@ void Editor::Backspace()
 			if((mState.mSelectionEnd.mLine - mState.mSelectionStart.mLine) > 1)
 				mLines.erase(mLines.begin()+mState.mSelectionStart.mLine+1,mLines.begin()+mState.mSelectionEnd.mLine);
 
+
+			if(mState.mSelectionStart.mLine < (int)floor(mMinLineVisible))
+				ScrollToLineNumber(mState.mSelectionStart.mLine+1,false);
+
+			reCalculateBounds=true;
 		}
 
 		return;
@@ -312,6 +316,16 @@ void Editor::UpdateBounds()
 	reCalculateBounds = false;
 }
 
+bool Editor::IsCursorVisible(){
+	int min=int(floor(mMinLineVisible));
+	int count=(int)floor(mEditorWindow->Size.y/mLineHeight);
+
+	if(mState.mCursorPosition.mLine < min) return false;
+	if(mState.mCursorPosition.mLine > (min+count)) return false;
+
+	return true;
+}
+
 
 float Editor::GetSelectionPosFromCoords(const Coordinates& coords)const{
 	float offset{0.0f};
@@ -354,12 +368,29 @@ bool Editor::render()
 	ImGui::ItemSize(mEditorBounds, 0.0f);
 	if (!ImGui::ItemAdd(mEditorBounds, id)) return false;
 
+	if( ImGui::IsMouseDown(0) && mSelectionMode==SelectionMode::Word && (ImGui::GetMousePos().y>(mEditorPosition.y+mEditorWindow->Size.y))){
+		ImGui::SetScrollY(ImGui::GetScrollY()+mLineHeight);
+		if(mState.mSelectionEnd.mLine < mLines.size()-1){
+			mState.mSelectionEnd.mLine++;
+			mState.mCursorPosition.mLine++;
+		}
+	}
+
+	if(ImGui::IsMouseDown(0) && mSelectionMode==SelectionMode::Word && (ImGui::GetMousePos().y<mEditorPosition.y)){
+		ImGui::SetScrollY(ImGui::GetScrollY()-mLineHeight);
+		if(mState.mSelectionEnd.mLine > 0){
+			mState.mSelectionEnd.mLine--;
+			mState.mCursorPosition.mLine--;
+		}
+	}
+
 	// BackGrounds
 	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x + mLineBarWidth, mEditorPosition.y}, mEditorBounds.Max,mGruvboxPalletDark[(size_t)Pallet::Background]); // Code
 
+
+
 	if(mScrollAnimation.hasStarted){
 		static bool isFirst=true;
-
 		if(isFirst){
 			mInitialScrollY=ImGui::GetScrollY();
 			isFirst=false;
@@ -464,10 +495,26 @@ bool Editor::render()
 
 
 	int lineNo = 0;
+	int i_prev=0;
 	while (start != end) {
 		float linePosY = mEditorPosition.y+mLineSpacing + (lineNo * mLineHeight) + mTitleBarHeight;
 		mEditorWindow->DrawList->AddText({mLinePosition.x, linePosY}, mGruvboxPalletDark[(size_t)Pallet::Text], mLines[start].c_str());
-
+		if(mLines[start].empty()){
+			int i=i_prev;
+			while(i>-1){
+				ImVec2 indentStart{mLinePosition.x+(i*mTabWidth*mCharacterSize.x), linePosY-(0.5f*mLineSpacing)};
+				mEditorWindow->DrawList->AddLine(indentStart, {indentStart.x,indentStart.y+mLineHeight}, mGruvboxPalletDark[(size_t)Pallet::Indentation]);
+				i--;
+			}
+		}else{
+			int i=0;
+			while(mLines[start].size() > i && mLines[start][i]=='\t'){
+				ImVec2 indentStart{mLinePosition.x+(i*mTabWidth*mCharacterSize.x), linePosY-(0.5f*mLineSpacing)};
+				mEditorWindow->DrawList->AddLine(indentStart, {indentStart.x,indentStart.y+mLineHeight}, mGruvboxPalletDark[(size_t)Pallet::Indentation]);
+				i++;
+			}
+			i_prev=--i;
+		}
 		start++;
 		lineNo++;
 	}
@@ -825,7 +872,7 @@ int Editor::GetColumnNumberFromIndex(int idx,int lineIdx){
 
 
 
-void Editor::ScrollToLineNumber(int lineNo){
+void Editor::ScrollToLineNumber(int lineNo,bool animate){
 
 	lineNo=std::max(1,lineNo);
 	if(lineNo > mLines.size()) lineNo=mLines.size();
@@ -847,11 +894,15 @@ void Editor::ScrollToLineNumber(int lineNo){
 
 	mScrollAmount=totalLines*mLineHeight;
 
+	if(!animate){
+		ImGui::SetScrollY(ImGui::GetScrollY()+mScrollAmount);
+		return;
+	}
+
+
 	//Handling quick change in nextl
 	if((ImGui::GetTime()-mLastClick)<0.5f){
-
 		ImGui::SetScrollY(ImGui::GetScrollY()+mScrollAmount);
-
 	}else{
 		mInitialScrollY=ImGui::GetScrollY();
 		mScrollAnimation.start();
@@ -873,7 +924,16 @@ void Editor::HandleKeyboardInputs()
 	auto alt = io.ConfigMacOSXBehaviors ? io.KeyCtrl : io.KeyAlt;
 
 	if (ImGui::IsWindowFocused()) {
+
 		if (ImGui::IsWindowHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_TextInput);
+		bool anyKeyPressed = false;
+		for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) {
+		    if (io.KeysDown[i]) {
+		        anyKeyPressed = true;
+		        break;
+		    }
+		}
+		if (anyKeyPressed && !mScrollAnimation.hasStarted && !IsCursorVisible()) ScrollToLineNumber(mState.mCursorPosition.mLine+1);
 
 		io.WantCaptureKeyboard = true;
 		io.WantTextInput = true;
@@ -1236,6 +1296,9 @@ void Editor::MoveDown(bool ctrl, bool shift)
 
 void Editor::MoveLeft(bool ctrl, bool shift)
 {
+	if(mLinePosition.y<(mTitleBarHeight*2)) 
+		ImGui::SetScrollY(ImGui::GetScrollY()-mLineHeight);
+
 	if(mSearchState.isValid()) mSearchState.reset();
 	if (!shift && mSelectionMode != SelectionMode::Normal) {
 		mSelectionMode = SelectionMode::Normal;
@@ -1322,7 +1385,13 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 
 void Editor::MoveRight(bool ctrl, bool shift)
 {
+
+	if(mLinePosition.y>mEditorWindow->Size.y-(mTitleBarHeight*2))
+		ImGui::SetScrollY(ImGui::GetScrollY()+mLineHeight);
+
 	if(mSearchState.isValid()) mSearchState.reset();
+
+
 	if (!shift && mSelectionMode != SelectionMode::Normal) {
 		mSelectionMode = SelectionMode::Normal;
 		if(mState.mSelectionStart > mState.mSelectionEnd)
