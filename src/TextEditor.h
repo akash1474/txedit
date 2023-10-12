@@ -11,6 +11,7 @@
 #include "Coordinates.h"
 #include "Animation.h"
 
+
 class Editor
 {
 	enum class Pallet { 
@@ -61,6 +62,8 @@ class Editor
 		bool mCursorDirectionChanged=false;
 	};
 
+	std::vector<EditorState> mCursors;
+
 
 
 
@@ -88,13 +91,10 @@ class Editor
 	int mLineHeight{0};
 	float mPaddingLeft{5.0f};
 	uint8_t mTabWidth{4};
-	uint8_t mCurrLineTabCounts{0};
 	float mTitleBarHeight{0.0f};
 
 
 	std::vector<std::string> mLines;
-	int mCurrentLineIndex{0};
-	size_t mCurrLineLength{0};
 	float mMinLineVisible{0.0f};
 
 	double mLastClick{-1.0f};
@@ -110,8 +110,8 @@ class Editor
 
 	void SwapLines(bool up = true);
 
-	void MoveUp(bool ctrl = false, bool shift = false);
-	void MoveDown(bool ctrl = false, bool shift = false);
+	void MoveUp(EditorState& state,bool ctrl = false, bool shift = false);
+	void MoveDown(EditorState& state,bool ctrl = false, bool shift = false);
 	void MoveLeft(bool ctrl = false, bool shift = false);
 	void MoveRight(bool ctrl = false, bool shift = false);
 
@@ -153,6 +153,8 @@ class Editor
 	uint32_t GetCurrentLineIndex(const Coordinates& cursorPosition)const;
 
 	bool IsCursorVisible();
+	void RenderStatusBar();
+	void DeleteCharacter(EditorState& cursor,int cidx=-1);
 
   public:
 	bool reCalculateBounds = true;

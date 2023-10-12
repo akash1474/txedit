@@ -2,8 +2,9 @@
 # [ FEATURE ] Using Ctrl+Click to place multiple cursors
 # [ FEATURE ] Ctrl+D Selection and Editing at multiple positions
 # [ FEATURE ] Smooth Scrolling
-# [ FEATURE ] Using Custum Title Bar
+<!-- # [ FEATURE ] Using Custum Title Bar -->
 # [ FEATURE ] Support For UTF-8 characters
+# [ FEATURE ] Bottom Bar containing (lineNo,colNo,gitbranch,tabsize,filetype)
 # [ FEATURE ] Use AddItem(size) at top and bottom of visible window for smooth scrolling
 # [ FEATURE ] Search and Replace
 # [ FEATURE ] File Operations
@@ -11,6 +12,15 @@
 # [ FEATURE ] Tabs and Split Views
 # [ FEATURE ] Full-Screen Mode
 # [ FEATURE ] Auto-Save and Backup
+
+
+# [   BUG   ] Multi-Cursor '{' issue -- only adds '}' on mCursors[0]
+# [   BUG   ] Multi-Cursor sometime characters insert only on mCursors[0]
+
+########################################################################################
+
+
+##  Thursday 12th Oct 2023
 
 ########################################################################################
 
