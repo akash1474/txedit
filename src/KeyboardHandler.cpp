@@ -31,9 +31,9 @@ void Editor::HandleKeyboardInputs()
 		// else if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Y)))
 		// 	Redo();
 		if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow))) 
-			MoveUp(mState);
+			MoveUp();
 		else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow)))
-			MoveDown(mState);
+			MoveDown();
 		else if (ctrl && shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow)))
 			SwapLines(true);
 		else if (ctrl && shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow)))
@@ -51,16 +51,15 @@ void Editor::HandleKeyboardInputs()
 				if(mSelectionMode!=SelectionMode::Word) HandleDoubleClick();
 				if(mState.mSelectionStart==mState.mSelectionEnd) return;
 				
-				// if(condition){
-					int start_idx=GetCurrentLineIndex(mState.mSelectionStart);
-					int end_idx=GetCurrentLineIndex(mState.mSelectionEnd);
+				int start_idx=GetCurrentLineIndex(mState.mSelectionStart);
+				int end_idx=GetCurrentLineIndex(mState.mSelectionEnd);
 
-					if(start_idx>end_idx) std::swap(start_idx,end_idx);
+				if(start_idx>end_idx) std::swap(start_idx,end_idx);
 
-					mSearchState.reset();
-					mSearchState.mWord=mLines[mState.mCursorPosition.mLine].substr(start_idx,end_idx-start_idx);
-					GL_INFO("Search: {}",mSearchState.mWord);
-				// }
+				mSearchState.reset();
+				mSearchState.mWord=mLines[mState.mCursorPosition.mLine].substr(start_idx,end_idx-start_idx);
+				GL_INFO("Search: {}",mSearchState.mWord);
+
 				FindAllOccurancesOfWord(mSearchState.mWord);
 				mCursors.push_back(mState);
 
@@ -100,8 +99,8 @@ void Editor::HandleKeyboardInputs()
 		// 	MoveHome(shift);
 		// else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_End)))
 		// 	MoveEnd(shift);
-		// else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)))
-		// 	Delete();
+		else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)))
+			Delete();
 		else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
 			Backspace();
 		// else if (!ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Insert)))

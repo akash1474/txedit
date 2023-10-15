@@ -1,6 +1,5 @@
 [------------------------------ __TODO__ ---------------------------------]
-# [ FEATURE ] Using Ctrl+Click to place multiple cursors
-# [ FEATURE ] Ctrl+D Selection and Editing at multiple positions
+# [   BUG   ] Fixing Quotations both single and double Quotations
 # [ FEATURE ] Smooth Scrolling
 <!-- # [ FEATURE ] Using Custum Title Bar -->
 # [ FEATURE ] Support For UTF-8 characters
@@ -14,13 +13,24 @@
 # [ FEATURE ] Auto-Save and Backup
 
 
-# [   BUG   ] Multi-Cursor '{' issue -- only adds '}' on mCursors[0]
-# [   BUG   ] Multi-Cursor sometime characters insert only on mCursors[0]
 
 ########################################################################################
 
 
-##  Thursday 12th Oct 2023
+##  Thursday 14th Oct 2023
++ [   BUG   ] Multi-Cursor '{' issue -- only adds '}' on mCursors[0]
++ [   BUG   ] Multi-Cursor sometime characters insert only on mCursors[0]
++ [ FEATURE ] Using Arrow Keys in Multi-Cursor
++ [ FEATURE ] Add Delete KeyBinding
++ [   BUG   ] Ctrl+Shift Multi-Cursor Selection
+
+########################################################################################
+
+
+##  Thursday 7th Oct 2023
+
++ [ FEATURE ] Using Ctrl+Click to place multiple cursors
++ [ FEATURE ] Ctrl+D Selection and Editing at multiple positions
 
 ########################################################################################
 

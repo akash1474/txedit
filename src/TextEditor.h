@@ -110,14 +110,15 @@ class Editor
 
 	void SwapLines(bool up = true);
 
-	void MoveUp(EditorState& state,bool ctrl = false, bool shift = false);
-	void MoveDown(EditorState& state,bool ctrl = false, bool shift = false);
+	void MoveUp(bool ctrl = false, bool shift = false);
+	void MoveDown(bool ctrl = false, bool shift = false);
 	void MoveLeft(bool ctrl = false, bool shift = false);
 	void MoveRight(bool ctrl = false, bool shift = false);
 
 	void Copy();
 	void Paste();
 	void Cut();
+	void Delete();
 
 	Coordinates MapScreenPosToCoordinates(const ImVec2& mousePosition);
 	float GetSelectionPosFromCoords(const Coordinates& coords)const;
