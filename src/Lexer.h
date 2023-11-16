@@ -6,6 +6,7 @@
 
 class Lexer
 {
+public:
     enum TokenType {
         End = 0,
         HashInclude,
@@ -36,6 +37,7 @@ class Lexer
         size_t text_len{0};
         Coordinates location;
     };
+private:
 
     struct LiteralToken {
         TokenType type;
@@ -59,10 +61,14 @@ class Lexer
     Token& mLastToken() { return mTokens.back(); }
 
     Token mGetNextToken();
+    void InitLiteralTokens();
     std::vector<Token> mTokens;
 
   public:
+    Lexer();
     Lexer(std::string content);
+    void SetData(std::string content);
+    const std::vector<Token>& GetTokens() const noexcept {return mTokens; }
 
     void Tokenize();
     const char* GetTokenType(int tkn);

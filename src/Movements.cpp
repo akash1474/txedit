@@ -303,7 +303,6 @@ void Editor::InsertCharacter(char newChar)
 	    idx <= mLines[currentLineIndex].size()) {
 
 		if (newChar == '\"' || newChar == '\'' || newChar == '(' || newChar == '{' || newChar == '[') {
-			if(mLines[currentLineIndex][idx]!='\"' && mLines[currentLineIndex][idx]!='\''){
 
 				mLines[currentLineIndex].insert(idx, 1, newChar);
 				switch (newChar) {
@@ -313,7 +312,7 @@ void Editor::InsertCharacter(char newChar)
 				}
 
 				mLines[currentLineIndex].insert(idx + 1, 1, newChar);
-			}
+
 		} else {
 
 			if ((newChar == ')' || newChar == ']' || newChar == '}') && mLines[currentLineIndex][idx] == newChar) {
@@ -339,7 +338,6 @@ void Editor::InsertCharacter(char newChar)
 				GL_INFO("CIDX:{} IDX:{}",cidx,idx);
 				if (newChar == '\"' || newChar == '\'' || newChar == '(' || newChar == '{' || newChar == '[') {
 
-					if(mLines[currentLine][idx]!='\"' && mLines[currentLine][idx]!='\''){
 						char backup=newChar;
 						mLines[cursor.mCursorPosition.mLine].insert(idx, 1, newChar);
 						switch (newChar) {
@@ -352,7 +350,6 @@ void Editor::InsertCharacter(char newChar)
 						mLines[cursor.mCursorPosition.mLine].insert(idx + 1, 1, newChar);
 						count=2;
 						newChar=backup;
-					}
 				} else {
 
 					if ((newChar == ')' || newChar == ']' || newChar == '}') && mLines[cursor.mCursorPosition.mLine][idx] == newChar) {
@@ -478,18 +475,29 @@ void Editor::DeleteCharacter(EditorState& cursor,int cidx){
 
 		char x = mLines[lineIndex][idx];
 
-		if ((x == ')' || x == ']' || x == '}')) {
+		if ((x == ')' || x == ']' || x == '}' || x == '\"' || x=='\'')) {
 			bool shouldDelete = false;
 			char y = mLines[lineIndex][idx - 1];
 
 			if (x == ')' && y == '(') shouldDelete = true;
 			else if (x == ']' && y == '[') shouldDelete = true;
 			else if (x == '}' && y == '{') shouldDelete = true;
+			else if (x == '\"' && y== '\"') shouldDelete=true;
+			else if (x == '\'' && y== '\'') shouldDelete=true;
 
 
 			if (shouldDelete) {
 				mLines[lineIndex].erase(idx - 1, 2);
 				cursor.mCursorPosition.mColumn--;
+				for(int i=cidx+1;i<mCursors.size();i++){
+					if(mCursors[i].mCursorPosition.mLine==cursor.mCursorPosition.mLine){
+						mCursors[i].mCursorPosition.mColumn-=2;
+						if(mSelectionMode==SelectionMode::Word){
+							mCursors[i].mSelectionStart.mColumn-=2;
+							mCursors[i].mSelectionEnd.mColumn-=2;
+						}
+					}
+				}
 				return;
 			}
 

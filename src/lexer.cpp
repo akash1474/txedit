@@ -1,3 +1,4 @@
+#include "Timer.h"
 #include "pch.h"
 #include "Lexer.h"
 #include "iostream"
@@ -30,7 +31,21 @@ const char* data_type[]= {
 #define SIZE_KEYWORD sizeof(keywords)/sizeof(keywords[0])
 #define SIZE_DATATYPE sizeof(data_type)/sizeof(data_type[0])
 
+Lexer::Lexer(){}
+
+
 Lexer::Lexer(std::string content) : mContent(content), mContentLength(content.size()) {
+    InitLiteralTokens();
+}
+
+void Lexer::SetData(std::string data){
+    mContent=data;
+    mContentLength=data.size();
+    InitLiteralTokens();
+}
+
+void Lexer::InitLiteralTokens(){
+    GL_WARN("LiteralToken");
     mLiteralTokens.emplace_back(OpenParen,"(");
     mLiteralTokens.emplace_back(CloseParen,")");
     mLiteralTokens.emplace_back(OpenCurly,"{");
@@ -55,8 +70,8 @@ Lexer::Lexer(std::string content) : mContent(content), mContentLength(content.si
     mLiteralTokens.emplace_back(Operator,">");
     mLiteralTokens.emplace_back(Operator,".");
     mLiteralTokens.emplace_back(ScopeResolution,"::");
-}
 
+}
 
 const char* Lexer::GetTokenType(int type)
 {
@@ -287,7 +302,7 @@ Lexer::Token Lexer::mGetNextToken()
 
     tkn.location = Coordinates(mLine, mCursorPos - mLineStart);
     mCursorPos++;
-    tkn.type = Invalid;
+    tkn.type = End;
     tkn.text_len = 1;
 
     return tkn;
@@ -295,14 +310,16 @@ Lexer::Token Lexer::mGetNextToken()
 
 void Lexer::Tokenize()
 {
+    OpenGL::ScopedTimer timer("Tokenizing");
     Token tkn;
     tkn = mGetNextToken();
     mTokens.push_back(tkn);
     while (tkn.type != End) {
-        fprintf(stderr, "%.*s, (%s) [ %d, %d ]\n", (int)tkn.text_len, tkn.text, GetTokenType(tkn.type),tkn.location.mColumn,tkn.location.mLine);
+        // fprintf(stderr, "%.*s, (%s) [ %d, %d ]\n", (int)tkn.text_len, tkn.text, GetTokenType(tkn.type),tkn.location.mColumn,tkn.location.mLine);
         tkn = mGetNextToken();
         mTokens.push_back(tkn);
     }
+    GL_INFO("Tokenization Complete");
 }
 
 // int main()

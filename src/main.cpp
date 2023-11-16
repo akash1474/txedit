@@ -1,10 +1,28 @@
+#include "FontAwesome6.h"
 #include "pch.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
 #include <filesystem>
+#include <shellapi.h>
+#include <sstream>
+#include <string>
+#include <unordered_map>
 #define STB_IMAGE_IMPLEMENTATION
 #include "TextEditor.h"
 #include "stb_img.h"
+#include <codecvt>
+
+std::string exec(const char* cmd) {
+	bool status = !std::system(cmd);
+	if (!status) return "None";
+	// An error occurred
+	std::string result;
+	std::ifstream file("git.txt");
+	std::getline(file,result);
+	if(result.size()==0) return "None";
+    return result;
+}
+
 
 #define WIDTH 900
 #define HEIGHT 600
@@ -12,11 +30,17 @@
 int width{0};
 int height{0};
 
-std::string file_data{0};
 Editor editor;
+struct Entity{
+	std::string filename;
+	std::string path;
+	bool is_directory=false;
+	bool is_explored=false;
+};
+
+std::unordered_map<std::string,std::vector<Entity>> mDirectoryData;
 
 
-size_t size{0};
 
 void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
@@ -29,6 +53,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	draw(window, ImGui::GetIO());
 }
 
+std::string wstringToUTF8(const std::wstring& input) {
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return converter.to_bytes(input);
+}
+
 void drop_callback(GLFWwindow* window, int count, const char** paths)
 {
 	for (int i = 0; i < count; i++) {
@@ -38,28 +67,74 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 			GL_INFO("File: {}", paths[i]);
 			std::ifstream t(paths[i]);
 			t.seekg(0, std::ios::end);
-			size = t.tellg();
-			file_data.resize(size, ' ');
-			t.seekg(0);
-			t.read(&file_data[0], size);
-			editor.SetBuffer(file_data);
+			// size = t.tellg();
+			// file_data.resize(size, ' ');
+			// t.seekg(0);
+			// t.read(&file_data[0], size);
+			// editor.SetBuffer(file_data);
 		}
+	}
+}
+
+void renderFolderItems(std::string path,bool isRoot=false){
+	if(isRoot){
+    	static std::string folderName=std::filesystem::path(path).filename().generic_string();
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,2.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(4.0f,2.0f));
+		if(ImGui::TreeNodeEx(folderName.c_str(),ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen)){
+    		renderFolderItems(path);
+    		ImGui::TreePop();
+    	}
+    	ImGui::PopStyleVar(2);
+    	return;
+	}
+	if(mDirectoryData.empty()  || mDirectoryData.find(path)==mDirectoryData.end()){
+		std::cout << path << std::endl;
+		auto& entities=mDirectoryData[path];
+		for(const auto& entity:std::filesystem::directory_iterator(path)) entities.push_back({
+			entity.path().filename().generic_string(),
+			entity.path().generic_string(),
+			entity.is_directory(),
+			false
+		});
+		std::stable_partition(entities.begin(), entities.end(), [](const auto& entity) { return entity.is_directory; });
+	}
+	auto& entities=mDirectoryData[path];
+	if(entities.empty()) return;
+	std::stringstream oss;
+	for(Entity& item:entities){
+		const char* icon = item.is_directory ? item.is_explored ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER : ICON_FA_FILE;
+		oss << icon << " " << item.filename.c_str();
+		if(item.is_directory) {
+			if(ImGui::TreeNodeEx(oss.str().c_str(),ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_Selected)){
+				std::stringstream wss;
+				wss << path << "\\" << item.filename.c_str();
+				renderFolderItems(wss.str(),false);
+				ImGui::TreePop();
+			}
+		}
+		else{
+			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,8.0f));
+			ImGui::PushStyleColor(ImGuiCol_Header,ImGui::GetStyle().Colors[ImGuiCol_SliderGrabActive]);
+			ImGui::PushStyleColor(ImGuiCol_HeaderHovered,ImGui::GetStyle().Colors[ImGuiCol_SliderGrab]);
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX()+28.0f);
+			if(ImGui::Selectable(oss.str().c_str(),item.is_explored,ImGuiSelectableFlags_SpanAvailWidth|ImGuiSelectableFlags_SelectOnClick)){
+				for(Entity& en:entities) en.is_explored=false;
+				if(!item.is_explored) item.is_explored=true;
+				editor.LoadFile(item.path.c_str());
+				editor.reCalculateBounds=true;
+			}
+			ImGui::PopStyleVar();
+			ImGui::PopStyleColor(2);
+			ImGui::PopFont();
+		}
+		oss.str("");
 	}
 }
 
 void draw(GLFWwindow* window, ImGuiIO& io)
 {
-	static bool isFileLoaded = false;
-	if (!isFileLoaded) {
-		std::ifstream t("D:/Projects/c++/txedit/src/TextEditor.cpp");
-		t.seekg(0, std::ios::end);
-		size = t.tellg();
-		file_data.resize(size, ' ');
-		t.seekg(0);
-		t.read(&file_data[0], size);
-		editor.SetBuffer(file_data);
-		isFileLoaded = true;
-	}
 	glfwPollEvents();
 	ImGui_ImplOpenGL2_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
@@ -67,13 +142,13 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	// ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 	glfwSetDropCallback(window, drop_callback);
 
-	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-	dockspace_flags |= ImGuiDockNodeFlags_PassthruCentralNode;
+	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None | ImGuiDockNodeFlags_PassthruCentralNode;
 	static ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	static bool is_open = true;
 	ImGui::SetNextWindowPos(viewport->WorkPos);
-	ImGui::SetNextWindowSize(viewport->WorkSize);
+	ImVec2 size(viewport->WorkSize.x,viewport->WorkSize.y-22.0f);
+	ImGui::SetNextWindowSize(size);
 	ImGui::SetNextWindowViewport(viewport->ID);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
@@ -84,7 +159,7 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	ImGui::Begin("Container", &is_open, window_flags);
 	ImGui::PopStyleVar(3);
 	static ImGuiID dockspace_id = ImGui::GetID("DDockSpace");
-	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f));
+	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f),dockspace_flags);
 
 	if (ImGui::BeginMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
@@ -105,7 +180,8 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 
 	ImGui::End();
 	#ifdef GL_DEBUG
-	ImGui::ShowDemoWindow();
+	static bool show_demo=true;
+	ImGui::ShowDemoWindow(&show_demo);
 
 
 	ImGui::Begin("Project");
@@ -157,25 +233,94 @@ void draw(GLFWwindow* window, ImGuiIO& io)
     if(ImGui::InputInt("##ScrollToLine", &v,1,100,ImGuiInputTextFlags_EnterReturnsTrue))
         editor.ScrollToLineNumber(v);
 
+    if(ImGui::Button("Select File")) SelectFile();
+
+    if(ImGui::Button("Select Files")){
+    	auto files=SelectFiles();
+    	for(auto& file:files)
+    		std::wcout << file << std::endl;
+    }
+
 	ImGui::End();
 	#endif
 
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::SetNextWindowContentSize(ImVec2(ImGui::GetContentRegionMax().x + 1500.0f, 0));
-	ImGui::Begin("Editor", 0, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_HorizontalScrollbar|ImGuiWindowFlags_AlwaysAutoResize);
-	ImGui::PopStyleVar();
+	static float s_width=250.0f;
+	static bool is_opening=true;
+	static Animation side_bar;
 
-	if (size) {
-		ImGui::PushFont(io.Fonts->Fonts[1]);
-        editor.render();
-		ImGui::PopFont();
+	// static float curr=300.0f;
+	// if(side_bar.hasStarted){
+	// 	float width=(is_opening ? s_width*side_bar.update() : s_width*(1.0f-side_bar.update()));
+	// 	GL_INFO(width);
+	// 	curr=width;
+	// 	if(width > 1.0f) ImGui::SetNextWindowSize(ImVec2{width,-1.0f});
+
+	// }
+	if(is_opening){
+		ImGui::SetNextWindowSize(ImVec2{s_width,-1.0f},ImGuiCond_Once);
+		ImGui::Begin("Project Directory");
+	    // static bool isLoaded=false;
+	   	// static std::string folderPath; 
+	    // if(ImGui::Button("Select Folder")) {
+	    // 	folderPath=wstringToUTF8(SelectFolder());
+	    // 	isLoaded=true;
+	    // }
+	    // if(isLoaded){
+	    	// renderFolderItems(folderPath,true);
+	    // }
+	    	renderFolderItems("D:/Projects/c++/txedit",true);
+		ImGui::End();
 	}
-	ImGui::End();
 
-	#ifdef GL_DEBUG
-	ImGui::Begin("Console");
+    editor.render();
+
+	// #ifdef GL_DEBUG
+	// ImGui::Begin("Console");
+	// ImGui::End();
+	// #endif
+
+
+
+
+	ImGui::SetNextWindowPos(ImVec2(0,size.y));
+	ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x,22.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(4.0f,0.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,0.0f);
+	ImGui::PushStyleColor(ImGuiCol_WindowBg,ImGui::GetStyle().Colors[ImGuiCol_TitleBg]);
+	ImGui::PushFont(io.Fonts->Fonts[1]);
+	ImGui::Begin("Status Bar",0,ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize );
+		ImGui::PushFont(io.Fonts->Fonts[0]);
+		if(ImGui::Button(ICON_FA_BARS)){
+			//Animate Sidebar
+			// side_bar.start();
+			is_opening=!is_opening;
+			// int success = !std::system("git rev-parse --abbrev-ref HEAD");
+			// GL_INFO(success);
+		}
+		ImGui::PopFont();
+		ImGui::SameLine();
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2.0f);
+		ImGui::Text("Line:%d",editor.GetEditorState()->mCursorPosition.mLine+1);
+		ImGui::SameLine();
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2.0f);
+		ImGui::Text("Column:%d",editor.GetEditorState()->mCursorPosition.mColumn+1);
+		static bool branchLoaded =false;
+		static std::string branch;
+		if(!branchLoaded){
+			branch=exec("git rev-parse --abbrev-ref HEAD > git.txt");
+			branchLoaded=true;
+		}
+		if(!branch.empty()){
+			ImGui::PushFont(io.Fonts->Fonts[0]);
+			ImGui::SameLine(ImGui::GetWindowWidth()-60.0f);
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY());
+			ImGui::Text("%s %s",ICON_FA_CODE_BRANCH,branch.c_str());
+			ImGui::PopFont();
+		}
 	ImGui::End();
-	#endif
+	ImGui::PopFont();
+	ImGui::PopStyleColor();
+	ImGui::PopStyleVar(2);
 
 	ImGui::Render();
 	int display_w, display_h;
@@ -263,16 +408,21 @@ int main(void)
 
 	const int font_data_size = IM_ARRAYSIZE(data_font);
 	const int icon_data_size = IM_ARRAYSIZE(data_icon);
+	const int icon_regular_data_size = IM_ARRAYSIZE(data_icon_regular);
 
 	ImFontConfig font_config;
 	font_config.FontDataOwnedByAtlas = false;
 	io.Fonts->AddFontFromMemoryTTF((void*)data_font, font_data_size, 16, &font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)data_icon, icon_data_size, 20 * 2.0f / 3.0f, &icon_config, icons_ranges);
 
+
 	io.Fonts->AddFontFromMemoryTTF((void*)monolisa_medium, IM_ARRAYSIZE(monolisa_medium), 12, &font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)data_icon_regular, icon_regular_data_size, 20 * 2.0f / 3.0f, &icon_config, icons_ranges);
 
 
 	StyleColorsDracula();
+
+	editor.LoadFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
 
 	while (!glfwWindowShouldClose(window)) {
 		draw(window, io);

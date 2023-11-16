@@ -8,8 +8,8 @@
 #include <unordered_map>
 
 
-#include "Coordinates.h"
 #include "Animation.h"
+#include "Lexer.h"
 
 
 class Editor
@@ -27,7 +27,6 @@ class Editor
 		Max 
 	};
 	std::vector<ImU32> mGruvboxPalletDark;
-	// Google
 
 	void InitPallet()
 	{
@@ -51,7 +50,8 @@ class Editor
 	float mInitialScrollY{0.0f};
 
 
-
+	bool isFileLoaded=false;
+	Lexer lex;
 
 	enum class SelectionMode { Normal, Word, Line };
 
@@ -105,6 +105,7 @@ class Editor
 	ImVec2 mEditorSize;
 	ImRect mEditorBounds;
 	ImVec2 mLinePosition;
+	std::string mFilePath;
 	ImGuiWindow* mEditorWindow{0};
 
 
@@ -119,6 +120,8 @@ class Editor
 	void Paste();
 	void Cut();
 	void Delete();
+	void SaveFile();
+	void SelectAll();
 
 	Coordinates MapScreenPosToCoordinates(const ImVec2& mousePosition);
 	float GetSelectionPosFromCoords(const Coordinates& coords)const;
@@ -162,6 +165,7 @@ class Editor
 	float maxLineWidth{0.0f}; //max horizontal scroll;
 	void SetBuffer(const std::string& buffer);
 	bool render();
+	void LoadFile(const char* filepath);
 	void setLineSpacing(float value) { this->mLineSpacing = value; }
 	void HandleKeyboardInputs();
 	void HandleMouseInputs();

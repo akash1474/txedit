@@ -1,4 +1,7 @@
 #include "imgui.h"
+#include "string"
+#include "vector"
+#include <shobjidl.h>
 
 inline ImColor darkerShade(ImVec4 color, float multiplier = 0.1428)
 {
@@ -175,4 +178,104 @@ inline void StyleColorsDracula()
     style.FrameRounding = 2;
     style.PopupRounding = 2;
     style.ChildRounding = 2;
+}
+
+inline std::wstring SelectFolder(){
+    CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    std::wstring folder_path;
+    IFileDialog *pfd;
+    if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_PPV_ARGS(&pfd)))) {
+        DWORD dwOptions;
+        if (SUCCEEDED(pfd->GetOptions(&dwOptions))) {
+            pfd->SetOptions(dwOptions | FOS_PICKFOLDERS);
+
+            if (SUCCEEDED(pfd->Show(NULL))) {
+                IShellItem *psi;
+                if (SUCCEEDED(pfd->GetResult(&psi))) {
+                    PWSTR pszPath;
+                    if (SUCCEEDED(psi->GetDisplayName(SIGDN_FILESYSPATH, &pszPath))) {
+                        folder_path=pszPath;
+                        CoTaskMemFree(pszPath);
+                    }
+                    psi->Release();
+                }
+            }
+        }
+        pfd->Release();
+    }
+
+    CoUninitialize();
+    return folder_path;
+}
+
+
+inline std::wstring SelectFile(){
+    CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    std::wstring filePath;
+
+    IFileDialog *pfd;
+    if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_PPV_ARGS(&pfd)))) {
+        // Set the file dialog options
+        DWORD dwOptions;
+        if (SUCCEEDED(pfd->GetOptions(&dwOptions))) {
+            pfd->SetOptions(dwOptions | FOS_ALLOWMULTISELECT);
+
+            // Show the file dialog
+            if (SUCCEEDED(pfd->Show(NULL))) {
+                IShellItem *psi;
+                if (SUCCEEDED(pfd->GetResult(&psi))) {
+                    PWSTR pszPath;
+                    if (SUCCEEDED(psi->GetDisplayName(SIGDN_FILESYSPATH, &pszPath))) {
+
+                        filePath=pszPath;
+                        CoTaskMemFree(pszPath);
+                    }
+                    psi->Release();
+                }
+            }
+        }
+        pfd->Release();
+    }
+
+    CoUninitialize();
+    return filePath;
+}
+
+
+inline std::vector<std::wstring> SelectFiles() {
+    CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+
+    std::vector<std::wstring> files;
+    IFileOpenDialog *pfd;
+    if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_PPV_ARGS(&pfd)))) {
+        DWORD dwOptions;
+        if (SUCCEEDED(pfd->GetOptions(&dwOptions))) {
+            pfd->SetOptions(dwOptions | FOS_ALLOWMULTISELECT);
+
+            if (SUCCEEDED(pfd->Show(NULL))) {
+                IShellItemArray *psia;
+                if (SUCCEEDED(pfd->GetResults(&psia))) {
+                    DWORD fileCount;
+                    if (SUCCEEDED(psia->GetCount(&fileCount))) {
+                        for (DWORD i = 0; i < fileCount; ++i) {
+                            IShellItem *psi;
+                            if (SUCCEEDED(psia->GetItemAt(i, &psi))) {
+                                PWSTR pszPath;
+                                if (SUCCEEDED(psi->GetDisplayName(SIGDN_FILESYSPATH, &pszPath))) {
+                                    files.push_back(pszPath);
+                                    CoTaskMemFree(pszPath);
+                                }
+                                psi->Release();
+                            }
+                        }
+                    }
+                    psia->Release();
+                }
+            }
+        }
+        pfd->Release();
+    }
+
+    CoUninitialize();
+    return files;
 }

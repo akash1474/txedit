@@ -1,23 +1,36 @@
 [------------------------------ __TODO__ ---------------------------------]
-# [   BUG   ] Fixing Quotations both single and double Quotations
 # [ FEATURE ] Smooth Scrolling
+# [ FEATURE ] Syntax Highlighting
 <!-- # [ FEATURE ] Using Custum Title Bar -->
 # [ FEATURE ] Support For UTF-8 characters
-# [ FEATURE ] Bottom Bar containing (lineNo,colNo,gitbranch,tabsize,filetype)
-# [ FEATURE ] Use AddItem(size) at top and bottom of visible window for smooth scrolling
+# [ FEATURE ] Status Bar containing (lineNo,colNo,gitbranch,tabsize,filetype)
 # [ FEATURE ] Search and Replace
 # [ FEATURE ] File Operations
-# [ FEATURE ] Line Numbers and Column Indicators
 # [ FEATURE ] Tabs and Split Views
 # [ FEATURE ] Full-Screen Mode
 # [ FEATURE ] Auto-Save and Backup
+# [ FEATURE ] File Saving
+########################################################################################
 
+## Tuesday 14th Nov 2023
++ [ FEATURE ] 
+# [   BUG   ] Update window size when new file is opened
 
+########################################################################################
+
+## Monday 13th Nov 2023
++ [ FEATURE ] File Explorer Prototype (Selecting folder,selecting file, tree branching, file save)
 
 ########################################################################################
 
 
-##  Thursday 14th Oct 2023
+## Sunday 14th Oct 2023
++ [   BUG   ] Fixing Quotations both single and double Quotations
+
+########################################################################################
+
+
+##  Saturday 14th Oct 2023
 + [   BUG   ] Multi-Cursor '{' issue -- only adds '}' on mCursors[0]
 + [   BUG   ] Multi-Cursor sometime characters insert only on mCursors[0]
 + [ FEATURE ] Using Arrow Keys in Multi-Cursor

@@ -26,9 +26,36 @@ Editor::Editor()
 }
 Editor::~Editor() {}
 
+void Editor::LoadFile(const char* filepath){
+	size_t size{0};
+	std::string file_data{0};
+	std::ifstream t(filepath);
+	if(t.good()) mFilePath=filepath;
+	t.seekg(0, std::ios::end);
+	size = t.tellg();
+	file_data.resize(size, ' ');
+	t.seekg(0);
+	t.read(&file_data[0], size);
+	this->SetBuffer(file_data);
+	isFileLoaded=true;
+	// lex.SetData(file_data);
+	// lex.Tokenize();
+}
+
+
 
 bool Editor::render()
 {
+	if(!isFileLoaded) return false;
+	
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg,mGruvboxPalletDark[(size_t)Pallet::Background]);
+	ImGui::SetNextWindowContentSize(ImVec2(ImGui::GetContentRegionMax().x + 1500.0f, 0));
+	ImGui::Begin("Editor", 0, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_HorizontalScrollbar|ImGuiWindowFlags_AlwaysAutoResize);
+	ImGui::PopStyleVar();
+	ImGui::PopStyleColor();
+
+	ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 	static bool isInit = false;
 	if (!isInit) {
 		mEditorWindow = ImGui::GetCurrentWindow();
@@ -77,8 +104,8 @@ bool Editor::render()
 		}
 	}
 
-	// BackGrounds
-	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x + mLineBarWidth, mEditorPosition.y}, mEditorBounds.Max,mGruvboxPalletDark[(size_t)Pallet::Background]); // Code
+	// // BackGrounds
+	// mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x + mLineBarWidth, mEditorPosition.y}, mEditorBounds.Max,mGruvboxPalletDark[(size_t)Pallet::Background]); // Code
 
 
 
@@ -93,7 +120,7 @@ bool Editor::render()
 		if(!mScrollAnimation.hasStarted) isFirst=true;
 	}
 
-	if (io.MouseWheel != 0.0f) {
+	if (ImGui::IsWindowFocused() && io.MouseWheel != 0.0f) {
 		GL_INFO("SCROLLX:{} SCROLLY:{}",ImGui::GetScrollX(),ImGui::GetScrollY());
 		if(mSearchState.isValid() && !mSearchState.mIsGlobal)SearchWordInCurrentVisibleBuffer();
 	}
@@ -205,9 +232,24 @@ bool Editor::render()
 
 	int lineNo = 0;
 	int i_prev=0;
+	const std::vector<Lexer::Token>& tokens=lex.GetTokens();
+
 	while (start != end) {
+
+		// float x=mLinePosition.x;
+		// for(int i=0;i<tokens.size();i++){
+		// 	if(tokens[i].location.mLine==start){
+		// 		ImU32 color= tokens[i].type==Lexer::HeaderName ? mGruvboxPalletDark[(size_t)Pallet::String] : mGruvboxPalletDark[(size_t)Pallet::Text];
+
+		// 		float linePosY = mEditorPosition.y+mLineSpacing + (lineNo * mLineHeight) + mTitleBarHeight;
+		// 		mEditorWindow->DrawList->AddText({x+(tokens[i].location.mColumn*mCharacterSize.x), linePosY}, color, tokens[i].text);
+		// 	}else{
+		// 		break;
+		// 	}
+		// }	
 		float linePosY = mEditorPosition.y+mLineSpacing + (lineNo * mLineHeight) + mTitleBarHeight;
 		mEditorWindow->DrawList->AddText({mLinePosition.x, linePosY}, mGruvboxPalletDark[(size_t)Pallet::Text], mLines[start].c_str());
+
 		if(mLines[start].empty()){
 			int i=i_prev;
 			while(i>-1){
@@ -301,6 +343,8 @@ bool Editor::render()
 	HandleKeyboardInputs();
 	HandleMouseInputs();
 
+	ImGui::PopFont();
+	ImGui::End();
 	return true;
 }
 
@@ -758,3 +802,26 @@ void Editor::Cut(){
 	Backspace();
 }
 
+void Editor::SaveFile(){
+	std::string copyStr;
+	int startLine=0;
+	while(startLine < mLines.size()){
+		copyStr+=mLines[startLine];
+		copyStr+='\n';
+		startLine++;
+	}
+
+	std::ofstream file(mFilePath,std::ios::trunc);
+	if(!file.is_open()){
+		GL_INFO("ERROR SAVING");
+		return;
+	}
+
+	file << copyStr;
+	file.close();
+	GL_INFO("Saving...");
+}
+
+void Editor::SelectAll(){
+	GL_INFO("SELECT ALL");
+}
