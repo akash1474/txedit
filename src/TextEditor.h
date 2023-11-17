@@ -162,9 +162,12 @@ class Editor
 
   public:
 	bool reCalculateBounds = true;
+	bool isFileSaving=false;
 	float maxLineWidth{0.0f}; //max horizontal scroll;
 	void SetBuffer(const std::string& buffer);
-	bool render();
+	std::string GetCurrentFilePath()const{return mFilePath;};
+	void Render();
+	bool Draw();
 	void LoadFile(const char* filepath);
 	void setLineSpacing(float value) { this->mLineSpacing = value; }
 	void HandleKeyboardInputs();

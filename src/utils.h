@@ -1,7 +1,10 @@
+#include "Log.h"
 #include "imgui.h"
 #include "string"
 #include "vector"
 #include <shobjidl.h>
+#include "shellapi.h"
+#include "userenv.h"
 
 inline ImColor darkerShade(ImVec4 color, float multiplier = 0.1428)
 {
@@ -34,7 +37,7 @@ inline void StyleColorDarkness()
     colors[ImGuiCol_FrameBg] = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
     colors[ImGuiCol_FrameBgHovered] = ImVec4(0.19f, 0.19f, 0.19f, 0.54f);
     colors[ImGuiCol_FrameBgActive] = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
-    colors[ImGuiCol_TitleBg] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_TitleBg] = ImVec4(0.068,0.068,0.068,1.000);
     colors[ImGuiCol_TitleBgActive] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
     colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
     colors[ImGuiCol_MenuBarBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
@@ -278,4 +281,27 @@ inline std::vector<std::wstring> SelectFiles() {
 
     CoUninitialize();
     return files;
+}
+
+inline void ShowErrorMessage(const char* errorMessage) {
+    MessageBoxA(nullptr, errorMessage, "Error", MB_ICONERROR | MB_OK);
+}
+
+inline void ShowMessage(const char* title,const char* msg) {
+    MessageBoxA(nullptr, msg, title, MB_OK | MB_ICONINFORMATION);
+}
+
+inline std::string GetUserDirectory(){
+    char profileDir[MAX_PATH];
+    DWORD size = sizeof(profileDir);
+
+    // Get the user's profile directory
+    if (!GetUserProfileDirectoryA(GetCurrentProcessToken(), profileDir, &size)) {
+        DWORD error = GetLastError();
+
+        char errorMessage[256];
+        sprintf_s(errorMessage, sizeof(errorMessage), "Error getting user profile directory. Error code: %lu\n Try running as administrator.", error);
+        ShowErrorMessage(errorMessage);
+    }
+    return std::string(profileDir);
 }

@@ -16,3 +16,4 @@ NamespaceIndentation: All
 PointerAlignment: Left
 TabWidth: '4'
 UseTab: ForIndentation
+                  

@@ -7,20 +7,31 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <winuser.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "TextEditor.h"
 #include "stb_img.h"
 #include <codecvt>
 
 std::string exec(const char* cmd) {
-	bool status = !std::system(cmd);
-	if (!status) return "None";
-	// An error occurred
-	std::string result;
-	std::ifstream file("git.txt");
-	std::getline(file,result);
-	if(result.size()==0) return "None";
-    return result;
+	// bool status = !std::system(cmd);
+	// if (!status) return "None";
+    char fcmd[128];
+    sprintf_s(fcmd, sizeof(fcmd), "/c %s", cmd);
+	SHELLEXECUTEINFOA sei = { sizeof(sei) };
+    sei.fMask = SEE_MASK_FLAG_NO_UI;
+    sei.lpFile = "cmd.exe";
+    sei.lpParameters = fcmd;
+    sei.nShow = SW_SHOWDEFAULT; // Hide the console window
+    if(ShellExecuteExA(&sei)){
+		std::string result;
+		std::ifstream file("git.txt");
+		std::getline(file,result);
+		file.close();
+		std::filesystem::remove("git.txt");
+		return result;
+    }
+    return "None";
 }
 
 
@@ -82,6 +93,21 @@ void renderFolderItems(std::string path,bool isRoot=false){
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,2.0f));
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(4.0f,2.0f));
 		if(ImGui::TreeNodeEx(folderName.c_str(),ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen)){
+
+			if(ImGui::IsMouseClicked(ImGuiMouseButton_Right)) ImGui::OpenPopup("folder_opt");
+
+	        const char* options[] = {ICON_FA_CARET_RIGHT"  New File",ICON_FA_CARET_RIGHT"  Rename",ICON_FA_CARET_RIGHT"  Open Folder",ICON_FA_CARET_RIGHT"  Open Terminal",ICON_FA_CARET_RIGHT"  New Folder",ICON_FA_CARET_RIGHT"  Delete Folder"};
+	        static int selected=-1;
+
+	        if (ImGui::BeginPopup("folder_opt"))
+	        {
+	            for (int i = 0; i < IM_ARRAYSIZE(options); i++){
+	            	if(i==4) ImGui::Separator();
+	                if (ImGui::Selectable(options[i])) selected = i;
+	            }
+	            ImGui::EndPopup();
+	        }
+
     		renderFolderItems(path);
     		ImGui::TreePop();
     	}
@@ -257,6 +283,7 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 
 	// }
 	if(is_opening){
+		ImGui::PushStyleColor(ImGuiCol_WindowBg,ImVec4(0.067f,0.075f,0.078f,1.000f));
 		ImGui::SetNextWindowSize(ImVec2{s_width,-1.0f},ImGuiCond_Once);
 		ImGui::Begin("Project Directory");
 	    // static bool isLoaded=false;
@@ -268,12 +295,15 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	    // if(isLoaded){
 	    	// renderFolderItems(folderPath,true);
 	    // }
+	    	// ImGui::PushStyleColor(ImGuiCol_Border,ImVec4(0.067,0.074,0.078,0.000));
 	    	renderFolderItems("D:/Projects/c++/txedit",true);
+	    	// ImGui::PopStyleColor();
 		ImGui::End();
+		ImGui::PopStyleColor();
 	}
 
-    editor.render();
 
+	editor.Render();
 	// #ifdef GL_DEBUG
 	// ImGui::Begin("Console");
 	// ImGui::End();
@@ -304,6 +334,21 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 		ImGui::SameLine();
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2.0f);
 		ImGui::Text("Column:%d",editor.GetEditorState()->mCursorPosition.mColumn+1);
+
+		static Animation aFileSave(2.0f);
+
+		if(editor.isFileSaving){
+			editor.isFileSaving=false;
+			aFileSave.start();
+		}
+		if(aFileSave.hasStarted){
+			ImGui::SameLine();
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2.0f);
+			ImGui::TextColored(ImVec4(0.165,0.616,0.561,1.000),"Saved:%s",editor.GetCurrentFilePath().c_str());
+			aFileSave.update();
+		}
+
+
 		static bool branchLoaded =false;
 		static std::string branch;
 		if(!branchLoaded){
@@ -420,7 +465,14 @@ int main(void)
 	io.Fonts->AddFontFromMemoryTTF((void*)data_icon_regular, icon_regular_data_size, 20 * 2.0f / 3.0f, &icon_config, icons_ranges);
 
 
-	StyleColorsDracula();
+	// StyleColorsDracula();
+	// auto& colors=ImGui::GetStyle().Colors;
+    // colors[ImGuiCol_TitleBg]=ImVec4{0.067,0.075,0.078,1.000};
+    // colors[ImGuiCol_TitleBgActive]=ImVec4{0.067,0.075,0.078,1.000};
+    // colors[ImGuiCol_Tab]=ImVec4{0.067,0.075,0.078,1.000};
+    // colors[ImGuiCol_TabActive] = ImVec4{0.114,0.125,0.129,1.000};
+    // colors[ImGuiCol_TabHovered] = ImVec4{0.134,0.135,0.139,1.000};
+    StyleColorDarkness();
 
 	editor.LoadFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
 

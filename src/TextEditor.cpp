@@ -42,20 +42,25 @@ void Editor::LoadFile(const char* filepath){
 	// lex.Tokenize();
 }
 
-
-
-bool Editor::render()
-{
-	if(!isFileLoaded) return false;
-	
+void Editor::Render(){
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg,mGruvboxPalletDark[(size_t)Pallet::Background]);
 	ImGui::SetNextWindowContentSize(ImVec2(ImGui::GetContentRegionMax().x + 1500.0f, 0));
 	ImGui::Begin("Editor", 0, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_HorizontalScrollbar|ImGuiWindowFlags_AlwaysAutoResize);
 	ImGui::PopStyleVar();
 	ImGui::PopStyleColor();
-
 	ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+	this->Draw();
+	ImGui::PopFont();
+	ImGui::End();
+}
+
+
+
+bool Editor::Draw()
+{
+	if(!isFileLoaded) return false;
+	
 	static bool isInit = false;
 	if (!isInit) {
 		mEditorWindow = ImGui::GetCurrentWindow();
@@ -343,8 +348,6 @@ bool Editor::render()
 	HandleKeyboardInputs();
 	HandleMouseInputs();
 
-	ImGui::PopFont();
-	ImGui::End();
 	return true;
 }
 
@@ -820,8 +823,10 @@ void Editor::SaveFile(){
 	file << copyStr;
 	file.close();
 	GL_INFO("Saving...");
+	this->isFileSaving=true;
 }
 
 void Editor::SelectAll(){
 	GL_INFO("SELECT ALL");
 }
+
