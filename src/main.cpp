@@ -94,7 +94,7 @@ void renderFolderItems(std::string path,bool isRoot=false){
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(4.0f,2.0f));
 		if(ImGui::TreeNodeEx(folderName.c_str(),ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen)){
 
-			if(ImGui::IsMouseClicked(ImGuiMouseButton_Right)) ImGui::OpenPopup("folder_opt");
+			if(ImGui::IsItemClicked(ImGuiMouseButton_Right)) ImGui::OpenPopup("folder_opt");
 
 	        const char* options[] = {ICON_FA_CARET_RIGHT"  New File",ICON_FA_CARET_RIGHT"  Rename",ICON_FA_CARET_RIGHT"  Open Folder",ICON_FA_CARET_RIGHT"  Open Terminal",ICON_FA_CARET_RIGHT"  New Folder",ICON_FA_CARET_RIGHT"  Delete Folder"};
 	        static int selected=-1;
@@ -352,7 +352,7 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 		static bool branchLoaded =false;
 		static std::string branch;
 		if(!branchLoaded){
-			branch=exec("git rev-parse --abbrev-ref HEAD > git.txt");
+			// branch=exec("git rev-parse --abbrev-ref HEAD > git.txt");
 			branchLoaded=true;
 		}
 		if(!branch.empty()){

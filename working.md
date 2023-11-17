@@ -1,19 +1,30 @@
 [------------------------------ __TODO__ ---------------------------------]
+# [ FEATURE ] Place Cursor at 0,0 when loading a file
+# [ FEATURE ] Execute the terminal commands in background asynchronously.
+# [ FEATURE ] Show File Extension in Status Bar
+# [ FEATURE ] Implement Content Menu Options for files and folders
+# [ FEATURE ] Drag and Drop File and Folders
+# [ FEATURE ] Opening new file in new tab
 # [ FEATURE ] Smooth Scrolling
 # [ FEATURE ] Syntax Highlighting
 <!-- # [ FEATURE ] Using Custum Title Bar -->
 # [ FEATURE ] Support For UTF-8 characters
-# [ FEATURE ] Status Bar containing (lineNo,colNo,gitbranch,tabsize,filetype)
 # [ FEATURE ] Search and Replace
 # [ FEATURE ] File Operations
 # [ FEATURE ] Tabs and Split Views
 # [ FEATURE ] Full-Screen Mode
 # [ FEATURE ] Auto-Save and Backup
+
+
+########################################################################################
+## Friday 15th - 17th Nov 2023
+# [ FEATURE ] Color Scheme Improvement
 # [ FEATURE ] File Saving
+
 ########################################################################################
 
 ## Tuesday 14th Nov 2023
-+ [ FEATURE ] 
+# [ FEATURE ] Status Bar containing (lineNo,colNo,gitbranch,tabsize)
 # [   BUG   ] Update window size when new file is opened
 
 ########################################################################################
@@ -158,4 +169,6 @@
 - [   BUG   ] Fix currentline selection on mouse click
 
 
-########################################################################################
+########################################################################################                                                                                                                                                                   
+                                                                                                                                                                       
+                                                                                                                                                                            
