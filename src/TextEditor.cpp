@@ -3,6 +3,7 @@
 #include "TextEditor.h"
 
 #include <ctype.h>
+#include <filesystem>
 #include <iterator>
 #include <stdint.h>
 
@@ -21,16 +22,30 @@
 Editor::Editor()
 {
 	InitPallet();
+	InitFileExtensions();
 	// #undef IM_TABSIZE
 	// #define IM_TABSIZE mTabWidth
 }
 Editor::~Editor() {}
 
+void Editor::ResetState(){
+	mSearchState.reset();
+	mCursors.clear();
+	mState.mCursorPosition.mColumn=0;
+	mState.mCursorPosition.mLine=0;
+	mState.mSelectionEnd =mState.mSelectionStart=mState.mCursorPosition;
+	mSelectionMode=SelectionMode::Normal;
+}
+
+
 void Editor::LoadFile(const char* filepath){
+	this->ResetState();
 	size_t size{0};
-	std::string file_data{0};
 	std::ifstream t(filepath);
 	if(t.good()) mFilePath=filepath;
+	fileType=GetFileType();
+
+	std::string file_data{0};
 	t.seekg(0, std::ios::end);
 	size = t.tellg();
 	file_data.resize(size, ' ');
@@ -38,8 +53,76 @@ void Editor::LoadFile(const char* filepath){
 	t.read(&file_data[0], size);
 	this->SetBuffer(file_data);
 	isFileLoaded=true;
+	reCalculateBounds=true;
 	// lex.SetData(file_data);
 	// lex.Tokenize();
+}
+
+void Editor::InitFileExtensions(){
+    FileExtensions[".c"] = "C";
+    FileExtensions[".cpp"] = "C++";
+    FileExtensions[".h"] = "Header";
+    FileExtensions[".hpp"] = "C++ Header";
+    FileExtensions[".java"] = "Java";
+    FileExtensions[".py"] = "Python";
+    FileExtensions[".html"] = "HTML";
+    FileExtensions[".css"] = "CSS";
+    FileExtensions[".js"] = "JavaScript";
+    FileExtensions[".php"] = "PHP";
+    FileExtensions[".rb"] = "Ruby";
+    FileExtensions[".pl"] = "Perl";
+    FileExtensions[".swift"] = "Swift";
+    FileExtensions[".ts"] = "TypeScript";
+    FileExtensions[".csharp"] = "C#";
+    FileExtensions[".go"] = "Go";
+    FileExtensions[".rust"] = "Rust";
+    FileExtensions[".kotlin"] = "Kotlin";
+    FileExtensions[".scala"] = "Scala";
+    FileExtensions[".sql"] = "SQL";
+    FileExtensions[".json"] = "JSON";
+    FileExtensions[".xml"] = "XML";
+    FileExtensions[".yaml"] = "YAML";
+    FileExtensions[".makefile"] = "Makefile";
+    FileExtensions[".bat"] = "Batch";
+    FileExtensions[".sh"] = "Shell Script";
+    FileExtensions[".md"] = "Markdown";
+    FileExtensions[".tex"] = "LaTeX";
+    FileExtensions[".csv"] = "CSV";
+    FileExtensions[".tsv"] = "TSV";
+    FileExtensions[".svg"] = "SVG";
+    FileExtensions[".gitignore"] = "Git Ignore";
+    FileExtensions[".dockerfile"] = "Dockerfile";
+    FileExtensions[".lua"] = "Lua";
+    FileExtensions[".sln"] = "Visual Studio Solution";
+    FileExtensions[".gitmodules"] = "Git Modules";
+    
+    FileExtensions[".asm"] = "Assembly";
+    FileExtensions[".bat"] = "Batch Script";
+    FileExtensions[".conf"] = "Configuration";
+    FileExtensions[".dll"] = "Dynamic Link Library";
+    FileExtensions[".exe"] = "Executable";
+    FileExtensions[".obj"] = "Object";
+    FileExtensions[".pch"] = "Precompiled Header";
+    FileExtensions[".pdf"] = "PDF";
+    FileExtensions[".ppt"] = "PowerPoint";
+    FileExtensions[".txt"] = "Plain Text";
+    FileExtensions[".xls"] = "Excel";
+    FileExtensions[".zip"] = "Zip Archive";
+    FileExtensions[".log"] = "Log File";
+}
+
+
+
+std::string Editor::GetFileType(){
+	std::string ext=std::filesystem::path(mFilePath).extension().generic_u8string();
+	if(FileExtensions.find(ext)!=FileExtensions.end())
+		return FileExtensions[ext];
+
+	if(ext.size()>0){
+		ext=ext.substr(1);
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::toupper);
+	}
+	return ext;
 }
 
 void Editor::Render(){

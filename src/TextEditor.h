@@ -107,6 +107,7 @@ class Editor
 	ImVec2 mLinePosition;
 	std::string mFilePath;
 	ImGuiWindow* mEditorWindow{0};
+	std::vector<std::string> mFolders;
 
 
 	void SwapLines(bool up = true);
@@ -159,17 +160,27 @@ class Editor
 	bool IsCursorVisible();
 	void RenderStatusBar();
 	void DeleteCharacter(EditorState& cursor,int cidx=-1);
+	void ResetState();
+	void InitFileExtensions();
+	std::map<std::string, std::string> FileExtensions;
+
 
   public:
 	bool reCalculateBounds = true;
 	bool isFileSaving=false;
 	float maxLineWidth{0.0f}; //max horizontal scroll;
+	std::string fileType;
 	void SetBuffer(const std::string& buffer);
+
+	std::vector<std::string>& GetFolders(){ return mFolders;}
+	void AddFolder(std::string path){ mFolders.push_back(path);}
+
 	std::string GetCurrentFilePath()const{return mFilePath;};
 	void Render();
 	bool Draw();
 	void LoadFile(const char* filepath);
 	void setLineSpacing(float value) { this->mLineSpacing = value; }
+	std::string GetFileType();
 	void HandleKeyboardInputs();
 	void HandleMouseInputs();
 	void UpdateBounds();

@@ -74,22 +74,17 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 	for (int i = 0; i < count; i++) {
 		if (std::filesystem::is_directory(paths[i])) {
 			GL_INFO("Folder: {}", paths[i]);
+			editor.AddFolder(paths[i]);
 		} else {
 			GL_INFO("File: {}", paths[i]);
-			std::ifstream t(paths[i]);
-			t.seekg(0, std::ios::end);
-			// size = t.tellg();
-			// file_data.resize(size, ' ');
-			// t.seekg(0);
-			// t.read(&file_data[0], size);
-			// editor.SetBuffer(file_data);
+			editor.LoadFile(paths[i]);
 		}
 	}
 }
 
 void renderFolderItems(std::string path,bool isRoot=false){
 	if(isRoot){
-    	static std::string folderName=std::filesystem::path(path).filename().generic_string();
+    	std::string folderName=std::filesystem::path(path).filename().generic_string();
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,2.0f));
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(4.0f,2.0f));
 		if(ImGui::TreeNodeEx(folderName.c_str(),ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen)){
@@ -149,7 +144,6 @@ void renderFolderItems(std::string path,bool isRoot=false){
 				for(Entity& en:entities) en.is_explored=false;
 				if(!item.is_explored) item.is_explored=true;
 				editor.LoadFile(item.path.c_str());
-				editor.reCalculateBounds=true;
 			}
 			ImGui::PopStyleVar();
 			ImGui::PopStyleColor(2);
@@ -280,11 +274,11 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	// 	GL_INFO(width);
 	// 	curr=width;
 	// 	if(width > 1.0f) ImGui::SetNextWindowSize(ImVec2{width,-1.0f});
-
 	// }
 	if(is_opening){
 		ImGui::PushStyleColor(ImGuiCol_WindowBg,ImVec4(0.067f,0.075f,0.078f,1.000f));
 		ImGui::SetNextWindowSize(ImVec2{s_width,-1.0f},ImGuiCond_Once);
+		ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(0.764,0.764,0.764,1.000));
 		ImGui::Begin("Project Directory");
 	    // static bool isLoaded=false;
 	   	// static std::string folderPath; 
@@ -296,10 +290,13 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	    	// renderFolderItems(folderPath,true);
 	    // }
 	    	// ImGui::PushStyleColor(ImGuiCol_Border,ImVec4(0.067,0.074,0.078,0.000));
-	    	renderFolderItems("D:/Projects/c++/txedit",true);
+	    	// renderFolderItems("D:/Projects/c++/txedit",true);
+	    	auto& folders=editor.GetFolders();
+	    	for(const auto& folder:folders)
+	    		renderFolderItems(folder,true);
 	    	// ImGui::PopStyleColor();
 		ImGui::End();
-		ImGui::PopStyleColor();
+		ImGui::PopStyleColor(2);
 	}
 
 
@@ -362,6 +359,13 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 			ImGui::Text("%s %s",ICON_FA_CODE_BRANCH,branch.c_str());
 			ImGui::PopFont();
 		}
+
+		// FileType
+		float width=ImGui::CalcTextSize(editor.fileType.c_str()).x;
+		ImGui::SameLine(ImGui::GetWindowWidth()-width-10.0f);
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2.0f);
+		ImGui::Text("%s", editor.fileType.c_str());
+
 	ImGui::End();
 	ImGui::PopFont();
 	ImGui::PopStyleColor();
@@ -388,8 +392,32 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 }
 
 
-int main(void)
+void processArguments(int argc,char* argv[]){
+	namespace fs=std::filesystem;
+	for (int i = 1; i < argc; ++i) {
+        fs::path path(argv[i]);
+        if (fs::exists(path)) {
+            if (fs::is_regular_file(path)) {
+                std::cout << path << " is a file." << std::endl;
+                editor.LoadFile(path.generic_string().c_str());
+            } else if (fs::is_directory(path)) {
+                std::cout << path << " is a folder." << std::endl;
+                editor.AddFolder(path.generic_string());
+            } else {
+                std::cout << path << " is neither a file nor a folder." << std::endl;
+            }
+        } else {
+            std::cout << path << " does not exist." << std::endl;
+        }
+    }
+}
+
+
+int main(int argc,char* argv[])
 {
+
+	if(argc > 1) processArguments(argc,argv);
+
 	GLFWwindow* window;
 #ifdef GL_DEBUG
 	OpenGL::Log::Init();
@@ -474,7 +502,7 @@ int main(void)
     // colors[ImGuiCol_TabHovered] = ImVec4{0.134,0.135,0.139,1.000};
     StyleColorDarkness();
 
-	editor.LoadFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
+	// editor.LoadFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
 
 	while (!glfwWindowShouldClose(window)) {
 		draw(window, io);

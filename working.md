@@ -1,11 +1,11 @@
 [------------------------------ __TODO__ ---------------------------------]
-# [ FEATURE ] Place Cursor at 0,0 when loading a file
+# [ FEATURE ] Set a default ini file location
+# [ FEATURE ] Surround selected word with Quotations/Brackets when clicked
 # [ FEATURE ] Execute the terminal commands in background asynchronously.
-# [ FEATURE ] Show File Extension in Status Bar
 # [ FEATURE ] Implement Content Menu Options for files and folders
-# [ FEATURE ] Drag and Drop File and Folders
 # [ FEATURE ] Opening new file in new tab
 # [ FEATURE ] Smooth Scrolling
+# [ FEATURE ] Render Image for image file
 # [ FEATURE ] Syntax Highlighting
 <!-- # [ FEATURE ] Using Custum Title Bar -->
 # [ FEATURE ] Support For UTF-8 characters
@@ -14,7 +14,16 @@
 # [ FEATURE ] Tabs and Split Views
 # [ FEATURE ] Full-Screen Mode
 # [ FEATURE ] Auto-Save and Backup
+########################################################################################
+## Friday 19th Nov 2023
+# [ FEATURE ] Drag and Drop File and Folders
+# [ FEATURE ] Show File Extension in Status Bar
+# [ FEATURE ] Take cmd arguments like folder/file path
+# [ FEATURE ] Support OpenWith Feature
 
+########################################################################################
+## Friday 18th Nov 2023
+# [ FEATURE ] Place Cursor at 0,0 when loading a file
 
 ########################################################################################
 ## Friday 15th - 17th Nov 2023
@@ -172,3 +181,4 @@
 ########################################################################################                                                                                                                                                                   
                                                                                                                                                                        
                                                                                                                                                                             
+                                                                                                                                                                               
