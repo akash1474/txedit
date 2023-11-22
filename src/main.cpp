@@ -64,11 +64,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	draw(window, ImGui::GetIO());
 }
 
-std::string wstringToUTF8(const std::wstring& input) {
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return converter.to_bytes(input);
-}
-
 void drop_callback(GLFWwindow* window, int count, const char** paths)
 {
 	for (int i = 0; i < count; i++) {
@@ -110,7 +105,6 @@ void renderFolderItems(std::string path,bool isRoot=false){
     	return;
 	}
 	if(mDirectoryData.empty()  || mDirectoryData.find(path)==mDirectoryData.end()){
-		std::cout << path << std::endl;
 		auto& entities=mDirectoryData[path];
 		for(const auto& entity:std::filesystem::directory_iterator(path)) entities.push_back({
 			entity.path().filename().generic_string(),
@@ -162,10 +156,10 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	// ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 	glfwSetDropCallback(window, drop_callback);
 
-	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None | ImGuiDockNodeFlags_PassthruCentralNode;
-	static ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
+	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+	static ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
-	static bool is_open = true;
 	ImGui::SetNextWindowPos(viewport->WorkPos);
 	ImVec2 size(viewport->WorkSize.x,viewport->WorkSize.y-22.0f);
 	ImGui::SetNextWindowSize(size);
@@ -174,18 +168,44 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
 	window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-	window_flags |= ImGuiWindowFlags_NoBackground;
+    if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+    	window_flags |= ImGuiWindowFlags_NoBackground;
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("Container", &is_open, window_flags);
+	ImGui::Begin("Container",nullptr, window_flags);
 	ImGui::PopStyleVar(3);
-	static ImGuiID dockspace_id = ImGui::GetID("DDockSpace");
-	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f),dockspace_flags);
+
+	if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable){
+        ImGuiID dockspace_id = ImGui::GetID("DDockSpace");
+        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+
+		static bool isFirst=true;
+		if(isFirst){
+			isFirst=false;
+			ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
+			ImGui::DockBuilderAddNode(dockspace_id,dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+			ImGui::DockBuilderSetNodeSize(dockspace_id, size);
+
+			auto dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.3f, nullptr, &dockspace_id);
+			// auto dock_id_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.7f, nullptr, &dockspace_id);
+			ImGui::DockBuilderDockWindow("Project Directory", dock_id_left);
+			ImGui::DockBuilderDockWindow("Editor", dockspace_id);
+			ImGui::DockBuilderFinish(dockspace_id);
+		}
+	}
 
 	if (ImGui::BeginMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
 			ImGui::MenuItem("New File");
-			ImGui::MenuItem("Open File");
-			ImGui::MenuItem("Open Folder");
+
+			if(ImGui::MenuItem("Open File"))
+				editor.LoadFile(SelectFile().c_str());
+
+			if(ImGui::MenuItem("Open Folder")){
+				std::string path=SelectFolder();
+				if(!path.empty()) editor.AddFolder(path.c_str());
+			}
+			
 			ImGui::EndMenu();
 		}
 
@@ -199,70 +219,70 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	}
 
 	ImGui::End();
-	#ifdef GL_DEBUG
-	static bool show_demo=true;
-	ImGui::ShowDemoWindow(&show_demo);
+	// #ifdef GL_DEBUG
+	// static bool show_demo=true;
+	// ImGui::ShowDemoWindow(&show_demo);
 
 
-	ImGui::Begin("Project");
+	// ImGui::Begin("Project");
 
 
-	static int LineSpacing = 10.0f;
-	if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
-		editor.setLineSpacing(LineSpacing);
-	}
+	// static int LineSpacing = 10.0f;
+	// if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
+	// 	editor.setLineSpacing(LineSpacing);
+	// }
 
-    ImGui::Spacing();
-	ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
-    ImGui::Spacing();
-    ImGui::Text("mCursorPosition: X:%d  Y:%d",editor.GetEditorState()->mCursorPosition.mColumn,editor.GetEditorState()->mCursorPosition.mLine);
-    ImGui::Text("mSelectionStart: X:%d  Y:%d",editor.GetEditorState()->mSelectionStart.mColumn,editor.GetEditorState()->mSelectionStart.mLine);
-    ImGui::Text("mSelectionEnd:   X:%d  Y:%d",editor.GetEditorState()->mSelectionEnd.mColumn,editor.GetEditorState()->mSelectionEnd.mLine);
-
-
-    ImGui::Spacing();
-    ImGui::Spacing();
-    static std::string mode;
-    ImColor color;
-    switch(editor.GetSelectionMode()){
-	    case 0: 
-	    	mode="Normal";
-	    	color=ImColor(50,206,187,255);
-	    	break;
-	    case 1: 
-	    	mode="Word";
-	    	color=ImColor(233,196,106,255);
-	    	break;
-	    case 2: 
-	    	mode="Line";
-	    	color=ImColor(231,111,81,255);
-	    	break;
-    }
-    ImGui::Text("SelectionMode: ");
-    ImGui::SameLine();
-    ImGui::PushStyleColor(ImGuiCol_Text,color.Value);
-    ImGui::Text("%s", mode.c_str());
-    ImGui::PopStyleColor();
+    // ImGui::Spacing();
+	// ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
+    // ImGui::Spacing();
+    // ImGui::Text("mCursorPosition: X:%d  Y:%d",editor.GetEditorState()->mCursorPosition.mColumn,editor.GetEditorState()->mCursorPosition.mLine);
+    // ImGui::Text("mSelectionStart: X:%d  Y:%d",editor.GetEditorState()->mSelectionStart.mColumn,editor.GetEditorState()->mSelectionStart.mLine);
+    // ImGui::Text("mSelectionEnd:   X:%d  Y:%d",editor.GetEditorState()->mSelectionEnd.mColumn,editor.GetEditorState()->mSelectionEnd.mLine);
 
 
+    // ImGui::Spacing();
+    // ImGui::Spacing();
+    // static std::string mode;
+    // ImColor color;
+    // switch(editor.GetSelectionMode()){
+	//     case 0: 
+	//     	mode="Normal";
+	//     	color=ImColor(50,206,187,255);
+	//     	break;
+	//     case 1: 
+	//     	mode="Word";
+	//     	color=ImColor(233,196,106,255);
+	//     	break;
+	//     case 2: 
+	//     	mode="Line";
+	//     	color=ImColor(231,111,81,255);
+	//     	break;
+    // }
+    // ImGui::Text("SelectionMode: ");
+    // ImGui::SameLine();
+    // ImGui::PushStyleColor(ImGuiCol_Text,color.Value);
+    // ImGui::Text("%s", mode.c_str());
+    // ImGui::PopStyleColor();
 
-    ImGui::Spacing();
-    ImGui::Spacing();
-    static int v{1};
-    ImGui::Text("Goto Line: "); ImGui::SameLine(); 
-    if(ImGui::InputInt("##ScrollToLine", &v,1,100,ImGuiInputTextFlags_EnterReturnsTrue))
-        editor.ScrollToLineNumber(v);
 
-    if(ImGui::Button("Select File")) SelectFile();
 
-    if(ImGui::Button("Select Files")){
-    	auto files=SelectFiles();
-    	for(auto& file:files)
-    		std::wcout << file << std::endl;
-    }
+    // ImGui::Spacing();
+    // ImGui::Spacing();
+    // static int v{1};
+    // ImGui::Text("Goto Line: "); ImGui::SameLine(); 
+    // if(ImGui::InputInt("##ScrollToLine", &v,1,100,ImGuiInputTextFlags_EnterReturnsTrue))
+    //     editor.ScrollToLineNumber(v);
 
-	ImGui::End();
-	#endif
+    // if(ImGui::Button("Select File")) SelectFile();
+
+    // if(ImGui::Button("Select Files")){
+    // 	auto files=SelectFiles();
+    // 	for(auto& file:files)
+    // 		std::wcout << file << std::endl;
+    // }
+
+	// ImGui::End();
+	// #endif
 
 	static float s_width=250.0f;
 	static bool is_opening=true;
@@ -398,16 +418,16 @@ void processArguments(int argc,char* argv[]){
         fs::path path(argv[i]);
         if (fs::exists(path)) {
             if (fs::is_regular_file(path)) {
-                std::cout << path << " is a file." << std::endl;
+            	GL_INFO("FILE:{}",path.generic_string());
                 editor.LoadFile(path.generic_string().c_str());
             } else if (fs::is_directory(path)) {
-                std::cout << path << " is a folder." << std::endl;
+            	GL_INFO("FOLDER:{}",path.generic_string());
                 editor.AddFolder(path.generic_string());
             } else {
-                std::cout << path << " is neither a file nor a folder." << std::endl;
+            	ShowErrorMessage("Invalid File/Folder Selected");
             }
         } else {
-            std::cout << path << " does not exist." << std::endl;
+            ShowErrorMessage("Path Doesn't Exists");
         }
     }
 }
@@ -451,7 +471,7 @@ int main(int argc,char* argv[])
 
 	GL_INFO("Initializing Fonts");
 	io.Fonts->Clear();
-	// io.IniFilename=nullptr;
+	io.IniFilename=GetUserDirectory("txedit").c_str();
 	io.LogFilename = nullptr;
 
 	glfwSwapInterval(1);

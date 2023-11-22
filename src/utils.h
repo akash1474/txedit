@@ -2,7 +2,9 @@
 #include "imgui.h"
 #include "string"
 #include "vector"
+#include <filesystem>
 #include <shobjidl.h>
+#include <stdio.h>
 #include "shellapi.h"
 #include "userenv.h"
 
@@ -183,7 +185,14 @@ inline void StyleColorsDracula()
     style.ChildRounding = 2;
 }
 
-inline std::wstring SelectFolder(){
+inline std::string ToUTF8(std::wstring wideString){
+    int bufferSize = WideCharToMultiByte(CP_UTF8, 0, wideString.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    std::string utf8String(bufferSize, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, wideString.c_str(), -1, &utf8String[0], bufferSize, nullptr, nullptr); 
+    return utf8String;
+}
+
+inline std::string SelectFolder(){
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     std::wstring folder_path;
     IFileDialog *pfd;
@@ -208,11 +217,17 @@ inline std::wstring SelectFolder(){
     }
 
     CoUninitialize();
-    return folder_path;
+    if (!folder_path.empty()) {
+        std::string path = ToUTF8(folder_path);
+        GL_INFO("FOLDER SELECTED: {}", path.c_str());
+        return path;
+    }
+
+    return std::string("");
 }
 
 
-inline std::wstring SelectFile(){
+inline std::string SelectFile(){
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     std::wstring filePath;
 
@@ -241,7 +256,7 @@ inline std::wstring SelectFile(){
     }
 
     CoUninitialize();
-    return filePath;
+    return ToUTF8(filePath);
 }
 
 
@@ -291,7 +306,7 @@ inline void ShowMessage(const char* title,const char* msg) {
     MessageBoxA(nullptr, msg, title, MB_OK | MB_ICONINFORMATION);
 }
 
-inline std::string GetUserDirectory(){
+inline std::string GetUserDirectory(const char* app_folder=nullptr){
     char profileDir[MAX_PATH];
     DWORD size = sizeof(profileDir);
 
@@ -303,5 +318,13 @@ inline std::string GetUserDirectory(){
         sprintf_s(errorMessage, sizeof(errorMessage), "Error getting user profile directory. Error code: %lu\n Try running as administrator.", error);
         ShowErrorMessage(errorMessage);
     }
+    if(app_folder){
+        std::string path(profileDir);
+        path+="\\"+std::string(app_folder);
+        if(!std::filesystem::exists(path)) std::filesystem::create_directory(path);
+        GL_INFO("ROOT PATH:{}",path);
+        return std::string(path);
+    }
+    GL_INFO("ROOT PATH:{}",profileDir);
     return std::string(profileDir);
 }
