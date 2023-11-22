@@ -1,6 +1,5 @@
 [------------------------------ __TODO__ ---------------------------------]
-# [ FEATURE ] Set a default ini file location
-# [ FEATURE ] Surround selected word with Quotations/Brackets when clicked
+# [   BUG   ] Fix Surround when tabs present and support for multiple cursors
 # [ FEATURE ] Execute the terminal commands in background asynchronously.
 # [ FEATURE ] Implement Content Menu Options for files and folders
 # [ FEATURE ] Opening new file in new tab
@@ -14,6 +13,16 @@
 # [ FEATURE ] Tabs and Split Views
 # [ FEATURE ] Full-Screen Mode
 # [ FEATURE ] Auto-Save and Backup
+
+########################################################################################
+## 20th-22nd Nov 2023
+# [   BUG   ] Fixed Scroll when cursor goes off screen while pressing enter
+# [   BUG   ] Fixed Line Render after some gap at top
+# [ FEATURE ] Surround selected word with Quotations/Brackets when clicked
+# [ FEATURE ] Added a Toolbar
+# [ FEATURE ] Set a default ini file location
+
+
 ########################################################################################
 ## Friday 19th Nov 2023
 # [ FEATURE ] Drag and Drop File and Folders

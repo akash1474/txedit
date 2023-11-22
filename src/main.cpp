@@ -219,70 +219,70 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	}
 
 	ImGui::End();
-	// #ifdef GL_DEBUG
-	// static bool show_demo=true;
-	// ImGui::ShowDemoWindow(&show_demo);
+	#ifdef GL_DEBUG
+	static bool show_demo=true;
+	ImGui::ShowDemoWindow(&show_demo);
 
 
-	// ImGui::Begin("Project");
+	ImGui::Begin("Project");
 
 
-	// static int LineSpacing = 10.0f;
-	// if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
-	// 	editor.setLineSpacing(LineSpacing);
-	// }
+	static int LineSpacing = 10.0f;
+	if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
+		editor.setLineSpacing(LineSpacing);
+	}
 
-    // ImGui::Spacing();
-	// ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
-    // ImGui::Spacing();
-    // ImGui::Text("mCursorPosition: X:%d  Y:%d",editor.GetEditorState()->mCursorPosition.mColumn,editor.GetEditorState()->mCursorPosition.mLine);
-    // ImGui::Text("mSelectionStart: X:%d  Y:%d",editor.GetEditorState()->mSelectionStart.mColumn,editor.GetEditorState()->mSelectionStart.mLine);
-    // ImGui::Text("mSelectionEnd:   X:%d  Y:%d",editor.GetEditorState()->mSelectionEnd.mColumn,editor.GetEditorState()->mSelectionEnd.mLine);
-
-
-    // ImGui::Spacing();
-    // ImGui::Spacing();
-    // static std::string mode;
-    // ImColor color;
-    // switch(editor.GetSelectionMode()){
-	//     case 0: 
-	//     	mode="Normal";
-	//     	color=ImColor(50,206,187,255);
-	//     	break;
-	//     case 1: 
-	//     	mode="Word";
-	//     	color=ImColor(233,196,106,255);
-	//     	break;
-	//     case 2: 
-	//     	mode="Line";
-	//     	color=ImColor(231,111,81,255);
-	//     	break;
-    // }
-    // ImGui::Text("SelectionMode: ");
-    // ImGui::SameLine();
-    // ImGui::PushStyleColor(ImGuiCol_Text,color.Value);
-    // ImGui::Text("%s", mode.c_str());
-    // ImGui::PopStyleColor();
+    ImGui::Spacing();
+	ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
+    ImGui::Spacing();
+    ImGui::Text("mCursorPosition: X:%d  Y:%d",editor.GetEditorState()->mCursorPosition.mColumn,editor.GetEditorState()->mCursorPosition.mLine);
+    ImGui::Text("mSelectionStart: X:%d  Y:%d",editor.GetEditorState()->mSelectionStart.mColumn,editor.GetEditorState()->mSelectionStart.mLine);
+    ImGui::Text("mSelectionEnd:   X:%d  Y:%d",editor.GetEditorState()->mSelectionEnd.mColumn,editor.GetEditorState()->mSelectionEnd.mLine);
 
 
+    ImGui::Spacing();
+    ImGui::Spacing();
+    static std::string mode;
+    ImColor color;
+    switch(editor.GetSelectionMode()){
+	    case 0: 
+	    	mode="Normal";
+	    	color=ImColor(50,206,187,255);
+	    	break;
+	    case 1: 
+	    	mode="Word";
+	    	color=ImColor(233,196,106,255);
+	    	break;
+	    case 2: 
+	    	mode="Line";
+	    	color=ImColor(231,111,81,255);
+	    	break;
+    }
+    ImGui::Text("SelectionMode: ");
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Text,color.Value);
+    ImGui::Text("%s", mode.c_str());
+    ImGui::PopStyleColor();
 
-    // ImGui::Spacing();
-    // ImGui::Spacing();
-    // static int v{1};
-    // ImGui::Text("Goto Line: "); ImGui::SameLine(); 
-    // if(ImGui::InputInt("##ScrollToLine", &v,1,100,ImGuiInputTextFlags_EnterReturnsTrue))
-    //     editor.ScrollToLineNumber(v);
 
-    // if(ImGui::Button("Select File")) SelectFile();
 
-    // if(ImGui::Button("Select Files")){
-    // 	auto files=SelectFiles();
-    // 	for(auto& file:files)
-    // 		std::wcout << file << std::endl;
-    // }
+    ImGui::Spacing();
+    ImGui::Spacing();
+    static int v{1};
+    ImGui::Text("Goto Line: "); ImGui::SameLine(); 
+    if(ImGui::InputInt("##ScrollToLine", &v,1,100,ImGuiInputTextFlags_EnterReturnsTrue))
+        editor.ScrollToLineNumber(v);
 
-	// ImGui::End();
-	// #endif
+    if(ImGui::Button("Select File")) SelectFile();
+
+    if(ImGui::Button("Select Files")){
+    	auto files=SelectFiles();
+    	for(auto& file:files)
+    		std::wcout << file << std::endl;
+    }
+
+	ImGui::End();
+	#endif
 
 	static float s_width=250.0f;
 	static bool is_opening=true;
@@ -471,7 +471,8 @@ int main(int argc,char* argv[])
 
 	GL_INFO("Initializing Fonts");
 	io.Fonts->Clear();
-	io.IniFilename=GetUserDirectory("txedit").c_str();
+	const std::string app_dir=GetUserDirectory("txedit");
+	io.IniFilename=app_dir.c_str();
 	io.LogFilename = nullptr;
 
 	glfwSwapInterval(1);
@@ -523,6 +524,7 @@ int main(int argc,char* argv[])
     StyleColorDarkness();
 
 	editor.LoadFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
+	editor.AddFolder("D:/Projects/c++/txedit");
 
 	while (!glfwWindowShouldClose(window)) {
 		draw(window, io);

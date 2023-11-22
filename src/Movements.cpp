@@ -1,4 +1,5 @@
 #include "Log.h"
+#include "imgui.h"
 #include "pch.h"
 #include "TextEditor.h"
 #include <algorithm>
@@ -92,7 +93,6 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 
 			if (cursorState.mSelectionStart > cursorState.mSelectionEnd) cursorState.mCursorDirectionChanged=true;
 
-			mState=mCursors[0];
 			continue;
 		}
 
@@ -118,7 +118,6 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 
 				cursorState.mCursorPosition.mColumn -= count;
 				if(mSelectionMode==SelectionMode::Word) cursorState.mSelectionEnd=cursorState.mCursorPosition;
-				mState=mCursors[0];
 
 				continue;
 			}
@@ -127,12 +126,11 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 		if (cursorState.mCursorPosition.mColumn == 0 && cursorState.mCursorPosition.mLine>0) {
 
 			cursorState.mCursorPosition.mLine--;
-
 			cursorState.mCursorPosition.mColumn = GetCurrentLineLength(cursorState.mCursorPosition.mLine);
 
 		} else if(cursorState.mCursorPosition.mColumn > 0) {
-			int idx=GetCurrentLineIndex(cursorState.mCursorPosition);
 
+			int idx=GetCurrentLineIndex(cursorState.mCursorPosition);
 			if (idx == 0 && mLines[cursorState.mCursorPosition.mLine][0] == '\t') {
 				cursorState.mCursorPosition.mColumn = 0;
 				continue;
@@ -299,19 +297,29 @@ void Editor::InsertCharacter(char newChar)
 	int idx = GetCurrentLineIndex(mState.mCursorPosition);
 	GL_INFO("INSERT IDX:{}",idx);
 	int currentLineIndex=mState.mCursorPosition.mLine;
+
+	if(mState.mSelectionStart > mState.mSelectionEnd)
+		std::swap(mState.mSelectionStart,mState.mSelectionEnd);
+
 	if ( mCursors.empty() && currentLineIndex >= 0 && currentLineIndex < mLines.size() && mState.mCursorPosition.mColumn >= 0 &&
 	    idx <= mLines[currentLineIndex].size()) {
 
+		//Fix for tab spaces
 		if (newChar == '\"' || newChar == '\'' || newChar == '(' || newChar == '{' || newChar == '[') {
 
-				mLines[currentLineIndex].insert(idx, 1, newChar);
+				if(mSelectionMode==SelectionMode::Word){
+					mLines[mState.mSelectionStart.mLine].insert(mState.mSelectionStart.mColumn,1,newChar);
+					mState.mSelectionStart.mColumn++;
+				}else mLines[currentLineIndex].insert(idx, 1, newChar);
 				switch (newChar) {
 					case '(': newChar = ')'; break;
 					case '[': newChar = ']'; break;
 					case '{': newChar = '}'; break;
 				}
-
-				mLines[currentLineIndex].insert(idx + 1, 1, newChar);
+				if(mSelectionMode==SelectionMode::Word){
+					mLines[mState.mSelectionEnd.mLine].insert(mState.mSelectionEnd.mColumn+1,1,newChar);
+					mState.mSelectionEnd.mColumn++;
+				}else mLines[currentLineIndex].insert(idx + 1, 1, newChar);
 
 		} else {
 
@@ -325,8 +333,17 @@ void Editor::InsertCharacter(char newChar)
 
 		mState.mCursorPosition.mColumn++;
 	}else if(mCursors.size()>0){
+
+
+		// if(mSelectionMode == SelectionMode::Word) Backspace();
+		// if(mSelectionMode!=SelectionMode::Normal) 
+		// 	mSelectionMode=SelectionMode::Normal;
+
+
 		int cidx=0;
 		GL_WARN("INSERT MULTIPLE CURSORS");
+
+
 		for(auto& cursor:mCursors){
 			int idx = GetCurrentLineIndex(cursor.mCursorPosition);
 			if (cursor.mCursorPosition.mLine >= 0 && cursor.mCursorPosition.mLine < mLines.size() && cursor.mCursorPosition.mColumn >= 0 &&
@@ -338,16 +355,23 @@ void Editor::InsertCharacter(char newChar)
 				GL_INFO("CIDX:{} IDX:{}",cidx,idx);
 				if (newChar == '\"' || newChar == '\'' || newChar == '(' || newChar == '{' || newChar == '[') {
 
-						char backup=newChar;
-						mLines[cursor.mCursorPosition.mLine].insert(idx, 1, newChar);
-						switch (newChar) {
-							case '(': newChar = ')'; break;
-							case '[': newChar = ']'; break;
-							case '{': newChar = '}'; break;
-						}
+					char backup=newChar;
 
 
-						mLines[cursor.mCursorPosition.mLine].insert(idx + 1, 1, newChar);
+					if(mSelectionMode==SelectionMode::Word){
+						mLines[cursor.mSelectionStart.mLine].insert(cursor.mSelectionStart.mColumn,1,newChar);
+						cursor.mSelectionStart.mColumn++;
+					}else mLines[currentLine].insert(idx, 1, newChar);
+					switch (newChar) {
+						case '(': newChar = ')'; break;
+						case '[': newChar = ']'; break;
+						case '{': newChar = '}'; break;
+					}
+					if(mSelectionMode==SelectionMode::Word){
+						mLines[cursor.mSelectionEnd.mLine].insert(cursor.mSelectionEnd.mColumn+1,1,newChar);
+						cursor.mSelectionEnd.mColumn++;
+					}else mLines[currentLine].insert(idx + 1, 1, newChar);
+
 						count=2;
 						newChar=backup;
 				} else {
@@ -460,6 +484,16 @@ void Editor::InsertLine()
 		mCursors[i].mCursorPosition.mColumn = tabCounts*mTabWidth;
 	}
 	mState=mCursors[0];
+
+	int start = std::min(int(mMinLineVisible),(int)mLines.size());
+	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
+
+	//Scroll if cursor goes off screen while pressing enter
+	if(mMinLineVisible+lineCount-2<=mState.mCursorPosition.mLine){
+		ImGui::SetScrollY(ImGui::GetScrollY()+mLineHeight);
+	}
+
+
 	if(mCursors.size()==1)  mCursors.clear();
 }
 

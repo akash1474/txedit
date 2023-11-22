@@ -220,7 +220,7 @@ bool Editor::Draw()
 
 
 
-
+	//Highlight Selections
 	if (mSelectionMode == SelectionMode::Word || mSelectionMode==SelectionMode::Line) {
 		Coordinates selectionStart=mState.mSelectionStart;
 		Coordinates selectionEnd=mState.mSelectionEnd;
@@ -322,6 +322,7 @@ bool Editor::Draw()
 	int i_prev=0;
 	const std::vector<Lexer::Token>& tokens=lex.GetTokens();
 
+	//Rendering Lines and Vertical Indentation Lines
 	while (start != end) {
 
 		// float x=mLinePosition.x;
@@ -338,6 +339,7 @@ bool Editor::Draw()
 		float linePosY = mEditorPosition.y + (lineNo * mLineHeight) + mTitleBarHeight+(0.5*mLineSpacing);
 		mEditorWindow->DrawList->AddText({mLinePosition.x, linePosY}, mGruvboxPalletDark[(size_t)Pallet::Text], mLines[start].c_str());
 
+		//Indentation Lines
 		if(mLines[start].empty()){
 			int i=i_prev;
 			while(i>-1){
@@ -396,6 +398,7 @@ bool Editor::Draw()
 
 
 
+	//Rendering for selected word
 	if(isTrue){
 		bool isNormalMode=mSelectionMode==SelectionMode::Normal;
 		for(const auto& coord:mSearchState.mFoundPositions){
@@ -908,5 +911,6 @@ void Editor::SaveFile(){
 void Editor::SelectAll(){
 	GL_INFO("SELECT ALL");
 }
+
 
 
