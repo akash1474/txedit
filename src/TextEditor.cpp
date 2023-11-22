@@ -61,7 +61,7 @@ void Editor::LoadFile(const char* filepath){
 void Editor::InitFileExtensions(){
     FileExtensions[".c"] = "C";
     FileExtensions[".cpp"] = "C++";
-    FileExtensions[".h"] = "Header";
+    FileExtensions[".h"] = "C/C++ Header";
     FileExtensions[".hpp"] = "C++ Header";
     FileExtensions[".java"] = "Java";
     FileExtensions[".py"] = "Python";
@@ -215,7 +215,7 @@ bool Editor::Draw()
 
 
 	mMinLineVisible = fmax(0.0f,ImGui::GetScrollY() / mLineHeight) ;
-	mLinePosition.y = (mEditorPosition.y+mTitleBarHeight + (mLineSpacing * 0.5f) + (mState.mCursorPosition.mLine-floor(mMinLineVisible)) * mLineHeight);
+	mLinePosition.y = (mEditorPosition.y+mTitleBarHeight  + (mState.mCursorPosition.mLine-floor(mMinLineVisible)) * mLineHeight);
 	mLinePosition.x = mEditorPosition.x + mLineBarWidth + mPaddingLeft-ImGui::GetScrollX();
 
 
@@ -242,7 +242,7 @@ bool Editor::Draw()
 				int end = std::min(start + lineCount + 1,(int)mLines.size());
 				for(const auto& cursor:mCursors){
 					if(cursor.mSelectionStart.mLine>=start && cursor.mSelectionStart.mLine < end){
-						int posY=(mEditorPosition.y+mTitleBarHeight + (mLineSpacing * 0.5f) + (cursor.mCursorPosition.mLine-floor(mMinLineVisible)) * mLineHeight);
+						int posY=(mEditorPosition.y+mTitleBarHeight + (cursor.mCursorPosition.mLine-floor(mMinLineVisible)) * mLineHeight);
 						ImVec2 start(GetSelectionPosFromCoords(cursor.mSelectionStart), posY);
 						ImVec2 end(GetSelectionPosFromCoords(cursor.mSelectionEnd), posY + mLineHeight);
 
@@ -255,7 +255,7 @@ bool Editor::Draw()
 
 			float prevLinePositonY=mLinePosition.y;
 			if(mState.mCursorDirectionChanged){
-				mLinePosition.y = (mEditorPosition.y+mTitleBarHeight + (mLineSpacing * 0.5f) + (selectionEnd.mLine-floor(mMinLineVisible)) * mLineHeight);
+				mLinePosition.y = (mEditorPosition.y+mTitleBarHeight + (selectionEnd.mLine-floor(mMinLineVisible)) * mLineHeight);
 			}
 
 			ImVec2 start(GetSelectionPosFromCoords(selectionStart), mLinePosition.y-mLineHeight);
@@ -281,7 +281,7 @@ bool Editor::Draw()
 
 			float prevLinePositonY=mLinePosition.y;
 			if(mState.mCursorDirectionChanged){
-				mLinePosition.y = (mEditorPosition.y+mTitleBarHeight + (mLineSpacing * 0.5f) + (selectionEnd.mLine-floor(mMinLineVisible)) * mLineHeight);
+				mLinePosition.y = (mEditorPosition.y+mTitleBarHeight + (selectionEnd.mLine-floor(mMinLineVisible)) * mLineHeight);
 			}
 
 			ImVec2 p_start(GetSelectionPosFromCoords(selectionStart), mLinePosition.y-(diff+1)*mLineHeight);
@@ -335,7 +335,7 @@ bool Editor::Draw()
 		// 		break;
 		// 	}
 		// }	
-		float linePosY = mEditorPosition.y+mLineSpacing + (lineNo * mLineHeight) + mTitleBarHeight;
+		float linePosY = mEditorPosition.y + (lineNo * mLineHeight) + mTitleBarHeight+(0.5*mLineSpacing);
 		mEditorWindow->DrawList->AddText({mLinePosition.x, linePosY}, mGruvboxPalletDark[(size_t)Pallet::Text], mLines[start].c_str());
 
 		if(mLines[start].empty()){
@@ -368,7 +368,7 @@ bool Editor::Draw()
 	}else{
 
 		for(const EditorState& cursor:mCursors){
-			int lineY = (mEditorPosition.y+mTitleBarHeight + (mLineSpacing * 0.5f) + (cursor.mCursorPosition.mLine-floor(mMinLineVisible)) * mLineHeight);
+			int lineY = (mEditorPosition.y+mTitleBarHeight + (cursor.mCursorPosition.mLine-floor(mMinLineVisible)) * mLineHeight);
 			ImVec2 cursorPosition(mLinePosition.x - 1.0f + (cursor.mCursorPosition.mColumn * mCharacterSize.x), lineY);
 			mEditorWindow->DrawList->AddRectFilled(cursorPosition, {cursorPosition.x + 2.0f, cursorPosition.y + mLineHeight},ImColor(255, 255, 255, 255));
 		}
@@ -389,7 +389,7 @@ bool Editor::Draw()
 		HighlightCurrentWordInBuffer();
 
 	//Line Number Background
-	mEditorWindow->DrawList->AddRectFilled(mEditorPosition, {mEditorPosition.x + mLineBarWidth, mEditorSize.y}, mGruvboxPalletDark[(size_t)Pallet::Background]); // LineNo
+	mEditorWindow->DrawList->AddRectFilled({mEditorPosition}, {mEditorPosition.x + mLineBarWidth, mEditorSize.y}, mGruvboxPalletDark[(size_t)Pallet::Background]); // LineNo
 	// Highlight Current Lin
 	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x,mLinePosition.y},{mEditorPosition.x+mLineBarWidth, mLinePosition.y + mLineHeight},mGruvboxPalletDark[(size_t)Pallet::Highlight]); // Code
 	mLineHeight = mLineSpacing + mCharacterSize.y;
@@ -399,7 +399,7 @@ bool Editor::Draw()
 	if(isTrue){
 		bool isNormalMode=mSelectionMode==SelectionMode::Normal;
 		for(const auto& coord:mSearchState.mFoundPositions){
-			float linePosY = (mEditorPosition.y+mTitleBarHeight  + (coord.mLine-floor(mMinLineVisible)) * mLineHeight)+0.5f*mLineSpacing;
+			float linePosY = (mEditorPosition.y+mTitleBarHeight  + (coord.mLine-floor(mMinLineVisible)) * mLineHeight);
 			ImVec2 start{mEditorPosition.x,linePosY};
 			ImVec2 end{mEditorPosition.x+4.0f,linePosY+(isNormalMode ? 0 : mLineHeight)};
 
@@ -418,7 +418,7 @@ bool Editor::Draw()
 	//Rendering Line Number
 	lineNo = 0;
 	while (start != end) {
-		float linePosY =mEditorPosition.y+ mLineSpacing + (lineNo * mLineHeight) + mTitleBarHeight;
+		float linePosY =mEditorPosition.y + (lineNo * mLineHeight) + mTitleBarHeight+ 0.5f*mLineSpacing;
 		float linePosX=mEditorPosition.x + mLineBarPadding + (mLineBarMaxCountWidth-GetNumberWidth(start+1))*mCharacterSize.x;
 
 		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (start==mState.mCursorPosition.mLine) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(start + 1).c_str());
@@ -537,10 +537,6 @@ float Editor::GetSelectionPosFromCoords(const Coordinates& coords)const{
 }
 
 
-
-
-
-
 void Editor::HighlightCurrentWordInBuffer() const {
 	bool isNormalMode=mSelectionMode==SelectionMode::Normal;
 	int minLine=int(mMinLineVisible);
@@ -550,7 +546,7 @@ void Editor::HighlightCurrentWordInBuffer() const {
 		if(coord.mLine==mState.mSelectionStart.mLine && coord.mColumn==mState.mSelectionStart.mColumn) continue;
 		if(mSearchState.mIsGlobal && (coord.mLine < minLine || coord.mLine > minLine+count)) break;
 
-		float offset=(mSelectionMode==SelectionMode::Normal) ? (mCharacterSize.y+1.0f+mLineSpacing) : 0.5f*mLineSpacing;
+		float offset=(mSelectionMode==SelectionMode::Normal) ? (mLineHeight+1.0f-0.5f*mLineSpacing) : 1.0f;
 		float linePosY = (mEditorPosition.y+mTitleBarHeight  + (coord.mLine-floor(mMinLineVisible)) * mLineHeight)+offset;
 
 		ImVec2 start{mLinePosition.x+coord.mColumn*mCharacterSize.x-!isNormalMode,linePosY};
@@ -695,7 +691,7 @@ Coordinates Editor::MapScreenPosToCoordinates(const ImVec2& mousePosition) {
 	// OpenGL::ScopedTimer timer("MouseClick");
 	Coordinates coords;
 
-	float currentLineNo=(ImGui::GetScrollY() + (mousePosition.y-mEditorPosition.y) - (0.5f * mLineSpacing) - mTitleBarHeight) / mLineHeight;
+	float currentLineNo=(ImGui::GetScrollY() + (mousePosition.y-mEditorPosition.y) - mTitleBarHeight) / mLineHeight;
 	coords.mLine = std::max(0,(int)floor(currentLineNo - (mMinLineVisible - floor(mMinLineVisible))));	
 	if(coords.mLine > mLines.size()-1) coords.mLine=mLines.size()-1;
 
@@ -912,4 +908,5 @@ void Editor::SaveFile(){
 void Editor::SelectAll(){
 	GL_INFO("SELECT ALL");
 }
+
 

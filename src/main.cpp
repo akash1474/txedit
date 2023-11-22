@@ -157,7 +157,7 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	glfwSetDropCallback(window, drop_callback);
 
 	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
-	static ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+	static ImGuiWindowFlags window_flags = ImGuiWindowFlags_None | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
 
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -522,7 +522,7 @@ int main(int argc,char* argv[])
     // colors[ImGuiCol_TabHovered] = ImVec4{0.134,0.135,0.139,1.000};
     StyleColorDarkness();
 
-	// editor.LoadFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
+	editor.LoadFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
 
 	while (!glfwWindowShouldClose(window)) {
 		draw(window, io);
