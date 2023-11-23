@@ -78,9 +78,7 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 			// mSelectionMode=SelectionMode::Word;
 			mode=SelectionMode::Word;
 
-			cursorState.mSelectionEnd=cursorState.mCursorPosition;
-			cursorState.mSelectionStart=cursorState.mCursorPosition;
-
+			cursorState.mSelectionEnd=cursorState.mSelectionStart=cursorState.mCursorPosition;
 			cursorState.mSelectionEnd.mColumn=std::max(0,--cursorState.mCursorPosition.mColumn);
 
 			//Selection Started From Line Begin the -ve mColumn
@@ -123,6 +121,7 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 			}
 		}
 
+		//Cursor at line start
 		if (cursorState.mCursorPosition.mColumn == 0 && cursorState.mCursorPosition.mLine>0) {
 
 			cursorState.mCursorPosition.mLine--;
@@ -308,7 +307,7 @@ void Editor::InsertCharacter(char newChar)
 		if (newChar == '\"' || newChar == '\'' || newChar == '(' || newChar == '{' || newChar == '[') {
 
 				if(mSelectionMode==SelectionMode::Word){
-					mLines[mState.mSelectionStart.mLine].insert(mState.mSelectionStart.mColumn,1,newChar);
+					mLines[mState.mSelectionStart.mLine].insert(GetCurrentLineIndex(mState.mSelectionStart),1,newChar);
 					mState.mSelectionStart.mColumn++;
 				}else mLines[currentLineIndex].insert(idx, 1, newChar);
 				switch (newChar) {
@@ -317,7 +316,19 @@ void Editor::InsertCharacter(char newChar)
 					case '{': newChar = '}'; break;
 				}
 				if(mSelectionMode==SelectionMode::Word){
-					mLines[mState.mSelectionEnd.mLine].insert(mState.mSelectionEnd.mColumn+1,1,newChar);
+					GL_INFO("eidx:{}",GetCurrentLineIndex(mState.mSelectionEnd));
+					size_t end_idx=GetCurrentLineIndex(mState.mSelectionEnd)+1;
+					size_t max=mLines[mState.mSelectionEnd.mLine].size();
+					if(end_idx>=max) end_idx=max;
+
+					//For MultiLine Selection Fix this
+					if(mState.mSelectionStart.mLine!=mState.mSelectionEnd.mLine){
+						// end_idx--;
+						mState.mSelectionEnd.mColumn--;
+						mState.mCursorPosition.mColumn--;
+					}
+
+					mLines[mState.mSelectionEnd.mLine].insert(end_idx,1,newChar);
 					mState.mSelectionEnd.mColumn++;
 				}else mLines[currentLineIndex].insert(idx + 1, 1, newChar);
 
@@ -345,6 +356,10 @@ void Editor::InsertCharacter(char newChar)
 
 
 		for(auto& cursor:mCursors){
+
+			if(cursor.mSelectionStart > cursor.mSelectionEnd)
+				std::swap(cursor.mSelectionStart,cursor.mSelectionEnd);
+
 			int idx = GetCurrentLineIndex(cursor.mCursorPosition);
 			if (cursor.mCursorPosition.mLine >= 0 && cursor.mCursorPosition.mLine < mLines.size() && cursor.mCursorPosition.mColumn >= 0 &&
 			    idx <= mLines[cursor.mCursorPosition.mLine].size()) {
@@ -359,7 +374,7 @@ void Editor::InsertCharacter(char newChar)
 
 
 					if(mSelectionMode==SelectionMode::Word){
-						mLines[cursor.mSelectionStart.mLine].insert(cursor.mSelectionStart.mColumn,1,newChar);
+						mLines[cursor.mSelectionStart.mLine].insert(GetCurrentLineIndex(cursor.mSelectionStart),1,newChar);
 						cursor.mSelectionStart.mColumn++;
 					}else mLines[currentLine].insert(idx, 1, newChar);
 					switch (newChar) {
@@ -368,7 +383,7 @@ void Editor::InsertCharacter(char newChar)
 						case '{': newChar = '}'; break;
 					}
 					if(mSelectionMode==SelectionMode::Word){
-						mLines[cursor.mSelectionEnd.mLine].insert(cursor.mSelectionEnd.mColumn+1,1,newChar);
+						mLines[cursor.mSelectionEnd.mLine].insert(GetCurrentLineIndex(cursor.mSelectionEnd)+1,1,newChar);
 						cursor.mSelectionEnd.mColumn++;
 					}else mLines[currentLine].insert(idx + 1, 1, newChar);
 
