@@ -322,14 +322,14 @@ void Editor::InsertCharacter(char newChar)
 					if(end_idx>=max) end_idx=max;
 
 					//For MultiLine Selection Fix this
-					if(mState.mSelectionStart.mLine!=mState.mSelectionEnd.mLine){
-						// end_idx--;
-						mState.mSelectionEnd.mColumn--;
+					bool diffLines=mState.mSelectionStart.mLine!=mState.mSelectionEnd.mLine;
+					if(diffLines){
+						if(end_idx != max) end_idx--;
 						mState.mCursorPosition.mColumn--;
 					}
 
 					mLines[mState.mSelectionEnd.mLine].insert(end_idx,1,newChar);
-					mState.mSelectionEnd.mColumn++;
+					if(!diffLines) mState.mSelectionEnd.mColumn++;
 				}else mLines[currentLineIndex].insert(idx + 1, 1, newChar);
 
 		} else {
@@ -337,6 +337,11 @@ void Editor::InsertCharacter(char newChar)
 			if ((newChar == ')' || newChar == ']' || newChar == '}') && mLines[currentLineIndex][idx] == newChar) {
 				// Avoiding ')' reentry after '(' pressed aka "()"
 			} else {
+				if (mSelectionMode == SelectionMode::Word){
+					Backspace();
+					mSelectionMode=SelectionMode::Normal;
+					idx = GetCurrentLineIndex(mState.mCursorPosition);
+				}
 				mLines[currentLineIndex].insert(idx, 1, newChar);
 			}
 
@@ -395,6 +400,11 @@ void Editor::InsertCharacter(char newChar)
 						// Avoiding ')' reentry after '(' pressed aka "()"
 						count=0;
 					} else {
+						// if (mSelectionMode == SelectionMode::Word){
+						// 	Backspace();
+						// 	mSelectionMode=SelectionMode::Normal;
+						// 	idx = GetCurrentLineIndex(mState.mCursorPosition);
+						// }
 						mLines[cursor.mCursorPosition.mLine].insert(idx, 1, newChar);
 						count=1;
 					}
@@ -686,7 +696,6 @@ void Editor::Backspace()
 		}
 
 		//Not executed if Multiple Cursors
-
 		if(mState.mSelectionStart > mState.mSelectionEnd)
 			std::swap(mState.mSelectionStart,mState.mSelectionEnd);
 
