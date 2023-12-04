@@ -1,9 +1,9 @@
 [------------------------------ __TODO__ ---------------------------------]
-# [   BUG   ] Fix Surround when tabs present and support for multiple cursors
+# [ UPGRADE ] Improve API
 # [ FEATURE ] Execute the terminal commands in background asynchronously.
 # [ FEATURE ] Implement Content Menu Options for files and folders
 # [ FEATURE ] Opening new file in new tab
-# [ FEATURE ] Smooth Scrolling
+<!-- # [ FEATURE ] Smooth Scrolling -->
 # [ FEATURE ] Render Image for image file
 # [ FEATURE ] Syntax Highlighting
 <!-- # [ FEATURE ] Using Custum Title Bar -->
@@ -15,35 +15,43 @@
 # [ FEATURE ] Auto-Save and Backup
 
 ########################################################################################
+## 4th Dec 2023
++ [ FEATURE ] Highlight opening and closing end of brackets,quotations
+
+########################################################################################
+## 27th Nov 2023
++ [   BUG   ] Fix Surround when tabs present and support for multiple cursors
+
+########################################################################################
 ## 20th-22nd Nov 2023
-# [   BUG   ] Fixed Scroll when cursor goes off screen while pressing enter
-# [   BUG   ] Fixed Line Render after some gap at top
-# [ FEATURE ] Surround selected word with Quotations/Brackets when clicked
-# [ FEATURE ] Added a Toolbar
-# [ FEATURE ] Set a default ini file location
++ [   BUG   ] Fixed Scroll when cursor goes off screen while pressing enter
++ [   BUG   ] Fixed Line Render after some gap at top
++ [ FEATURE ] Surround selected word with Quotations/Brackets when clicked
++ [ FEATURE ] Added a Toolbar
++ [ FEATURE ] Set a default ini file location
 
 
 ########################################################################################
 ## Friday 19th Nov 2023
-# [ FEATURE ] Drag and Drop File and Folders
-# [ FEATURE ] Show File Extension in Status Bar
-# [ FEATURE ] Take cmd arguments like folder/file path
-# [ FEATURE ] Support OpenWith Feature
++ [ FEATURE ] Drag and Drop File and Folders
++ [ FEATURE ] Show File Extension in Status Bar
++ [ FEATURE ] Take cmd arguments like folder/file path
++ [ FEATURE ] Support OpenWith Feature
 
 ########################################################################################
 ## Friday 18th Nov 2023
-# [ FEATURE ] Place Cursor at 0,0 when loading a file
++ [ FEATURE ] Place Cursor at 0,0 when loading a file
 
 ########################################################################################
 ## Friday 15th - 17th Nov 2023
-# [ FEATURE ] Color Scheme Improvement
-# [ FEATURE ] File Saving
++ [ FEATURE ] Color Scheme Improvement
++ [ FEATURE ] File Saving
 
 ########################################################################################
 
 ## Tuesday 14th Nov 2023
-# [ FEATURE ] Status Bar containing (lineNo,colNo,gitbranch,tabsize)
-# [   BUG   ] Update window size when new file is opened
++ [ FEATURE ] Status Bar containing (lineNo,colNo,gitbranch,tabsize)
++ [   BUG   ] Update window size when new file is opened
 
 ########################################################################################
 
@@ -191,3 +199,4 @@
                                                                                                                                                                        
                                                                                                                                                                             
                                                                                                                                                                                
+                                                                                                                                                                                                   

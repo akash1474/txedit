@@ -5,6 +5,7 @@
 #include <map>
 #include <stdint.h>
 #include <tuple>
+#include <array>
 #include <unordered_map>
 
 
@@ -24,6 +25,7 @@ class Editor
 		Highlight,
 		YellowLight,
 		YellowDark, 
+		HighlightOne,
 		Max 
 	};
 	std::vector<ImU32> mGruvboxPalletDark;
@@ -38,6 +40,7 @@ class Editor
 		mGruvboxPalletDark[(size_t)Pallet::Comment] = ImColor(146,131,116,255);        // 237
 		mGruvboxPalletDark[(size_t)Pallet::Indentation] = ImColor(60,56,54,255);        // 237
 		mGruvboxPalletDark[(size_t)Pallet::Highlight] = ImColor(54,51,50,255);        // 237
+		mGruvboxPalletDark[(size_t)Pallet::HighlightOne] = ImColor(102,92,84);   // 248
 		mGruvboxPalletDark[(size_t)Pallet::YellowLight] = ImColor(250,189,47,255);        // 237
 		mGruvboxPalletDark[(size_t)Pallet::YellowDark] = ImColor(215,153,33,255);        // 237
 	}
@@ -62,7 +65,14 @@ class Editor
 		bool mCursorDirectionChanged=false;
 	};
 
+
+	struct BracketCoordinates{
+		std::array<Coordinates,2> coords;
+		bool hasMatched=false;
+	};
+
 	std::vector<EditorState> mCursors;
+	BracketCoordinates mBracketsCoordinates;
 
 
 
@@ -156,6 +166,9 @@ class Editor
 
 	uint8_t GetTabCountsUptoCursor(const Coordinates& coords)const;
 	uint32_t GetCurrentLineIndex(const Coordinates& cursorPosition)const;
+
+
+	std::array<Coordinates,2> GetMatchingBracketsCoordinates();
 
 	bool IsCursorVisible();
 	void RenderStatusBar();

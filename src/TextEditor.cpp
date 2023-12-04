@@ -4,6 +4,7 @@
 
 #include <ctype.h>
 #include <filesystem>
+#include <ios>
 #include <iterator>
 #include <stdint.h>
 
@@ -194,6 +195,7 @@ bool Editor::Draw()
 
 	// // BackGrounds
 	// mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x + mLineBarWidth, mEditorPosition.y}, mEditorBounds.Max,mGruvboxPalletDark[(size_t)Pallet::Background]); // Code
+
 
 
 
@@ -410,6 +412,16 @@ bool Editor::Draw()
 		}
 	}
 
+	if(mBracketsCoordinates.hasMatched){
+		for(Coordinates& coord:mBracketsCoordinates.coords){
+			int column=GetColumnNumberFromIndex(coord.mColumn,coord.mLine);
+			float linePosY = (mEditorPosition.y+mTitleBarHeight  + (coord.mLine-floor(mMinLineVisible)) * mLineHeight);
+			int tabs=GetTabCountsUptoCursor(coord)*(mTabWidth-1);
+			ImVec2 start{mLinePosition.x+column*mCharacterSize.x,linePosY};
+			mEditorWindow->DrawList->AddRect(start,{start.x+mCharacterSize.x+1,start.y+mLineHeight}, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
+		}
+	}
+
 
 	//Horizonal scroll Shadow
 	if(ImGui::GetScrollX()>0.0f){
@@ -437,6 +449,115 @@ bool Editor::Draw()
 	return true;
 }
 
+
+std::array<Coordinates,2> Editor::GetMatchingBracketsCoordinates(){
+	OpenGL::ScopedTimer timer("bracket_match");
+	std::array<Coordinates,2> coords;
+	int start = std::min(int(mMinLineVisible),(int)mLines.size());
+	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
+	int end = std::min(start + lineCount + 1,(int)mLines.size()-1);
+
+	int cLine=mState.mCursorPosition.mLine;
+	int cColumn=GetCurrentLineIndex(mState.mCursorPosition)-1;
+
+	if(cColumn==-1) cColumn++;
+	char match=0;
+
+
+	GL_INFO("CURSOR POS:[{},{}] - {}",cLine,cColumn,(char)mLines[cLine][cColumn]);
+	bool isFound=false;
+	int ignore=0;
+	char x=-1;
+	for(int i=cLine;i>start;i--){
+		for(int j=cColumn;j>=0;j--){
+			if(mLines[i][j]==x){ x=-1; continue; }
+			if(mLines[i][j]=='\'' || mLines[i][j]=='"'){
+				x=mLines[i][j];
+				continue;
+			}
+			if(x!=-1) continue;
+			switch (mLines[i][j]) {
+				case ')': ignore++;break;
+				case ']': ignore++;break;
+				case '}': ignore++;break;
+				case '(':{
+					if(!ignore){match = ')'; isFound=true;}
+					if(ignore>0) ignore--;
+					break;
+				}
+				case '[':{
+					if(!ignore){ match = ']'; isFound=true;}
+					if(ignore>0) ignore--;
+					break;
+				} 
+				case '{':{
+					if(!ignore){match = '}'; isFound=true;}
+					if(ignore>0) ignore--;
+					break;
+				} 
+			}
+			if(isFound)	{
+				coords[0].mLine=i;
+				coords[0].mColumn=j;
+				break;
+			}
+		}
+		if(isFound) break;
+		cColumn=mLines[i-1].size()-1;;
+	}
+	GL_INFO("Start:[{},{}]",coords[0].mLine,coords[0].mColumn);
+	if(isFound==false) mBracketsCoordinates.hasMatched=false;
+
+	isFound=false;
+	cColumn=GetCurrentLineIndex(mState.mCursorPosition);
+	// if(cColumn == mLines[cLine].size()) cColumn--;
+
+	ignore=0;
+	x=-1;
+	for(int i=cLine;(i<end && !isFound);i++){
+		int size=mLines[i].size();
+		if(size<=0) continue;
+		for(int j=cColumn;j<size;j++){
+			if(mLines[i][j]==x){ x=-1; continue; }
+			if(mLines[i][j]=='\'' || mLines[i][j]=='"'){
+				x=mLines[i][j];
+				continue;
+			}
+			if(x!=-1) continue;
+			switch(mLines[i][j]){
+				case '(': ignore++;break;
+				case '[': ignore++;break;
+				case '{': ignore++;break;
+				case ')':{
+					if(!ignore) isFound=true;
+					if(ignore>0) ignore--;
+					break;
+				}
+				case ']':{
+					if(!ignore) isFound=true;
+					if(ignore>0) ignore--;
+					break;
+				} 
+				case '}':{
+					if(!ignore) isFound=true;
+					if(ignore>0) ignore--;
+					break;
+				} 
+
+			}
+			if(isFound){
+				coords[1].mLine=i;
+				coords[1].mColumn=j;
+				break;
+			}
+		}
+		cColumn=0;
+	}
+	if(isFound==false) mBracketsCoordinates.hasMatched=false;
+	GL_INFO("End:[{},{}]",coords[1].mLine,coords[1].mColumn);
+	mBracketsCoordinates.hasMatched=true;
+	return coords;
+}
 
 
 
@@ -557,9 +678,9 @@ void Editor::HighlightCurrentWordInBuffer() const {
 		ImDrawList* drawlist=ImGui::GetCurrentWindow()->DrawList;
 
 		if(isNormalMode)
-			drawlist->AddLine(start,end, mGruvboxPalletDark[(size_t)Pallet::Text]);
+			drawlist->AddLine(start,end, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
 		else
-			drawlist->AddRect(start,end, mGruvboxPalletDark[(size_t)Pallet::Text]);
+			drawlist->AddRect(start,end, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
 
 	}
 }
@@ -593,7 +714,7 @@ void Editor::FindAllOccurancesOfWord(std::string word){
 
             GL_TRACE("Line {} : Found '{}' at [{},{}] ",start+1,word,startIndex,endIndex);
 
-            mSearchState.mFoundPositions.push_back({start,GetColumnNumberFromIndex(startIndex,start)-1});
+            mSearchState.mFoundPositions.push_back({start,GetColumnNumberFromIndex(startIndex,start)});
             wordIdx = endIndex + 1;
         }
 
@@ -644,7 +765,7 @@ void Editor::SearchWordInCurrentVisibleBuffer(){
 
             GL_TRACE("Line {} : Found '{}' at [{},{}] ",start+1,currentWord,startIndex,endIndex);
 
-            mSearchState.mFoundPositions.push_back({start,GetColumnNumberFromIndex(startIndex,start)-1});
+            mSearchState.mFoundPositions.push_back({start,GetColumnNumberFromIndex(startIndex,start)});
             wordIdx = endIndex + 1;
         }
 
@@ -732,7 +853,7 @@ int Editor::GetColumnNumberFromIndex(int idx,int lineIdx){
 	if(idx>mLines[lineIdx].size()-1) return GetCurrentLineLength(lineIdx);
 
 	int column{0};
-	for(int i=0;i<=idx;i++){
+	for(int i=0;i<idx;i++){
 		if(mLines[lineIdx][i]=='\t') column+=mTabWidth;
 		else column++;
 	}

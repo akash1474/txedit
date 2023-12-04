@@ -1,3 +1,4 @@
+#include "imgui.h"
 #include "pch.h"
 #include "TextEditor.h"
 
@@ -221,5 +222,7 @@ void Editor::HandleKeyboardInputs()
 
 			io.InputQueueCharacters.resize(0);
 		}
+
+		if(anyKeyPressed) mBracketsCoordinates.coords=GetMatchingBracketsCoordinates();
 	}
 }

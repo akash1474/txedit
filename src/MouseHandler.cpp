@@ -70,6 +70,7 @@ void Editor::HandleMouseInputs()
 				GL_INFO("MOUSE CLICK");
 				if(!mCursors.empty()) mCursors.clear();
 
+
 				mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition=MapScreenPosToCoordinates(ImGui::GetMousePos());
 				mSelectionMode = SelectionMode::Normal;
 
@@ -77,6 +78,7 @@ void Editor::HandleMouseInputs()
 
 				mState.mCursorDirectionChanged=false;
 				mLastClick = (float)ImGui::GetTime();
+				mBracketsCoordinates.coords=GetMatchingBracketsCoordinates();
 			}
 
 			//Mouse Click And Dragging

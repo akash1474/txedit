@@ -82,18 +82,42 @@ void renderFolderItems(std::string path,bool isRoot=false){
     	std::string folderName=std::filesystem::path(path).filename().generic_string();
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,2.0f));
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(4.0f,2.0f));
-		if(ImGui::TreeNodeEx(folderName.c_str(),ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen)){
-
-			if(ImGui::IsItemClicked(ImGuiMouseButton_Right)) ImGui::OpenPopup("folder_opt");
+		// bool isOpen=false;
+		if(ImGui::TreeNodeEx(folderName.c_str(),ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen)){
+			// isOpen=true;
+			// if(ImGui::IsItemClicked(ImGuiMouseButton_Right)) ImGui::OpenPopup("folder_opt");
 
 	        const char* options[] = {ICON_FA_CARET_RIGHT"  New File",ICON_FA_CARET_RIGHT"  Rename",ICON_FA_CARET_RIGHT"  Open Folder",ICON_FA_CARET_RIGHT"  Open Terminal",ICON_FA_CARET_RIGHT"  New Folder",ICON_FA_CARET_RIGHT"  Delete Folder"};
 	        static int selected=-1;
 
-	        if (ImGui::BeginPopup("folder_opt"))
+	        if (ImGui::BeginPopupContextItem())
 	        {
 	            for (int i = 0; i < IM_ARRAYSIZE(options); i++){
 	            	if(i==4) ImGui::Separator();
-	                if (ImGui::Selectable(options[i])) selected = i;
+	                if (ImGui::Selectable(options[i])){
+	                	selected = i;
+	                	switch(selected){
+		                	case 0:
+		                		GL_INFO("New File");
+		                		break;
+		                	case 1:
+		                		GL_INFO("Rename");
+		                		break;
+		                	case 2:
+		                		GL_INFO("Open Folder");
+		                		break;
+		                	case 3:
+		                		GL_INFO("Open Terminal");
+		                		break;
+		                	case 4:
+		                		GL_INFO("New Folder");
+		                		break;
+		                	case 5:
+		                		GL_INFO("Delete Folder");
+		                		break;
+	                	}
+
+	                }
 	            }
 	            ImGui::EndPopup();
 	        }
