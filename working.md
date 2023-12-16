@@ -1,7 +1,7 @@
 [------------------------------ __TODO__ ---------------------------------]
 # [ UPGRADE ] Improve API
 # [ FEATURE ] Execute the terminal commands in background asynchronously.
-# [ FEATURE ] Implement Content Menu Options for files and folders
+# [ FEATURE ] Implement Context Menu Options for files and folders
 # [ FEATURE ] Opening new file in new tab
 <!-- # [ FEATURE ] Smooth Scrolling -->
 # [ FEATURE ] Render Image for image file

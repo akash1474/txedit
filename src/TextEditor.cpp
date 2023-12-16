@@ -412,6 +412,8 @@ bool Editor::Draw()
 		}
 	}
 
+
+	//Highlighting Brackets
 	if(mBracketsCoordinates.hasMatched){
 		for(Coordinates& coord:mBracketsCoordinates.coords){
 			int column=GetColumnNumberFromIndex(coord.mColumn,coord.mLine);

@@ -2,6 +2,3 @@
 #include "CoreSystem.h"
 
 
-void CoreSystem::renderFile(){
-		
-}

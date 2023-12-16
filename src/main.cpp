@@ -12,6 +12,7 @@
 #include "TextEditor.h"
 #include "stb_img.h"
 #include <codecvt>
+#include "DirectoryHandler.h"
 
 std::string exec(const char* cmd) {
 	// bool status = !std::system(cmd);
@@ -38,9 +39,6 @@ std::string exec(const char* cmd) {
 #define WIDTH 900
 #define HEIGHT 600
 
-int width{0};
-int height{0};
-
 Editor editor;
 struct Entity{
 	std::string filename;
@@ -53,7 +51,6 @@ std::unordered_map<std::string,std::vector<Entity>> mDirectoryData;
 
 
 
-void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 void draw(GLFWwindow* window, ImGuiIO& io);
 
@@ -77,54 +74,64 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 	}
 }
 
-void renderFolderItems(std::string path,bool isRoot=false){
+inline void ShowContextMenu(std::string& path,std::string& name,bool isFolder=true){
+    static int selected=-1;
+
+    if (ImGui::BeginPopupContextItem(name.c_str()))
+    {
+	    const char* options[] = {ICON_FA_CARET_RIGHT"  New File",ICON_FA_CARET_RIGHT"  Rename",ICON_FA_CARET_RIGHT"  Open Folder",ICON_FA_CARET_RIGHT"  Open Terminal",ICON_FA_CARET_RIGHT"  New Folder",ICON_FA_CARET_RIGHT"  Delete Folder"};
+	    if(!isFolder){
+	    	options[5]=ICON_FA_CARET_RIGHT"  Delete File";
+	    }else{
+	    	options[5]=ICON_FA_CARET_RIGHT"  Delete Folder";
+	    }
+        for (int i = 0; i < IM_ARRAYSIZE(options); i++){
+        	if(i==4) ImGui::Separator();
+            if (ImGui::Selectable(options[i])){
+            	selected = i;
+                std::string fpath=path;
+            	switch(selected){
+                	case 0:
+                		GL_INFO("New File");
+                		GL_INFO("{}/{}",path,name);
+                		break;
+                	case 1:
+                		GL_INFO("Rename");
+                		break;
+                	case 2:
+						if(std::filesystem::is_directory(path))
+							fpath = (std::filesystem::path(path)/name).generic_string();
+						DirectoryHandler::OpenExplorer(fpath);
+                		break;
+                	case 3:
+						if(std::filesystem::is_directory(path))
+							fpath = (std::filesystem::path(path)/name).generic_string();
+						DirectoryHandler::StartTerminal(fpath);
+                		break;
+                	case 4:
+                		GL_INFO("New Folder");
+                		break;
+                	case 5:
+                		GL_INFO("Delete Folder");
+                		break;
+            	}
+
+            }
+        }
+        ImGui::EndPopup();
+    }
+}
+
+void RenderFolderItems(std::string path,bool isRoot=false){
 	if(isRoot){
-    	std::string folderName=std::filesystem::path(path).filename().generic_string();
+		std::string folderName=std::filesystem::path(path).filename().generic_string();
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,2.0f));
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(4.0f,2.0f));
-		// bool isOpen=false;
 		if(ImGui::TreeNodeEx(folderName.c_str(),ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen)){
-			// isOpen=true;
-			// if(ImGui::IsItemClicked(ImGuiMouseButton_Right)) ImGui::OpenPopup("folder_opt");
-
-	        const char* options[] = {ICON_FA_CARET_RIGHT"  New File",ICON_FA_CARET_RIGHT"  Rename",ICON_FA_CARET_RIGHT"  Open Folder",ICON_FA_CARET_RIGHT"  Open Terminal",ICON_FA_CARET_RIGHT"  New Folder",ICON_FA_CARET_RIGHT"  Delete Folder"};
-	        static int selected=-1;
-
-	        if (ImGui::BeginPopupContextItem())
-	        {
-	            for (int i = 0; i < IM_ARRAYSIZE(options); i++){
-	            	if(i==4) ImGui::Separator();
-	                if (ImGui::Selectable(options[i])){
-	                	selected = i;
-	                	switch(selected){
-		                	case 0:
-		                		GL_INFO("New File");
-		                		break;
-		                	case 1:
-		                		GL_INFO("Rename");
-		                		break;
-		                	case 2:
-		                		GL_INFO("Open Folder");
-		                		break;
-		                	case 3:
-		                		GL_INFO("Open Terminal");
-		                		break;
-		                	case 4:
-		                		GL_INFO("New Folder");
-		                		break;
-		                	case 5:
-		                		GL_INFO("Delete Folder");
-		                		break;
-	                	}
-
-	                }
-	            }
-	            ImGui::EndPopup();
-	        }
-
-    		renderFolderItems(path);
+    		RenderFolderItems(path);
     		ImGui::TreePop();
     	}
+		ShowContextMenu(path,folderName);
     	ImGui::PopStyleVar(2);
     	return;
 	}
@@ -147,10 +154,12 @@ void renderFolderItems(std::string path,bool isRoot=false){
 		if(item.is_directory) {
 			if(ImGui::TreeNodeEx(oss.str().c_str(),ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_Selected)){
 				std::stringstream wss;
+				ShowContextMenu(path,item.filename); //Explored Folder
 				wss << path << "\\" << item.filename.c_str();
-				renderFolderItems(wss.str(),false);
+				RenderFolderItems(wss.str(),false);
 				ImGui::TreePop();
 			}
+			ShowContextMenu(path,item.filename); // UnExplored Folder
 		}
 		else{
 			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
@@ -163,9 +172,10 @@ void renderFolderItems(std::string path,bool isRoot=false){
 				if(!item.is_explored) item.is_explored=true;
 				editor.LoadFile(item.path.c_str());
 			}
+			ImGui::PopFont();
+			ShowContextMenu(path,item.filename,false);
 			ImGui::PopStyleVar();
 			ImGui::PopStyleColor(2);
-			ImGui::PopFont();
 		}
 		oss.str("");
 	}
@@ -177,15 +187,17 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	ImGui_ImplOpenGL2_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
-	// ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 	glfwSetDropCallback(window, drop_callback);
 
 	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 	static ImGuiWindowFlags window_flags = ImGuiWindowFlags_None | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
 
+	static bool isPanelOpen=false;
+	static const float pannelSize=38.0f;
+	static const float statusSize=22.0f;
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowPos(viewport->WorkPos);
-	ImVec2 size(viewport->WorkSize.x,viewport->WorkSize.y-22.0f);
+	ImVec2 size(viewport->WorkSize.x,isPanelOpen ? viewport->WorkSize.y-statusSize - pannelSize : viewport->WorkSize.y-statusSize);
 	ImGui::SetNextWindowSize(size);
 	ImGui::SetNextWindowViewport(viewport->ID);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -312,49 +324,67 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	static bool is_opening=true;
 	static Animation side_bar;
 
-	// static float curr=300.0f;
-	// if(side_bar.hasStarted){
-	// 	float width=(is_opening ? s_width*side_bar.update() : s_width*(1.0f-side_bar.update()));
-	// 	GL_INFO(width);
-	// 	curr=width;
-	// 	if(width > 1.0f) ImGui::SetNextWindowSize(ImVec2{width,-1.0f});
-	// }
 	if(is_opening){
 		ImGui::PushStyleColor(ImGuiCol_WindowBg,ImVec4(0.067f,0.075f,0.078f,1.000f));
 		ImGui::SetNextWindowSize(ImVec2{s_width,-1.0f},ImGuiCond_Once);
 		ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(0.764,0.764,0.764,1.000));
 		ImGui::Begin("Project Directory");
-	    // static bool isLoaded=false;
-	   	// static std::string folderPath; 
-	    // if(ImGui::Button("Select Folder")) {
-	    // 	folderPath=wstringToUTF8(SelectFolder());
-	    // 	isLoaded=true;
-	    // }
-	    // if(isLoaded){
-	    	// renderFolderItems(folderPath,true);
-	    // }
-	    	// ImGui::PushStyleColor(ImGuiCol_Border,ImVec4(0.067,0.074,0.078,0.000));
-	    	// renderFolderItems("D:/Projects/c++/txedit",true);
 	    	auto& folders=editor.GetFolders();
 	    	for(const auto& folder:folders)
-	    		renderFolderItems(folder,true);
-	    	// ImGui::PopStyleColor();
+	    		RenderFolderItems(folder,true);
 		ImGui::End();
 		ImGui::PopStyleColor(2);
 	}
 
 
 	editor.Render();
-	// #ifdef GL_DEBUG
-	// ImGui::Begin("Console");
-	// ImGui::End();
-	// #endif
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
+	if(isPanelOpen){
+
+		ImGui::SetNextWindowPos(ImVec2(0,size.y));
+		ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x,pannelSize));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(4.0f,0.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,0.0f);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg,ImGui::GetStyle().Colors[ImGuiCol_TitleBg]);
+		ImGui::PushFont(io.Fonts->Fonts[1]);
+		ImGui::Begin("InputBar",0,ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize );
+
+			const char* prompt_text="File Name:";
+			const ImVec2 txt_dim=ImGui::CalcTextSize(prompt_text);
+			const float y=(ImGui::GetWindowHeight()-txt_dim.y)*0.5f;
+
+			ImGui::PushFont(io.Fonts->Fonts[0]);
+			ImGui::SetCursorPosY(y-ImGui::GetStyle().FramePadding.y*2);
+			ImGui::Text("%s", prompt_text);
+
+
+			ImGui::SetCursorPos({txt_dim.x,5.0f});
+			static char buff[256]="Placeholder";
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(4.0f,6.0f));
+			ImGui::PushStyleColor(ImGuiCol_FrameBg,ImGui::GetStyle().Colors[ImGuiCol_MenuBarBg]);
+			ImGui::PushItemWidth(viewport->WorkSize.x-txt_dim.x-5.0f);
+			if(ImGui::InputText("##InputBar",buff,IM_ARRAYSIZE(buff),ImGuiInputTextFlags_EnterReturnsTrue)){
+				GL_INFO("Submit");
+			}
+			ImGui::PopStyleVar();
+			ImGui::PopStyleColor();
+			ImGui::PopFont();
+			if(ImGui::IsKeyPressed(ImGuiKey_Escape)){
+				isPanelOpen=false;
+			}
+		ImGui::End();
+		ImGui::PopFont();
+		ImGui::PopStyleColor();
+		ImGui::PopStyleVar(2);
+		
+	}
 
 
 
 
-	ImGui::SetNextWindowPos(ImVec2(0,size.y));
-	ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x,22.0f));
+	ImGui::SetNextWindowPos(ImVec2(0,isPanelOpen ? size.y+pannelSize : size.y));
+	ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x,statusSize));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(4.0f,0.0f));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,0.0f);
 	ImGui::PushStyleColor(ImGuiCol_WindowBg,ImGui::GetStyle().Colors[ImGuiCol_TitleBg]);
@@ -362,11 +392,8 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	ImGui::Begin("Status Bar",0,ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize );
 		ImGui::PushFont(io.Fonts->Fonts[0]);
 		if(ImGui::Button(ICON_FA_BARS)){
-			//Animate Sidebar
-			// side_bar.start();
 			is_opening=!is_opening;
-			// int success = !std::system("git rev-parse --abbrev-ref HEAD");
-			// GL_INFO(success);
+			isPanelOpen=true;
 		}
 		ImGui::PopFont();
 		ImGui::SameLine();
@@ -413,7 +440,7 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 	ImGui::End();
 	ImGui::PopFont();
 	ImGui::PopStyleColor();
-	ImGui::PopStyleVar(2);
+	ImGui::PopStyleVar(3);
 
 	ImGui::Render();
 	int display_w, display_h;
@@ -436,7 +463,7 @@ void draw(GLFWwindow* window, ImGuiIO& io)
 }
 
 
-void processArguments(int argc,char* argv[]){
+void HandleArguments(int argc,char* argv[]){
 	namespace fs=std::filesystem;
 	for (int i = 1; i < argc; ++i) {
         fs::path path(argv[i]);
@@ -460,7 +487,7 @@ void processArguments(int argc,char* argv[]){
 int main(int argc,char* argv[])
 {
 
-	if(argc > 1) processArguments(argc,argv);
+	if(argc > 1) HandleArguments(argc,argv);
 
 	GLFWwindow* window;
 #ifdef GL_DEBUG
@@ -505,7 +532,6 @@ int main(int argc,char* argv[])
 	style.ItemSpacing.y = 6.0f;
 	style.ScrollbarRounding = 2.0f;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	// io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
 		style.WindowRounding = 0.0f;
@@ -515,8 +541,6 @@ int main(int argc,char* argv[])
 
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	if (!ImGui_ImplOpenGL2_Init()) GL_ERROR("Failed to initit OpenGL 2");
-
-	// glfwSetKeyCallback(window, keyboardCallback);
 
 	static const ImWchar icons_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
 	ImFontConfig icon_config;
@@ -538,13 +562,6 @@ int main(int argc,char* argv[])
 	io.Fonts->AddFontFromMemoryTTF((void*)data_icon_regular, icon_regular_data_size, 20 * 2.0f / 3.0f, &icon_config, icons_ranges);
 
 
-	// StyleColorsDracula();
-	// auto& colors=ImGui::GetStyle().Colors;
-    // colors[ImGuiCol_TitleBg]=ImVec4{0.067,0.075,0.078,1.000};
-    // colors[ImGuiCol_TitleBgActive]=ImVec4{0.067,0.075,0.078,1.000};
-    // colors[ImGuiCol_Tab]=ImVec4{0.067,0.075,0.078,1.000};
-    // colors[ImGuiCol_TabActive] = ImVec4{0.114,0.125,0.129,1.000};
-    // colors[ImGuiCol_TabHovered] = ImVec4{0.134,0.135,0.139,1.000};
     StyleColorDarkness();
 
 	editor.LoadFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
