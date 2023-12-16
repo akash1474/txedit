@@ -1,3 +1,4 @@
+#pragma once
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "string"
@@ -117,7 +118,6 @@ class Editor
 	ImVec2 mLinePosition;
 	std::string mFilePath;
 	ImGuiWindow* mEditorWindow{0};
-	std::vector<std::string> mFolders;
 
 
 	void SwapLines(bool up = true);
@@ -185,8 +185,6 @@ class Editor
 	std::string fileType;
 	void SetBuffer(const std::string& buffer);
 
-	std::vector<std::string>& GetFolders(){ return mFolders;}
-	void AddFolder(std::string path){ mFolders.push_back(path);}
 
 	std::string GetCurrentFilePath()const{return mFilePath;};
 	void Render();
@@ -203,6 +201,7 @@ class Editor
 	void InsertLine();
 	int GetSelectionMode()const{return (int)mSelectionMode;};
 	void ScrollToLineNumber(int lineNo,bool animate=true);
+	void RecalculateBounds(){this->reCalculateBounds=true;}
 
 	inline uint8_t GetTabWidth() { return this->mTabWidth; }
 

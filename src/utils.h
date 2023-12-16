@@ -192,6 +192,18 @@ inline std::string ToUTF8(std::wstring wideString){
     return utf8String;
 }
 
+inline std::wstring StringToWString(const std::string& narrowString) {
+    int length = MultiByteToWideChar(CP_UTF8, 0, narrowString.c_str(), -1, nullptr, 0);
+    
+    if (length == 0) return L"";
+
+    std::wstring wideString(length, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, narrowString.c_str(), -1, &wideString[0], length);
+
+    return wideString;
+}
+
+
 inline std::string SelectFolder(){
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     std::wstring folder_path;

@@ -1,4 +1,6 @@
 // #include "imgui.h"
+#pragma once
+
 
 struct Coordinates {
 	int mLine, mColumn;

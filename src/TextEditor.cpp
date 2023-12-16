@@ -18,6 +18,7 @@
 #include "GLFW/glfw3.h"
 #include "Log.h"
 #include "imgui.h"
+#include "StatusBarManager.h"
 
 
 Editor::Editor()
@@ -412,6 +413,8 @@ bool Editor::Draw()
 		}
 	}
 
+
+	//Highlighting Brackets
 	if(mBracketsCoordinates.hasMatched){
 		for(Coordinates& coord:mBracketsCoordinates.coords){
 			int column=GetColumnNumberFromIndex(coord.mColumn,coord.mLine);
@@ -1026,12 +1029,19 @@ void Editor::SaveFile(){
 	file << copyStr;
 	file.close();
 	GL_INFO("Saving...");
-	this->isFileSaving=true;
+	// this->isFileSaving=true;
+	StatusBarManager::ShowNotification("Saved", mFilePath.c_str(),StatusBarManager::NotificationType::Success);
+
 }
 
 void Editor::SelectAll(){
 	GL_INFO("SELECT ALL");
 }
+
+
+
+
+
 
 
 

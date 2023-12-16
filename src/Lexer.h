@@ -1,3 +1,4 @@
+#pragma once
 #include "Coordinates.h"
 #include "string"
 #include "vector"
