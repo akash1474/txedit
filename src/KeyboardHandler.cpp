@@ -223,6 +223,6 @@ void Editor::HandleKeyboardInputs()
 			io.InputQueueCharacters.resize(0);
 		}
 
-		if(anyKeyPressed) mBracketsCoordinates.coords=GetMatchingBracketsCoordinates();
+		if(anyKeyPressed && !ctrl) mBracketsCoordinates.coords=GetMatchingBracketsCoordinates();
 	}
 }
