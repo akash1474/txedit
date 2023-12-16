@@ -1,5 +1,4 @@
 [------------------------------ __TODO__ ---------------------------------]
-# [ UPGRADE ] Improve API
 # [ FEATURE ] Execute the terminal commands in background asynchronously.
 # [ FEATURE ] Implement Context Menu Options for files and folders
 # [ FEATURE ] Opening new file in new tab
@@ -13,6 +12,11 @@
 # [ FEATURE ] Tabs and Split Views
 # [ FEATURE ] Full-Screen Mode
 # [ FEATURE ] Auto-Save and Backup
+
+
+########################################################################################
+## 16th Dec 2023
++ [ UPGRADE ] Improve API
 
 ########################################################################################
 ## 4th Dec 2023
