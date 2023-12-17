@@ -7,8 +7,9 @@
 #include <winnt.h>
 
 
-bool DirectoryHandler::CreateFile(const std::string& filePath){
+bool DirectoryHandler::CreateFile(std::string filePath){
 	if(std::filesystem::exists(filePath)) return false;
+	if(std::filesystem::is_directory(filePath)) filePath=std::filesystem::path(filePath).parent_path().generic_string();
 	std::ofstream file(filePath);
 	file.close();
 	return true;

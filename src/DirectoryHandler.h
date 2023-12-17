@@ -2,7 +2,7 @@
 #include "vector"
 
 namespace DirectoryHandler{
-	bool CreateFile(const std::string& filePath);
+	bool CreateFile(std::string filePath);
 	bool RenameFile(const std::string& filePath,const std::string& newName);
 	bool DeleteFile(const std::string& filePath);
 	bool DeleteFolder(const std::string& folderPath);

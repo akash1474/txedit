@@ -42,6 +42,10 @@ void Editor::ResetState(){
 
 void Editor::LoadFile(const char* filepath){
 	this->ResetState();
+	if(!std::filesystem::exists(filepath)){
+		StatusBarManager::ShowNotification("Invalid Path",filepath,StatusBarManager::NotificationType::Error);
+		return;
+	}
 	size_t size{0};
 	std::ifstream t(filepath);
 	if(t.good()) mFilePath=filepath;
@@ -1039,6 +1043,13 @@ void Editor::SelectAll(){
 }
 
 
+void Editor::Find(){
+	GL_INFO("FIND");
+	StatusBarManager::ShowInputPanel("Word:",[](const char* value){
+		GL_INFO("CallbackFN:{}",value);
+		// StatusBarManager::ShowNotification("Created:", file_path,StatusBarManager::NotificationType::Success);
+	},nullptr,true,"Save");
+}
 
 
 

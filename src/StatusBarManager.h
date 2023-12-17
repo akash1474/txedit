@@ -28,6 +28,7 @@ namespace StatusBarManager{
 	static inline std::string mButtonTitle="Save";
 	static inline std::string mPlaceholder;
 	static inline bool mShowButton=false;
+	static inline void (*mCallbackFn)(const char* data);
 
 
 	void Init(Editor* editorPtr,FileNavigation* fileNavigation);
@@ -36,10 +37,13 @@ namespace StatusBarManager{
 	void Render(ImVec2& size,const ImGuiViewport* viewport);
 	void RenderInputPanel(ImVec2& size,const ImGuiViewport* viewport);
 
+	FileNavigation* GetFileNavigation();
+
 
 	void ShowNotification(const char* title,const char* info,NotificationType type=NotificationType::Info);
 	void SetFileType(const char* filetype);
 	void SetCursorCoordinate(const Coordinates& cursorPosition);
 	bool IsInputPanelOpen();
-	void ShowInputPanel(const char* title,const char* placeholder=nullptr,bool showButton=false,const char* btnName="Done");
+	void ShowInputPanel(const char* title,void(*callback)(const char*),const char* placeholder=nullptr,bool showButton=false,const char* btnName="Done");
+	void CloseInputPanel();
 };
