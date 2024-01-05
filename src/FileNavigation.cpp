@@ -1,4 +1,5 @@
 #include "Log.h"
+#include "imgui.h"
 #include "pch.h"
 #include "FileNavigation.h"
 #include "DirectoryHandler.h"
@@ -14,6 +15,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
 	    if(!isFolder)
 	    	options[5]=ICON_FA_CARET_RIGHT"  Delete File";
 
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,8.0f));
         for (int i = 0; i < IM_ARRAYSIZE(options); i++){
         	if(i==4) ImGui::Separator();
             if (ImGui::Selectable(options[i])){
@@ -84,6 +86,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
 
             }
         }
+        ImGui::PopStyleVar();
         ImGui::EndPopup();
     }
 }
@@ -97,7 +100,7 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot){
     		RenderFolderItems(path);
     		ImGui::TreePop();
     	}
-		ShowContextMenu(path);
+		ShowContextMenu(path,true);
     	ImGui::PopStyleVar(2);
     	return;
 	}
@@ -147,7 +150,7 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot){
 				this->mTextEditor->LoadFile(item.path.c_str());
 			}
 			ImGui::PopFont();
-			ShowContextMenu(item.path,item.is_directory);
+			ShowContextMenu(item.path);
 			ImGui::PopStyleVar();
 			ImGui::PopStyleColor(2);
 		}

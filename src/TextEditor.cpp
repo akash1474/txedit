@@ -37,6 +37,7 @@ void Editor::ResetState(){
 	mState.mCursorPosition.mLine=0;
 	mState.mSelectionEnd =mState.mSelectionStart=mState.mCursorPosition;
 	mSelectionMode=SelectionMode::Normal;
+	mBracketsCoordinates.hasMatched=false;
 }
 
 

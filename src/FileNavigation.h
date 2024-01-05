@@ -18,7 +18,7 @@ class FileNavigation{
 	std::vector<std::string> mFolders;
 
 	std::unordered_map<std::string,std::vector<Entity>> mDirectoryData;
-	void ShowContextMenu(std::string& path,bool isFolder=true);
+	void ShowContextMenu(std::string& path,bool isFolder=false);
 	void RenderFolderItems(std::string path,bool isRoot=false);
 
 public:

@@ -1,9 +1,10 @@
 #include "pch.h"
 #include "CoreSystem.h"
+#include <chrono>
+#include <future>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_img.h"
-
-
+#include "ImageTexture.h"
 
 #ifdef GL_DEBUG
 
@@ -67,6 +68,14 @@ void CoreSystem::RenderDebugInfo(){
     	for(auto& file:files)
     		std::wcout << file << std::endl;
     }
+
+    static ImageTexture img1("./assets/screenshots/editor.png");
+    static ImageTexture img2("./assets/screenshots/multi_cursor.png");
+    static ImageTexture img3("./assets/screenshots/selection.png");
+    ImageTexture::AsyncImGuiImage(img1,ImVec2(362, 256));
+    ImageTexture::AsyncImGuiImage(img2,ImVec2(362, 256));
+    ImageTexture::AsyncImGuiImage(img3,ImVec2(362, 256));
+
 
 	ImGui::End();
 }
