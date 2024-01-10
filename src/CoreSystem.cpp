@@ -15,7 +15,7 @@ void CoreSystem::RenderDebugInfo(){
 
 	ImGui::Begin("Project");
 
-	static int LineSpacing = 10.0f;
+	static int LineSpacing = 15.0f;
 	if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
 		Get().mTextEditor.setLineSpacing(LineSpacing);
 	}
@@ -253,6 +253,15 @@ bool CoreSystem::InitImGui(){
 	return true;
 }
 
+float GetFontSize(){
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);	
+    float baseSize = 12.0f;
+    float scaleFactor = 0.007f;
+    float fontSize = baseSize + std::min(screenWidth, screenHeight) * scaleFactor;
+    return fontSize;
+}
+
 
 void CoreSystem::InitFonts(){
 	GL_INFO("Initializing Fonts");
@@ -270,12 +279,13 @@ void CoreSystem::InitFonts(){
 
 	ImFontConfig font_config;
 	font_config.FontDataOwnedByAtlas = false;
-	io.Fonts->AddFontFromMemoryTTF((void*)data_font, font_data_size, 16, &font_config);
-	io.Fonts->AddFontFromMemoryTTF((void*)data_icon, icon_data_size, 20 * 2.0f / 3.0f, &icon_config, icons_ranges);
+	const float font_size=GetFontSize();
+	io.Fonts->AddFontFromMemoryTTF((void*)data_font, font_data_size, font_size, &font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)data_icon, icon_data_size, (font_size+4.0f) * 2.0f / 3.0f, &icon_config, icons_ranges);
 
 
-	io.Fonts->AddFontFromMemoryTTF((void*)monolisa_medium, IM_ARRAYSIZE(monolisa_medium), 12, &font_config);
-	io.Fonts->AddFontFromMemoryTTF((void*)data_icon_regular, icon_regular_data_size, 20 * 2.0f / 3.0f, &icon_config, icons_ranges);
+	io.Fonts->AddFontFromMemoryTTF((void*)monolisa_medium, IM_ARRAYSIZE(monolisa_medium), font_size-4.0f, &font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)data_icon_regular, icon_regular_data_size, (font_size+4.0f) * 2.0f / 3.0f, &icon_config, icons_ranges);
 }
 
 
