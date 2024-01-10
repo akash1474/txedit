@@ -1,7 +1,6 @@
 @echo off
 set solution_name=""
 
-for %%i in ("*.sln") do set solution_name=%%i
 
 if /i [%1] == [run] goto :run
 
@@ -43,6 +42,7 @@ if /i [%1] == [release] (
 )
 goto :build
 
+for %%i in ("*.sln") do set solution_name=%%i
 
 :build
 	echo [%pcolor%m[ %build_type% Build ][0m
