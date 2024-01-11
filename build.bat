@@ -7,6 +7,7 @@ if /i [%1] == [run] goto :run
 echo [94m[ Premake ][0m - [90mGenerating vs2022 files[0m
 premake5 vs2022
 
+for %%i in ("*.sln") do set solution_name=%%i
 
 where /q cl
 if [%errorlevel%]==[1] (
@@ -42,7 +43,6 @@ if /i [%1] == [release] (
 )
 goto :build
 
-for %%i in ("*.sln") do set solution_name=%%i
 
 :build
 	echo [%pcolor%m[ %build_type% Build ][0m
