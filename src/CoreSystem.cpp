@@ -5,6 +5,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_img.h"
 #include "ImageTexture.h"
+#include "MultiThreading.h"
 
 #ifdef GL_DEBUG
 
@@ -72,9 +73,18 @@ void CoreSystem::RenderDebugInfo(){
     static ImageTexture img1("./assets/screenshots/editor.png");
     static ImageTexture img2("./assets/screenshots/multi_cursor.png");
     static ImageTexture img3("./assets/screenshots/selection.png");
-    ImageTexture::AsyncImGuiImage(img1,ImVec2(362, 256));
-    ImageTexture::AsyncImGuiImage(img2,ImVec2(362, 256));
-    ImageTexture::AsyncImGuiImage(img3,ImVec2(362, 256));
+    static bool pushed=false;
+    static std::vector<ImageTexture*> imgs;
+    if(!pushed){
+	    imgs.push_back(&img1);
+	    // imgs.push_back(&img2); imgs.push_back(&img3);
+    	MultiThreading::ImageLoader::AddImagesToQueue(imgs);
+    	pushed=true;
+    }
+    MultiThreading::ImageLoader::LoadImages();
+    ImageTexture::AsyncImage(imgs[0],ImVec2(362, 256));
+    // ImageTexture::AsyncImage(imgs[1],ImVec2(362, 256));
+    // ImageTexture::AsyncImage(imgs[2],ImVec2(362, 256));
 
 
 	ImGui::End();

@@ -8,8 +8,8 @@
 #include "FileNavigation.h"
 #include "StatusBarManager.h"
 
-#define WIDTH 900
-#define HEIGHT 600
+#define WIDTH 1200
+#define HEIGHT 800
 
 class CoreSystem{
 	const char* mCurrentFile;

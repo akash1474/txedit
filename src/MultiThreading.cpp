@@ -3,27 +3,47 @@
 #include "ImageTexture.h"
 #include <algorithm>
 
-void MultiThreading::ImageLoader::AddImagesToQueue(std::vector<ImageTexture>& images){
+void MultiThreading::ImageLoader::AddImagesToQueue(std::vector<ImageTexture*>& images){
 	size_t size=images.size();
-	for(size_t i=size;i>-1;i--)
-		Get().mQueue.push(&images[i]);
+	for(ImageTexture* img:images){
+		Get()->mQueue.push(img);
+	}
 
-	if(!Get().mQueue.empty())
+	GL_INFO("Size:{}",Get()->mQueue.size());
+	if(!Get()->mQueue.empty())
+		MultiThreading::IsRequired=true;
+}
+
+void MultiThreading::ImageLoader::PushImageToQueue(ImageTexture* img){
+	Get()->mQueue.push(img);
+
+	if(!Get()->mQueue.empty())
 		MultiThreading::IsRequired=true;
 }
 
 void MultiThreading::ImageLoader::LoadImages(){
-	auto& que=Get().mQueue;
-	auto& img=Get().mCurrentImage;
+	if(!MultiThreading::IsRequired) return;
+	static bool isReserved=false;
+	if(!isReserved){
+		Get()->mCurrentImages.resize(8);
+		isReserved=true;
+	}
 
-	//Execute if img==nullptr and mQueue not empty
-	if(!img && !que.empty())
-		img=que.front();
+	auto& que=Get()->mQueue;
+	auto& imgs=Get()->mCurrentImages;
+	if(que.empty() && imgs.empty()) return;
 
-	ImageTexture::LoadAsync(img);
-	if(img->IsLoaded()){
-		que.pop();
-		img=nullptr;
-		if(que.empty()) MultiThreading::IsRequired=false;
+	for(size_t i=0;i<Get()->mThreadCount;i++){
+		if(!imgs[i] && !que.empty()){
+			imgs[i]=que.front();
+			que.pop();
+		}
+		ImageTexture::LoadAsync(imgs[i]);
+		if(imgs[i] && imgs[i]->IsLoaded()){
+			imgs[i]=nullptr;
+			bool isFinished=true;
+			for(size_t i=0;i<Get()->mThreadCount;i++){if(imgs[i] && !imgs[i]->IsLoaded()) isFinished=false;}
+			if(isFinished && que.empty()) MultiThreading::IsRequired=false;
+		}
 	}
 }

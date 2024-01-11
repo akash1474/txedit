@@ -1,8 +1,10 @@
+#include "imgui.h"
 #include "pch.h"
 #include "Log.h"
 #include "ImageTexture.h"
 #include <gl/GL.h>
 #include <thread>
+#include <vcruntime.h>
 #include "stb_img.h"
 
 void ImageTexture::LoadTexture(const char* file_path){
@@ -11,7 +13,7 @@ void ImageTexture::LoadTexture(const char* file_path){
         GL_CRITICAL("ImageTexture Loading Error:{}",stbi_failure_reason());
         return;
     }
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 }
 
 void ImageTexture::BindTexture(){
@@ -25,15 +27,36 @@ void ImageTexture::BindTexture(){
 
     glBindTexture(GL_TEXTURE_2D, 0);
     stbi_image_free(mImageData);
+    GL_INFO("Image:{} LOADED",mFilePath);
     mIsLoaded=true;
 }
 
 void ImageTexture::LoadAsync(ImageTexture* img){
+    if(!img) return;
     if(!img->mFuture.valid())
         img->mFuture=std::async(std::launch::async,&ImageTexture::LoadTexture,img,img->mFilePath.c_str());
 
     if(!img->IsLoaded() && img->mFuture.valid() && img->mFuture.wait_for(std::chrono::milliseconds(5))==std::future_status::ready){
         img->BindTexture();
+    }
+}
+
+void ImageTexture::AsyncImage(ImageTexture* img,const ImVec2& size){
+    if(img->IsLoaded()) ImGui::Image((void*)(intptr_t)img->GetTextureId(),size);
+    else{
+        ImGuiWindow* window = ImGui::GetCurrentWindow();
+        if (window->SkipItems) return;
+
+        ImGuiContext& g = *GImGui;
+        const ImGuiStyle& style = g.Style;
+        const ImGuiID id = window->GetID(img->mFilePath.c_str());
+        float threshold=window->Size.x-80.0f;
+
+        ImVec2 pos=window->DC.CursorPos;
+        const ImRect bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
+        ImGui::ItemSize(bb,0);
+        if (!ImGui::ItemAdd(bb, id)) return;
+        ImGui::GetCurrentWindow()->DrawList->AddRectFilled(pos,{pos.x+size.x,pos.y+size.y},ImColor(61,61,69,255));
     }
 }
 

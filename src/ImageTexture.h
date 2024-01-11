@@ -1,6 +1,7 @@
 #pragma once
 #include "imgui.h"
 #include <future>
+#include <Windows.h>
 #include <gl/GL.h>
 #define GL_CLAMP_TO_EDGE 0x812F
 #define GL_CLAMP 0x2900
@@ -27,5 +28,6 @@ public:
 	bool IsLoaded(){return mIsLoaded;}
 	unsigned int GetTextureId(){return mTextureId;};
 	static void AsyncImGuiImage(ImageTexture& img,const ImVec2& size);
+	static void AsyncImage(ImageTexture* img,const ImVec2& size);
 	static void LoadAsync(ImageTexture* img);
 };
