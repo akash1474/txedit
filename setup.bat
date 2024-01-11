@@ -14,7 +14,7 @@ echo -- Cloning spdlog
 git clone -b v1.12.0 --single-branch https://github.com/gabime/spdlog.git --depth 1 ./packages/spdlog
 echo.
 echo -- Cloning imgui
-git clone -b v1.89.9 --single-branch https://github.com/ocornut/imgui.git --depth 1
+git clone -b v1.89.9-docking --single-branch https://github.com/ocornut/imgui.git --depth 1
 echo.
 echo -- Cloning lunasvg
 git clone -b v2.3.9 --single-branch https://github.com/sammycage/lunasvg.git --depth 1
@@ -67,3 +67,4 @@ echo -- Cleaning
 rmdir /s /q imgui
 rmdir /s /q glfw
 rmdir /s /q lunasvg
+build
