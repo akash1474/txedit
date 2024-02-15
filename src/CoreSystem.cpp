@@ -1,7 +1,6 @@
+#include "fa-regular.h"
 #include "pch.h"
 #include "CoreSystem.h"
-#include <chrono>
-#include <future>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_img.h"
 #include "ImageTexture.h"
@@ -74,15 +73,16 @@ void CoreSystem::RenderDebugInfo(){
     static ImageTexture img2("./assets/screenshots/multi_cursor.png");
     static ImageTexture img3("./assets/screenshots/selection.png");
     static bool pushed=false;
-    static std::vector<ImageTexture*> imgs;
     if(!pushed){
-	    imgs.push_back(&img1);
-	    // imgs.push_back(&img2); imgs.push_back(&img3);
-    	MultiThreading::ImageLoader::AddImagesToQueue(imgs);
+    	MultiThreading::ImageLoader::PushImageToQueue(&img1);
+    	MultiThreading::ImageLoader::PushImageToQueue(&img2);
+    	MultiThreading::ImageLoader::PushImageToQueue(&img3);
     	pushed=true;
     }
     MultiThreading::ImageLoader::LoadImages();
-    ImageTexture::AsyncImage(imgs[0],ImVec2(362, 256));
+    ImageTexture::AsyncImage(&img1,ImVec2(362, 256));
+    ImageTexture::AsyncImage(&img2,ImVec2(362, 256));
+    ImageTexture::AsyncImage(&img3,ImVec2(362, 256));
     // ImageTexture::AsyncImage(imgs[1],ImVec2(362, 256));
     // ImageTexture::AsyncImage(imgs[2],ImVec2(362, 256));
 
@@ -210,8 +210,6 @@ bool CoreSystem::Init(){
 
 	if (!glfwInit()) return false;
 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
 
 	Get().mWindow = glfwCreateWindow(WIDTH, HEIGHT, "TxEdit", NULL, NULL);

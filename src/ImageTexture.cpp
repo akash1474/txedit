@@ -1,7 +1,8 @@
-#include "imgui.h"
 #include "pch.h"
+#include "imgui.h"
 #include "Log.h"
 #include "ImageTexture.h"
+#include <chrono>
 #include <gl/GL.h>
 #include <thread>
 #include <vcruntime.h>
@@ -13,7 +14,7 @@ void ImageTexture::LoadTexture(const char* file_path){
         GL_CRITICAL("ImageTexture Loading Error:{}",stbi_failure_reason());
         return;
     }
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 }
 
 void ImageTexture::BindTexture(){

@@ -70,7 +70,6 @@ void Lexer::InitLiteralTokens(){
     mLiteralTokens.emplace_back(Operator,">");
     mLiteralTokens.emplace_back(Operator,".");
     mLiteralTokens.emplace_back(ScopeResolution,"::");
-
 }
 
 const char* Lexer::GetTokenType(int type)

@@ -5,7 +5,6 @@
 #include <filesystem>
 #include <shobjidl.h>
 #include <stdio.h>
-#include "shellapi.h"
 #include "userenv.h"
 
 inline ImColor darkerShade(ImVec4 color, float multiplier = 0.1428)

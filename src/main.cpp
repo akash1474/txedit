@@ -16,7 +16,7 @@ int main(int argc,char* argv[])
 	if(!CoreSystem::InitImGui()) return -1;
 	CoreSystem::InitFonts();
 
-    StyleColorDarkness();
+   StyleColorDarkness();
 
 	CoreSystem::GetTextEditor()->LoadFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
 	CoreSystem::GetFileNavigation()->AddFolder("D:/Projects/c++/txedit");
