@@ -7,8 +7,9 @@
 #include <winnt.h>
 
 
-bool DirectoryHandler::CreateFile(const std::string& filePath){
+bool DirectoryHandler::CreateFile(std::string filePath){
 	if(std::filesystem::exists(filePath)) return false;
+	if(std::filesystem::is_directory(filePath)) filePath=std::filesystem::path(filePath).parent_path().generic_string();
 	std::ofstream file(filePath);
 	file.close();
 	return true;
@@ -20,12 +21,12 @@ void DirectoryHandler::OpenExplorer(const std::string& path){
 	std::string copy=path;
 	std::replace(copy.begin(), copy.end(), '/', '\\');
 	GL_INFO("OpenExplorer: {}",copy);
-	if(!std::filesystem::is_directory(copy)){
-		ShellExecute(NULL, L"open", L"explorer.exe", std::filesystem::path(copy).parent_path().wstring().c_str(), NULL, SW_SHOWNORMAL);
-		return;
-	}
-	std::wstring wideString = StringToWString(copy);
-	ShellExecute(NULL, L"open", L"explorer.exe",std::filesystem::path(copy).wstring().c_str(), NULL, SW_SHOWNORMAL);
+	// if(!std::filesystem::is_directory(copy)){
+	// 	ShellExecute(NULL, L"open", L"explorer.exe", std::filesystem::path(copy).parent_path().wstring().c_str(), NULL, SW_SHOWNORMAL);
+	// 	return;
+	// }
+	// std::wstring wideString = StringToWString(copy);
+	// ShellExecute(NULL, L"open", L"explorer.exe",std::filesystem::path(copy).wstring().c_str(), NULL, SW_SHOWNORMAL);
 }
 
 

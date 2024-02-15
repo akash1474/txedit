@@ -26,6 +26,8 @@ class Editor
 		Highlight,
 		YellowLight,
 		YellowDark, 
+		AquaLight, 
+		AquaDark, 
 		HighlightOne,
 		Max 
 	};
@@ -44,6 +46,8 @@ class Editor
 		mGruvboxPalletDark[(size_t)Pallet::HighlightOne] = ImColor(102,92,84);   // 248
 		mGruvboxPalletDark[(size_t)Pallet::YellowLight] = ImColor(250,189,47,255);        // 237
 		mGruvboxPalletDark[(size_t)Pallet::YellowDark] = ImColor(215,153,33,255);        // 237
+		mGruvboxPalletDark[(size_t)Pallet::AquaLight] = ImColor(142,192,124,255);        // 237
+		mGruvboxPalletDark[(size_t)Pallet::AquaDark] = ImColor(104,157,106,255);        // 237
 	}
 
 
@@ -133,6 +137,7 @@ class Editor
 	void Delete();
 	void SaveFile();
 	void SelectAll();
+	void Find();
 
 	Coordinates MapScreenPosToCoordinates(const ImVec2& mousePosition);
 	float GetSelectionPosFromCoords(const Coordinates& coords)const;
@@ -180,7 +185,6 @@ class Editor
 
   public:
 	bool reCalculateBounds = true;
-	bool isFileSaving=false;
 	float maxLineWidth{0.0f}; //max horizontal scroll;
 	std::string fileType;
 	void SetBuffer(const std::string& buffer);

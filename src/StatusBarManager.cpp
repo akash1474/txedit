@@ -1,7 +1,8 @@
-#include "imgui.h"
 #include "pch.h"
+#include "imgui.h"
 #include "StatusBarManager.h"
 #include <cstdio>
+#include <stdio.h>
 
 
 void StatusBarManager::Init(Editor* editorPtr,FileNavigation* fileNavigation){ 
@@ -129,17 +130,38 @@ void StatusBarManager::RenderInputPanel(ImVec2& size,const ImGuiViewport* viewpo
 		ImGui::Text("%s", mPanelTitle.c_str());
 
 
-		ImGui::SetCursorPos({txt_dim.x,5.0f});
+		ImGui::SetCursorPos({txt_dim.x+8.0f,5.0f});
 		static char buff[256]="";
+		if(!mPlaceholder.empty()){
+			sprintf(buff,"%s",mPlaceholder.c_str());
+		}
+		static const float buttonWidth=ImGui::CalcTextSize(mButtonTitle.c_str()).x+25.0f;
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(4.0f,6.0f));
 		ImGui::PushStyleColor(ImGuiCol_FrameBg,ImGui::GetStyle().Colors[ImGuiCol_MenuBarBg]);
-		ImGui::PushItemWidth(viewport->WorkSize.x-txt_dim.x-5.0f);
+		const float inputWidth=mShowButton ? viewport->WorkSize.x-txt_dim.x-5.0f-buttonWidth : viewport->WorkSize.x-txt_dim.x-15.0f;
+		ImGui::PushItemWidth(inputWidth);
+		ImGui::SetKeyboardFocusHere();
 		if(ImGui::InputText("##InputBar",buff,IM_ARRAYSIZE(buff),ImGuiInputTextFlags_EnterReturnsTrue)){
 			GL_INFO("Submit");
+			mCallbackFn(buff);
+			StatusBarManager::CloseInputPanel();
 		}
-		ImGui::PopStyleVar();
 		ImGui::PopStyleColor();
+		ImGui::PopStyleVar();
 		ImGui::PopFont();
+
+		if(mShowButton){
+			ImGui::SetCursorPos({txt_dim.x+inputWidth+10.0f,5.0f});
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(4.0f,8.0f));
+			ImGui::PushStyleColor(ImGuiCol_Button,ImGui::GetStyle().Colors[ImGuiCol_Border]);
+			if(ImGui::Button(mButtonTitle.c_str())){
+				mCallbackFn(buff);
+				StatusBarManager::CloseInputPanel();
+			}
+			ImGui::PopStyleVar();
+			ImGui::PopStyleColor();
+		}
+
 		if(ImGui::IsKeyPressed(ImGuiKey_Escape)){
 			mIsInputPanelOpen=false;
 		}
@@ -151,6 +173,7 @@ void StatusBarManager::RenderInputPanel(ImVec2& size,const ImGuiViewport* viewpo
 }
 
 
+FileNavigation* StatusBarManager::GetFileNavigation(){return mFileNavigation;}
 
 
 void StatusBarManager::ShowNotification(const char* title,const char* info,NotificationType type){
@@ -163,7 +186,7 @@ void StatusBarManager::ShowNotification(const char* title,const char* info,Notif
 
 
 
-void StatusBarManager::ShowInputPanel(const char* title,const char* placeholder,bool showButton,const char* btnName){
+void StatusBarManager::ShowInputPanel(const char* title,void(*callback)(const char*),const char* placeholder,bool showButton,const char* btnName){
 	mPanelTitle=title;
 	if(placeholder) mPlaceholder=placeholder;
 	if(showButton){
@@ -171,4 +194,8 @@ void StatusBarManager::ShowInputPanel(const char* title,const char* placeholder,
 		mButtonTitle=btnName;
 	}
 	mIsInputPanelOpen=true;
+	mCallbackFn=callback;
 }
+
+
+void StatusBarManager::CloseInputPanel(){mIsInputPanelOpen=false;}

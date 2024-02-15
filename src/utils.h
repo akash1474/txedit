@@ -5,7 +5,6 @@
 #include <filesystem>
 #include <shobjidl.h>
 #include <stdio.h>
-#include "shellapi.h"
 #include "userenv.h"
 
 inline ImColor darkerShade(ImVec4 color, float multiplier = 0.1428)
@@ -340,3 +339,24 @@ inline std::string GetUserDirectory(const char* app_folder=nullptr){
     GL_INFO("ROOT PATH:{}",profileDir);
     return std::string(profileDir);
 }
+
+// std::string exec(const char* cmd) {
+//     // bool status = !std::system(cmd);
+//     // if (!status) return "None";
+//     char fcmd[128];
+//     sprintf_s(fcmd, sizeof(fcmd), "/c %s", cmd);
+//     SHELLEXECUTEINFOA sei = { sizeof(sei) };
+//     sei.fMask = SEE_MASK_FLAG_NO_UI;
+//     sei.lpFile = "cmd.exe";
+//     sei.lpParameters = fcmd;
+//     sei.nShow = SW_SHOWDEFAULT; // Hide the console window
+//     if(ShellExecuteExA(&sei)){
+//         std::string result;
+//         std::ifstream file("git.txt");
+//         std::getline(file,result);
+//         file.close();
+//         std::filesystem::remove("git.txt");
+//         return result;
+//     }
+//     return "None";
+// }

@@ -18,7 +18,7 @@ class FileNavigation{
 	std::vector<std::string> mFolders;
 
 	std::unordered_map<std::string,std::vector<Entity>> mDirectoryData;
-	void ShowContextMenu(std::string& path,std::string& name,bool isFolder=true);
+	void ShowContextMenu(std::string& path,bool isFolder=false);
 	void RenderFolderItems(std::string path,bool isRoot=false);
 
 public:
@@ -28,6 +28,8 @@ public:
 
 	void SetTextEditor(Editor* editorPtr){ this->mTextEditor=editorPtr;}
 	void Render();
+
+	void UpdateDirectory(std::string directory);
 
 	void AddFolder(std::string path){ mFolders.push_back(path);}
 	void ToggleSideBar(){mIsOpen=!mIsOpen;}

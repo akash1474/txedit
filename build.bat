@@ -1,13 +1,13 @@
 @echo off
 set solution_name=""
 
-for %%i in ("*.sln") do set solution_name=%%i
 
 if /i [%1] == [run] goto :run
 
 echo [94m[ Premake ][0m - [90mGenerating vs2022 files[0m
 premake5 vs2022
 
+for %%i in ("*.sln") do set solution_name=%%i
 
 where /q cl
 if [%errorlevel%]==[1] (
