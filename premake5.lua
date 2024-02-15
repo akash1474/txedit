@@ -32,7 +32,7 @@ project "text_editor"
    pchsource "src/pch.cpp"
 
    links {
-      "glfw","ImGui","opengl32","LunaSVG","userenv","Shell32"
+      "glfw","ImGui","opengl32","LunaSVG","userenv","Shell32","dwmapi"
    }
 
    includedirs{

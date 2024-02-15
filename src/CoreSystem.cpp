@@ -5,6 +5,11 @@
 #include "stb_img.h"
 #include "ImageTexture.h"
 #include "MultiThreading.h"
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include "GLFW/glfw3native.h"
+#include <dwmapi.h>
+#include <windef.h>
+#include <wingdi.h>
 
 #ifdef GL_DEBUG
 
@@ -223,6 +228,9 @@ bool CoreSystem::Init(){
 	}
 
 	glfwMakeContextCurrent(Get().mWindow);
+	HWND WinHwnd=glfwGetWin32Window(Get().mWindow);
+	BOOL USE_DARK_MODE = true;
+	BOOL SET_IMMERSIVE_DARK_MODE_SUCCESS = SUCCEEDED(DwmSetWindowAttribute(WinHwnd, DWMWINDOWATTRIBUTE::DWMWA_USE_IMMERSIVE_DARK_MODE,&USE_DARK_MODE, sizeof(USE_DARK_MODE)));
 	return true;
 }
 
