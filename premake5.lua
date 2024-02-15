@@ -78,3 +78,5 @@ project "text_editor"
       staticruntime "On"
       buildoptions { "/MP","/utf-8"}
       linkoptions {"/ENTRY:mainCRTStartup"}
+      files { 'setup.rc', '**.ico' }
+      vpaths { ['./*'] = { '*.rc', '**.ico' }}

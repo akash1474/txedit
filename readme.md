@@ -1,5 +1,11 @@
 # TxEdit🍀
-TxEdit is a minimalistic yet powerful text editor built using C/C++, designed to be close IDE coding experience TxEdit offers a user-friendly interface combined with essential features to enhance your productivity.
+<p align="center">
+  <img src="./assets/logo.png?raw=true" alt="TxEdit Logo"/>
+</p>
+<p align="center">
+TxEdit is a minimalistic yet powerful text editor built using C/C++, designed to be close IDE coding experience TxEdit offers a user-friendly interface combined with essential features to enhance your productivity
+</p>
+
 > [!NOTE]  
 > Feel free to use it.
 
