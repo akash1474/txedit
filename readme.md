@@ -1,4 +1,5 @@
 # TxEdit🍀
+![Editor](./assets/logo.svg)
 TxEdit is a minimalistic yet powerful text editor built using C/C++, designed to be close IDE coding experience TxEdit offers a user-friendly interface combined with essential features to enhance your productivity.
 > [!NOTE]  
 > Feel free to use it.
