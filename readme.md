@@ -3,13 +3,11 @@ TxEdit is a minimalistic yet powerful text editor built using C/C++, designed to
 > [!NOTE]  
 > Feel free to use it.
 
+
+### Introducing "TxEdit" a light-weight text editor for Windows
 ![Editor](./assets/screenshots/editor.png)
 ![Selection](./assets/screenshots/selection.png)
 ![Multi-Cursor](./assets/screenshots/multi_cursor.png)
-
-### Introducing "TxEdit" a light-weight text editor for Windows
-
-SpectrumColor Pro is a powerful and user-friendly color picker designed to enhance your color selection experience on the Windows desktop. This feature-rich application empowers users to seamlessly:
 
 > [!WARNING]  
 > The application is still in development phase and still has bugs.
