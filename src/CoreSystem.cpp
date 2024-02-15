@@ -69,6 +69,8 @@ void CoreSystem::RenderDebugInfo(){
     		std::wcout << file << std::endl;
     }
 
+    #ifdef GL_DEBUG
+
     static ImageTexture img1("./assets/screenshots/editor.png");
     static ImageTexture img2("./assets/screenshots/multi_cursor.png");
     static ImageTexture img3("./assets/screenshots/selection.png");
@@ -85,6 +87,7 @@ void CoreSystem::RenderDebugInfo(){
     ImageTexture::AsyncImage(&img3,ImVec2(362, 256));
     // ImageTexture::AsyncImage(imgs[1],ImVec2(362, 256));
     // ImageTexture::AsyncImage(imgs[2],ImVec2(362, 256));
+    #endif
 
 
 	ImGui::End();
