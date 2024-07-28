@@ -43,7 +43,7 @@ class Editor
 		mGruvboxPalletDark[(size_t)Pallet::Comment] = ImColor(146,131,116,255);        // 237
 		mGruvboxPalletDark[(size_t)Pallet::Indentation] = ImColor(60,56,54,255);        // 237
 		mGruvboxPalletDark[(size_t)Pallet::Highlight] = ImColor(54,51,50,255);        // 237
-		mGruvboxPalletDark[(size_t)Pallet::HighlightOne] = ImColor(102,92,84);   // 248
+		mGruvboxPalletDark[(size_t)Pallet::HighlightOne] = ImColor(150,150,150);   // 248 // Backup ImColor(102,92,84)
 		mGruvboxPalletDark[(size_t)Pallet::YellowLight] = ImColor(250,189,47,255);        // 237
 		mGruvboxPalletDark[(size_t)Pallet::YellowDark] = ImColor(215,153,33,255);        // 237
 		mGruvboxPalletDark[(size_t)Pallet::AquaLight] = ImColor(142,192,124,255);        // 237

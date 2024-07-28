@@ -58,7 +58,7 @@ project "text_editor"
       staticruntime "On"
       optimize "Off"
       buildoptions { "/MP","/DEBUG:FULL" }
-      defines {"GL_DEBUG"}
+      defines {"GL_DEBUG"} 
 
    filter {"configurations:Release"}
       runtime "Release"

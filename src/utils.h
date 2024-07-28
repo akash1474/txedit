@@ -25,7 +25,7 @@ inline ImColor lighterShade(ImVec4 color, float factor = 0.1428)
     return color;
 }
 
-inline void StyleColorDarkness()
+inline void SetStyleColorDarkness()
 {
     ImVec4* colors = ImGui::GetStyle().Colors;
     colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);

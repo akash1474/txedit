@@ -1,15 +1,8 @@
-#include "fa-regular.h"
 #include "pch.h"
+#include "fa-regular.h"
 #include "CoreSystem.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_img.h"
 #include "ImageTexture.h"
 #include "MultiThreading.h"
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include "GLFW/glfw3native.h"
-#include <dwmapi.h>
-#include <windef.h>
-#include <wingdi.h>
 
 #ifdef GL_DEBUG
 
@@ -118,8 +111,7 @@ void CoreSystem::Render(){
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
 	window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-    if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-    	window_flags |= ImGuiWindowFlags_NoBackground;
+    if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) window_flags |= ImGuiWindowFlags_NoBackground;
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::Begin("Container",nullptr, window_flags);
@@ -141,6 +133,10 @@ void CoreSystem::Render(){
 			// auto dock_id_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.7f, nullptr, &dockspace_id);
 			ImGui::DockBuilderDockWindow("Project Directory", dock_id_left);
 			ImGui::DockBuilderDockWindow("Editor", dockspace_id);
+			#ifdef GL_DEBUG
+			ImGui::DockBuilderDockWindow("Dear ImGui Demo", dock_id_left);
+			ImGui::DockBuilderDockWindow("Project", dock_id_left);
+			#endif
 			ImGui::DockBuilderFinish(dockspace_id);
 		}
 	}
@@ -190,87 +186,9 @@ void CoreSystem::Render(){
 
 
 
-void CoreSystem::HandleArguments(int argc,char* argv[]){
-	namespace fs=std::filesystem;
-	for (int i = 1; i < argc; ++i) {
-        fs::path path(argv[i]);
-        if (fs::exists(path)) {
-            if (fs::is_regular_file(path)) {
-            	GL_INFO("FILE:{}",path.generic_string());
-                CoreSystem::GetTextEditor()->LoadFile(path.generic_string().c_str());
-            } else if (fs::is_directory(path)) {
-            	GL_INFO("FOLDER:{}",path.generic_string());
-                CoreSystem::GetFileNavigation()->AddFolder(path.generic_string());
-            } else {
-            	ShowErrorMessage("Invalid File/Folder Selected");
-            }
-        } else {
-            ShowErrorMessage("Path Doesn't Exists");
-        }
-    }
-}
+bool CoreSystem::Init(){return true;}
 
-bool CoreSystem::Init(){
-
-	#ifdef GL_DEBUG
-		OpenGL::Log::Init();
-	#endif
-
-	if (!glfwInit()) return false;
-
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
-
-	Get().mWindow = glfwCreateWindow(WIDTH, HEIGHT, "TxEdit", NULL, NULL);
-	glfwSetWindowSizeLimits(Get().mWindow, 330, 500, GLFW_DONT_CARE, GLFW_DONT_CARE);
-	if (!Get().mWindow) {
-		glfwTerminate();
-		return false;
-	}
-
-	glfwMakeContextCurrent(Get().mWindow);
-	HWND WinHwnd=glfwGetWin32Window(Get().mWindow);
-	BOOL USE_DARK_MODE = true;
-	BOOL SET_IMMERSIVE_DARK_MODE_SUCCESS = SUCCEEDED(DwmSetWindowAttribute(WinHwnd, DWMWINDOWATTRIBUTE::DWMWA_USE_IMMERSIVE_DARK_MODE,&USE_DARK_MODE, sizeof(USE_DARK_MODE)));
-	return true;
-}
-
-void CoreSystem::SetApplicationIcon(unsigned char* logo_img,int length){
-	GLFWimage images[1];
-	images[0].pixels = stbi_load_from_memory(logo_img, length, &images[0].width, &images[0].height, 0, 4); // rgba channels
-	glfwSetWindowIcon(Get().mWindow, 1, images);
-	stbi_image_free(images[0].pixels);
-}
-
-bool CoreSystem::InitImGui(){
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO();
-
-
-	const std::string app_dir=GetUserDirectory("txedit");
-	io.IniFilename=app_dir.c_str();
-	io.LogFilename = nullptr;
-
-	glfwSwapInterval(1);
-	ImGuiStyle& style = ImGui::GetStyle();
-	style.FrameRounding = 2.0f;
-	style.ItemSpacing.y = 6.0f;
-	style.ScrollbarRounding = 2.0f;
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-		style.WindowRounding = 0.0f;
-		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-	}
-
-
-	ImGui_ImplGlfw_InitForOpenGL(Get().mWindow, true);
-	if (!ImGui_ImplOpenGL2_Init()){
-		GL_ERROR("Failed to initit OpenGL 2");
-		return false;
-	}
-	return true;
-}
+bool CoreSystem::InitImGui(){return true; }
 
 float GetFontSize(){
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -305,64 +223,4 @@ void CoreSystem::InitFonts(){
 
 	io.Fonts->AddFontFromMemoryTTF((void*)monolisa_medium, IM_ARRAYSIZE(monolisa_medium), font_size-4.0f, &font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)data_icon_regular, icon_regular_data_size, (font_size+4.0f) * 2.0f / 3.0f, &icon_config, icons_ranges);
-}
-
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	CoreSystem::GetTextEditor()->RecalculateBounds();
-	glViewport(0, 0, width, height);
-	CoreSystem::Get().Draw();
-}
-
-void drop_callback(GLFWwindow* window, int count, const char** paths)
-{
-	for (int i = 0; i < count; i++) {
-		if (std::filesystem::is_directory(paths[i])) {
-			GL_INFO("Folder: {}", paths[i]);
-			CoreSystem::GetFileNavigation()->AddFolder(paths[i]);
-		} else {
-			GL_INFO("File: {}", paths[i]);
-			CoreSystem::GetTextEditor()->LoadFile(paths[i]);
-		}
-	}
-}
-
-void CoreSystem::Draw()
-{
-	glfwPollEvents();
-	ImGui_ImplOpenGL2_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
-	glfwSetDropCallback(Get().mWindow, drop_callback);
-
-	CoreSystem::Render();
-
-	ImGui::Render();
-	int display_w, display_h;
-	glfwGetFramebufferSize(Get().mWindow, &display_w, &display_h);
-	glViewport(0, 0, display_w, display_h);
-	glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glfwSetFramebufferSizeCallback(Get().mWindow, framebuffer_size_callback);
-
-	ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
-	if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-		GLFWwindow* backup_current_context = glfwGetCurrentContext();
-		ImGui::UpdatePlatformWindows();
-		ImGui::RenderPlatformWindowsDefault();
-		glfwMakeContextCurrent(backup_current_context);
-	}
-
-	glfwMakeContextCurrent(Get().mWindow);
-	glfwSwapBuffers(Get().mWindow);
-}
-
-void CoreSystem::Destroy(){
-	ImGui_ImplOpenGL2_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
-
-	glfwDestroyWindow(GetGLFWwindow());
-	glfwTerminate();
 }

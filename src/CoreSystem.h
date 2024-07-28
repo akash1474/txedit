@@ -6,9 +6,8 @@
 #include "DirectoryHandler.h"
 #include "FileNavigation.h"
 #include "StatusBarManager.h"
+#include "filesystem"
 
-#define WIDTH 1200
-#define HEIGHT 800
 
 class CoreSystem{
 	const char* mCurrentFile;
@@ -28,7 +27,6 @@ public:
 	static FileNavigation* GetFileNavigation(){return &Get().mFileNavigation;}
 	static GLFWwindow* GetGLFWwindow(){return Get().mWindow;}
 
-	
 	static void Render();
 	static void InitFonts();
 	static void HandleArguments(int argc,char* argv[]);

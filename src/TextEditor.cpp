@@ -1,3 +1,4 @@
+#include "Coordinates.h"
 #include "Timer.h"
 #include "pch.h"
 #include "TextEditor.h"
@@ -133,16 +134,24 @@ std::string Editor::GetFileType(){
 }
 
 void Editor::Render(){
+	ImGuiStyle& style=ImGui::GetStyle();
+	float width=style.ScrollbarSize;
+	style.ScrollbarSize=20.0f;
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg,mGruvboxPalletDark[(size_t)Pallet::Background]);
 	ImGui::SetNextWindowContentSize(ImVec2(ImGui::GetContentRegionMax().x + 1500.0f, 0));
-	ImGui::Begin("Editor", 0, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_HorizontalScrollbar|ImGuiWindowFlags_AlwaysAutoResize);
+	ImGui::Begin("Editor", 0, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_HorizontalScrollbar|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoMove);
 	ImGui::PopStyleVar();
 	ImGui::PopStyleColor();
 	ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 	this->Draw();
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+	ImGuiID hover_id = ImGui::GetHoveredID();
+	bool scrollbarHovered = hover_id && (hover_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_X) || hover_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_Y));
+	if(scrollbarHovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 	ImGui::PopFont();
 	ImGui::End();
+	style.ScrollbarSize=width;
 }
 
 
@@ -745,7 +754,7 @@ void Editor::SearchWordInCurrentVisibleBuffer(){
 	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
 	int end = std::min(start + lineCount + 1,(int)mLines.size()-1);
 
-
+ 
 	std::string currentWord=mLines[mState.mCursorPosition.mLine].substr(start_idx,end_idx-start_idx);
 	mSearchState.mWord=currentWord;
 
@@ -1041,6 +1050,9 @@ void Editor::SaveFile(){
 
 void Editor::SelectAll(){
 	GL_INFO("SELECT ALL");
+	mState.mSelectionEnd=mState.mCursorPosition=Coordinates(mLines.size()-1,0);
+	mState.mSelectionStart=Coordinates(0,0);
+	mSelectionMode=SelectionMode::Word;
 }
 
 
@@ -1051,6 +1063,7 @@ void Editor::Find(){
 		// StatusBarManager::ShowNotification("Created:", file_path,StatusBarManager::NotificationType::Success);
 	},nullptr,true,"Save");
 }
+
 
 
 
