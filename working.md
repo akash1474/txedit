@@ -13,6 +13,7 @@
 # [ FEATURE ] Full-Screen Mode
 # [ FEATURE ] Auto-Save and Backup
 
+
 ## 28th July 2024
 + [ UPGRADE ] Added support for OpenGL 3.3
 + [ REFACTOR ] Separating core app initialization logic to Application.cpp

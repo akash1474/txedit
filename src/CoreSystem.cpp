@@ -126,13 +126,13 @@ void CoreSystem::Render(){
 		if(isFirst){
 			isFirst=false;
 			ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
-			ImGui::DockBuilderAddNode(dockspace_id,dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+			ImGui::DockBuilderAddNode(dockspace_id,dockspace_flags | ImGuiDockNodeFlags_DockSpace );
 			ImGui::DockBuilderSetNodeSize(dockspace_id, size);
 
 			auto dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.3f, nullptr, &dockspace_id);
 			// auto dock_id_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.7f, nullptr, &dockspace_id);
 			ImGui::DockBuilderDockWindow("Project Directory", dock_id_left);
-			ImGui::DockBuilderDockWindow("Editor", dockspace_id);
+			ImGui::DockBuilderDockWindow("#editor_container", dockspace_id);
 			#ifdef GL_DEBUG
 			ImGui::DockBuilderDockWindow("Dear ImGui Demo", dock_id_left);
 			ImGui::DockBuilderDockWindow("Project", dock_id_left);
