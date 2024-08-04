@@ -15,7 +15,7 @@
 
 
 ## 28th July 2024
-+ [ UPGRADE ] Added support for OpenGL 3.3
++ [ UPGRADE ] Added support for Latest OpenGL
 + [ REFACTOR ] Separating core app initialization logic to Application.cpp
 + [ UPGRADE ] Switched to ImGui 1.90.9 from 1.89.9
 

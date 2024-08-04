@@ -14,6 +14,7 @@ includeDirs["SpdLog"]="packages/spdlog/include"
 includeDirs["ImGui"]="packages/imgui"
 includeDirs["Mini"]="packages/mINI/src/mini"
 includeDirs["LunaSVG"]="packages/lunasvg/include"
+includeDirs["UUID"]="packages/uuid_v4"
 
 -- /MP -- Multithreaded build 
 -- /MT -- Static Linking. Defines _MT 
@@ -41,7 +42,8 @@ project "text_editor"
       "%{includeDirs.ImGui}",
       "%{includeDirs.Mini}",
       "%{includeDirs.LunaSVG}",
-      "%{includeDirs.SpdLog}"
+      "%{includeDirs.SpdLog}",
+      "%{includeDirs.UUID}"
    }
 
    files { 

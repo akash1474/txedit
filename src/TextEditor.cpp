@@ -6,6 +6,7 @@
 #include "pch.h"
 #include "TextEditor.h"
 
+#include <cstdint>
 #include <ctype.h>
 #include <filesystem>
 #include <ios>
@@ -23,6 +24,7 @@
 #include "Log.h"
 #include "imgui.h"
 #include "StatusBarManager.h"
+#include "TabsManager.h"
 
 
 Editor::Editor()
@@ -136,56 +138,7 @@ std::string Editor::GetFileType(){
 	return ext;
 }
 
-struct FileTab{
-	std::string filepath;
-	std::string filename;
-	bool isTemp=false;
-	bool isActive=false;
-	int idx=0;
-	FileTab(std::string path,std::string file,bool temp,bool active,int idx):filepath(path),filename(file),isTemp(temp),isActive(active),idx(idx){}
-};
 
-bool RenderTab(FileTab& tab){
-	ImGuiWindow* window=ImGui::GetCurrentWindow();
-	if(window->SkipItems) return false;
-
-	ImGuiID id=window->GetID(tab.filename.c_str());
-
-	const ImVec2 fontSize=ImGui::CalcTextSize(tab.filename.c_str());
-	static const ImVec2 tabSize{200.0f,40.0f};
-	ImDrawList* drawlist=ImGui::GetWindowDrawList();
-
-	const ImVec2 pos=window->DC.CursorPos;	
-	const ImRect rect(pos,{pos.x+tabSize.x,pos.y+tabSize.y});
-
-
-	ImGui::ItemSize(rect,0.0f);
-	if(!ImGui::ItemAdd(rect, id)) return false;
-
-	bool isHovered,isHeld;
-	bool isClicked=ImGui::ButtonBehavior(rect, id,&isHovered,&isHeld);
-	ImU32 bgColor=isHovered ? IM_COL32(25, 25,25, 255) : IM_COL32(17, 19,20, 255);
-
-	drawlist->AddRectFilled(rect.Min,rect.Max , tab.isActive ? IM_COL32(29, 32,33, 255) : bgColor ,0.0f);
-	if(!tab.isActive) drawlist->AddLine({rect.Max.x,rect.Min.y+2.0f},{rect.Max.x,rect.Max.y-2.0f},IM_COL32(70, 70, 70, 255));
-
-	const ImVec2 startText{pos.x+10.0f,pos.y+((tabSize.y-fontSize.y)*0.5f)};
-	drawlist->AddText(startText,IM_COL32_WHITE,tab.filename.c_str());
-	ImGui::RenderText(startText, tab.filename.c_str());
-
-	if(isHovered){
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,{10.0,5.0f});
-		ImGui::BeginTooltip();
-		ImGui::Text("%s", tab.filepath.c_str());
-		ImGui::EndTooltip();
-		ImGui::PopStyleVar();
-	}
-
-	if(tab.isTemp) drawlist->AddCircleFilled({pos.x+tabSize.x-20.0f,pos.y+((tabSize.y-10.0f)*0.5f)+5.0f}, 5.0f, IM_COL32(100,100,100,255));
-	else drawlist->AddText({pos.x+tabSize.x-20.0f,pos.y+((tabSize.y-ImGui::CalcTextSize(ICON_FA_XMARK).y)*0.5f)},IM_COL32(100,100,100,255),ICON_FA_XMARK);
-
-	return isClicked;
-}
 
 void Editor::Render(){
 	ImGuiStyle& style=ImGui::GetStyle();
@@ -196,36 +149,29 @@ void Editor::Render(){
 
 	//Hiding Tab Bar
 	ImGuiWindowClass window_class;
-	window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
+	window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_NoDockingOverMe;
 	static int winFlags=ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus;
 	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 
 	ImGui::SetNextWindowClass(&window_class);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("#editor_container",0,winFlags | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoDecoration );
+	ImGui::Begin("#editor_container",0,winFlags | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoDecoration);
 		ImGui::PopStyleVar();
 
-		static std::vector<FileTab> tabs;
 
 
 
-
-	    ImGuiID dockspace_id = ImGui::GetID("DDockSpace");
+	    ImGuiID dockspace_id = ImGui::GetID("EditorDockSpace");
 	    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags | ImGuiDockNodeFlags_NoResize);
 
 		static bool isFirst=true;
 		if(isFirst){
-			for(int i=0;i<10;i++) tabs.emplace_back("D:/Projects/c++/txedit/src/Application.cpp","TextEditor.cpp",false,false,i);
-
-			tabs[2].isActive=true;
-			tabs[5].isTemp=true;
-
 			isFirst=false;
 			ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
-			ImGui::DockBuilderAddNode(dockspace_id,dockspace_flags | ImGuiDockNodeFlags_DockSpace );
+			ImGui::DockBuilderAddNode(dockspace_id,dockspace_flags | ImGuiDockNodeFlags_DockSpace);
 			ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetWindowSize());
 
-			auto doc_id_top = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Up, -1.0f, nullptr, &dockspace_id);
+			auto doc_id_top = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Up, 0.0f, nullptr, &dockspace_id);
 			ImGui::DockBuilderSetNodeSize(doc_id_top, {ImGui::GetWindowWidth(),40.0f});
 			ImGui::DockBuilderDockWindow("#tabs_area", doc_id_top);
 			ImGui::DockBuilderDockWindow("#text_editor", dockspace_id);
@@ -234,27 +180,7 @@ void Editor::Render(){
 		}
 
 
-		ImGui::SetNextWindowClass(&window_class);
-		ImGui::PushStyleColor(ImGuiCol_WindowBg,IM_COL32(17, 19, 20, 255));
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,{0.0f,0.0f});
-		ImGui::Begin("#tabs_area",0,winFlags|ImGuiWindowFlags_NoScrollbar);
-
-			for(auto& tab:tabs){
-				if(RenderTab(tab)) {
-					tab.isActive=true;
-					GL_INFO("CLICKED");
-				}
-				ImGui::SameLine(0.0f,0.0f);
-			}
-			ImGuiIO& io=ImGui::GetIO();
-			if (ImGui::IsWindowHovered() &&  io.MouseWheel != 0.0f) {
-		        // Apply the vertical scroll value to horizontal scroll
-		        ImGui::SetScrollX(ImGui::GetCurrentWindow(), ImGui::GetScrollX() - io.MouseWheel * 25.0f); // Adjust the multiplier as needed
-		        io.MouseWheel = 0.0f; // Reset the vertical scroll value to prevent vertical scrolling
-		    }
-		ImGui::PopStyleColor();
-		ImGui::PopStyleVar();
-		ImGui::End();
+		TabsManager::Render(window_class,winFlags);
 
 
 
@@ -262,17 +188,17 @@ void Editor::Render(){
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 		ImGui::PushStyleColor(ImGuiCol_WindowBg,mGruvboxPalletDark[(size_t)Pallet::Background]);
 		ImGui::SetNextWindowContentSize(ImVec2(ImGui::GetContentRegionMax().x + 1500.0f, 0));
-		ImGui::Begin("#text_editor", 0, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_HorizontalScrollbar|winFlags );
-		ImGui::PopStyleVar();
-		ImGui::PopStyleColor();
-		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-		this->Draw();
-		ImGuiWindow* window = ImGui::GetCurrentWindow();
-		ImGuiID hover_id = ImGui::GetHoveredID();
-		bool scrollbarHovered = hover_id && (hover_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_X) || hover_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_Y));
-		if(scrollbarHovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-		ImGui::PopFont();
-		style.ScrollbarSize=width;
+		ImGui::Begin("#text_editor", 0, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_HorizontalScrollbar|winFlags);
+			ImGui::PopStyleVar();
+			ImGui::PopStyleColor();
+			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[(uint8_t)Fonts::MonoLisaRegular]);
+			this->Draw();
+			ImGuiWindow* window = ImGui::GetCurrentWindow();
+			ImGuiID hover_id = ImGui::GetHoveredID();
+			bool scrollbarHovered = hover_id && (hover_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_X) || hover_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_Y));
+			if(scrollbarHovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+			ImGui::PopFont();
+			style.ScrollbarSize=width;
 		ImGui::End();  // #text_editor
 
 
@@ -300,7 +226,7 @@ bool Editor::Draw()
 		mLinePosition = ImVec2({mEditorPosition.x + mLineBarWidth + mPaddingLeft, mEditorPosition.y});
 		mLineHeight = mLineSpacing + mCharacterSize.y;
 
-		mTitleBarHeight = ImGui::GetWindowHeight() - ImGui::GetContentRegionAvail().y;
+		mTitleBarHeight = 0;
 		mSelectionMode = SelectionMode::Normal;
 
 		GL_WARN("LINE HEIGHT:{}", mLineHeight);

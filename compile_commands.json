@@ -1,85 +1,97 @@
 [
           {
             "directory": "D:/Projects/c++/txedit",
+            "file": "D:/Projects/c++/txedit/src/Application.cpp",
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/Application.o -MF D:/Projects/c++/txedit/bin/obj/Release/Application.d -c D:/Projects/c++/txedit/src/Application.cpp"
+          }
+,
+          {
+            "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/CoreSystem.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/CoreSystem.o -MF D:/Projects/c++/txedit/bin/obj/Release/CoreSystem.d -c D:/Projects/c++/txedit/src/CoreSystem.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/CoreSystem.o -MF D:/Projects/c++/txedit/bin/obj/Release/CoreSystem.d -c D:/Projects/c++/txedit/src/CoreSystem.cpp"
           }
 ,
           {
             "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/DirectoryHandler.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/DirectoryHandler.o -MF D:/Projects/c++/txedit/bin/obj/Release/DirectoryHandler.d -c D:/Projects/c++/txedit/src/DirectoryHandler.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/DirectoryHandler.o -MF D:/Projects/c++/txedit/bin/obj/Release/DirectoryHandler.d -c D:/Projects/c++/txedit/src/DirectoryHandler.cpp"
           }
 ,
           {
             "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/FileNavigation.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/FileNavigation.o -MF D:/Projects/c++/txedit/bin/obj/Release/FileNavigation.d -c D:/Projects/c++/txedit/src/FileNavigation.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/FileNavigation.o -MF D:/Projects/c++/txedit/bin/obj/Release/FileNavigation.d -c D:/Projects/c++/txedit/src/FileNavigation.cpp"
           }
 ,
           {
             "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/ImageTexture.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/ImageTexture.o -MF D:/Projects/c++/txedit/bin/obj/Release/ImageTexture.d -c D:/Projects/c++/txedit/src/ImageTexture.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/ImageTexture.o -MF D:/Projects/c++/txedit/bin/obj/Release/ImageTexture.d -c D:/Projects/c++/txedit/src/ImageTexture.cpp"
           }
 ,
           {
             "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/KeyboardHandler.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/KeyboardHandler.o -MF D:/Projects/c++/txedit/bin/obj/Release/KeyboardHandler.d -c D:/Projects/c++/txedit/src/KeyboardHandler.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/KeyboardHandler.o -MF D:/Projects/c++/txedit/bin/obj/Release/KeyboardHandler.d -c D:/Projects/c++/txedit/src/KeyboardHandler.cpp"
           }
 ,
           {
             "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/Log.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/Log.o -MF D:/Projects/c++/txedit/bin/obj/Release/Log.d -c D:/Projects/c++/txedit/src/Log.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/Log.o -MF D:/Projects/c++/txedit/bin/obj/Release/Log.d -c D:/Projects/c++/txedit/src/Log.cpp"
           }
 ,
           {
             "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/MouseHandler.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/MouseHandler.o -MF D:/Projects/c++/txedit/bin/obj/Release/MouseHandler.d -c D:/Projects/c++/txedit/src/MouseHandler.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/MouseHandler.o -MF D:/Projects/c++/txedit/bin/obj/Release/MouseHandler.d -c D:/Projects/c++/txedit/src/MouseHandler.cpp"
           }
 ,
           {
             "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/Movements.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/Movements.o -MF D:/Projects/c++/txedit/bin/obj/Release/Movements.d -c D:/Projects/c++/txedit/src/Movements.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/Movements.o -MF D:/Projects/c++/txedit/bin/obj/Release/Movements.d -c D:/Projects/c++/txedit/src/Movements.cpp"
           }
 ,
           {
             "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/MultiThreading.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/MultiThreading.o -MF D:/Projects/c++/txedit/bin/obj/Release/MultiThreading.d -c D:/Projects/c++/txedit/src/MultiThreading.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/MultiThreading.o -MF D:/Projects/c++/txedit/bin/obj/Release/MultiThreading.d -c D:/Projects/c++/txedit/src/MultiThreading.cpp"
           }
 ,
           {
             "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/StatusBarManager.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/StatusBarManager.o -MF D:/Projects/c++/txedit/bin/obj/Release/StatusBarManager.d -c D:/Projects/c++/txedit/src/StatusBarManager.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/StatusBarManager.o -MF D:/Projects/c++/txedit/bin/obj/Release/StatusBarManager.d -c D:/Projects/c++/txedit/src/StatusBarManager.cpp"
+          }
+,
+          {
+            "directory": "D:/Projects/c++/txedit",
+            "file": "D:/Projects/c++/txedit/src/TabsManager.cpp",
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/TabsManager.o -MF D:/Projects/c++/txedit/bin/obj/Release/TabsManager.d -c D:/Projects/c++/txedit/src/TabsManager.cpp"
           }
 ,
           {
             "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/TextEditor.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/TextEditor.o -MF D:/Projects/c++/txedit/bin/obj/Release/TextEditor.d -c D:/Projects/c++/txedit/src/TextEditor.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/TextEditor.o -MF D:/Projects/c++/txedit/bin/obj/Release/TextEditor.d -c D:/Projects/c++/txedit/src/TextEditor.cpp"
           }
 ,
           {
             "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/lexer.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/lexer.o -MF D:/Projects/c++/txedit/bin/obj/Release/lexer.d -c D:/Projects/c++/txedit/src/lexer.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/lexer.o -MF D:/Projects/c++/txedit/bin/obj/Release/lexer.d -c D:/Projects/c++/txedit/src/lexer.cpp"
           }
 ,
           {
             "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/main.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/main.o -MF D:/Projects/c++/txedit/bin/obj/Release/main.d -c D:/Projects/c++/txedit/src/main.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/main.o -MF D:/Projects/c++/txedit/bin/obj/Release/main.d -c D:/Projects/c++/txedit/src/main.cpp"
           }
 ,
           {
             "directory": "D:/Projects/c++/txedit",
             "file": "D:/Projects/c++/txedit/src/pch.cpp",
-            "command": "cc -MD -MP -DGL_DEBUG -std=c++17 -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/pch.o -MF D:/Projects/c++/txedit/bin/obj/Release/pch.d -c D:/Projects/c++/txedit/src/pch.cpp"
+            "command": "cc -std=c++20 -MD -MP -DGL_DEBUG -D_CRT_SECURE_NO_WARNINGS -ID:/Projects/c++/txedit/src -ID:/Projects/c++/txedit/packages/glfw/include -ID:/Projects/c++/txedit/packages/imgui -ID:/Projects/c++/txedit/packages/mINI/src/mini -ID:/Projects/c++/txedit/packages/lunasvg/include -ID:/Projects/c++/txedit/packages/spdlog/include -ID:/Projects/c++/txedit/packages/uuid_v4 -m64 -O2 /MP /utf-8 -o D:/Projects/c++/txedit/bin/obj/Release/pch.o -MF D:/Projects/c++/txedit/bin/obj/Release/pch.d -c D:/Projects/c++/txedit/src/pch.cpp"
           }
 ]

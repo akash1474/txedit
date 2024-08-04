@@ -23,6 +23,7 @@
 
 bool Application::Init(){
 	OpenGL::ScopedTimer timer("Application::Init");
+
 	#ifdef GL_DEBUG
 		OpenGL::Log::Init();
 	#endif
@@ -296,3 +297,4 @@ void Application::SetupSystemSignalHandling(){
     std::signal(SIGTERM, Application::HandleCrash); // Termination request
     std::signal(SIGINT, Application::HandleCrash); // Interrupt (Ctrl+C)
 }
+                                                                                                                                                                                                                                                                                                          

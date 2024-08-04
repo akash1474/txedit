@@ -7,6 +7,14 @@
 #include <stdio.h>
 #include "userenv.h"
 
+enum class Fonts{
+    GudeaRegular,
+    GudeaItalic,
+    MonoLisaRegular,
+    MonoLisaMedium,
+};
+
+
 inline ImColor darkerShade(ImVec4 color, float multiplier = 0.1428)
 {
     multiplier = 1.0f - multiplier;

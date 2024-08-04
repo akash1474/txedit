@@ -1,8 +1,12 @@
 #include "pch.h"
-#include "fa-regular.h"
 #include "CoreSystem.h"
 #include "ImageTexture.h"
 #include "MultiThreading.h"
+#include "resources/FontAwesomeRegular.embed"
+#include "resources/FontAwesomeSolid.embed"
+#include "resources/MonoLisaRegular.embed"
+#include "resources/GudeaRegular.embed"
+#include "resources/GudeaItalic.embed"
 
 #ifdef GL_DEBUG
 
@@ -210,17 +214,15 @@ void CoreSystem::InitFonts(){
 	icon_config.PixelSnapH = true;
 	icon_config.FontDataOwnedByAtlas = false;
 
-	const int font_data_size = IM_ARRAYSIZE(data_font);
-	const int icon_data_size = IM_ARRAYSIZE(data_icon);
-	const int icon_regular_data_size = IM_ARRAYSIZE(data_icon_regular);
-
 	ImFontConfig font_config;
 	font_config.FontDataOwnedByAtlas = false;
 	const float font_size=GetFontSize();
-	io.Fonts->AddFontFromMemoryTTF((void*)data_font, font_data_size, font_size, &font_config);
-	io.Fonts->AddFontFromMemoryTTF((void*)data_icon, icon_data_size, (font_size+4.0f) * 2.0f / 3.0f, &icon_config, icons_ranges);
+	// io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\Arial.ttf",font_size,&font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)GudeaRegular, IM_ARRAYSIZE(GudeaRegular), font_size+2, &font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeSolid, IM_ARRAYSIZE(FontAwesomeSolid), (font_size+4.0f) * 2.0f / 3.0f, &icon_config, icons_ranges);
 
+	io.Fonts->AddFontFromMemoryTTF((void*)GudeaItalic, IM_ARRAYSIZE(GudeaItalic), font_size+2, &font_config);
 
-	io.Fonts->AddFontFromMemoryTTF((void*)monolisa_medium, IM_ARRAYSIZE(monolisa_medium), font_size-4.0f, &font_config);
-	io.Fonts->AddFontFromMemoryTTF((void*)data_icon_regular, icon_regular_data_size, (font_size+4.0f) * 2.0f / 3.0f, &icon_config, icons_ranges);
+	io.Fonts->AddFontFromMemoryTTF((void*)MonoLisaRegular, IM_ARRAYSIZE(MonoLisaRegular), font_size-4.0f, &font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeRegular, IM_ARRAYSIZE(FontAwesomeRegular), (font_size+4.0f) * 2.0f / 3.0f, &icon_config, icons_ranges);
 }
