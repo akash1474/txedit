@@ -1,3 +1,4 @@
+#include "FontAwesome6.h"
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "pch.h"
@@ -15,7 +16,14 @@ bool TabsManager::OpenFile(std::string filepath,bool isTemp){
 	auto it=std::find_if(Get().mTabs.begin(),Get().mTabs.end(),[&](const FileTab& tab){return tab.filepath==filepath;});
 	if(it==Get().mTabs.end()){
 		for(auto&tab:Get().mTabs) tab.isActive=false;
-		Get().mTabs.emplace_back(filepath,path.filename().generic_string(),isTemp,true,true,uuid.str());
+
+		//Replace the temp file with curr temp file if a temp file is found
+		auto it=std::find_if(Get().mTabs.begin(),Get().mTabs.end(),[&](const FileTab& tab){return tab.isTemp;});
+		if(it!=Get().mTabs.end()){
+			it->filepath=filepath;
+			it->filename=path.filename().generic_string();
+		}else Get().mTabs.emplace_back(filepath,path.filename().generic_string(),isTemp,true,true,uuid.str());
+
 	}else{
 		for(auto&tab:Get().mTabs) tab.isActive=false;
 		it->isActive=true;
@@ -35,9 +43,16 @@ void TabsManager::Render(ImGuiWindowClass& window_class,int winFlags){
 	ImGui::PushStyleColor(ImGuiCol_WindowBg,IM_COL32(17, 19, 20, 255));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,{0.0f,0.0f});
 	ImGui::Begin("#tabs_area",0,winFlags|ImGuiWindowFlags_NoScrollbar);
+		ImGuiIO& io=ImGui::GetIO();
+		// ImGui::SetCursorPosX(ImGui::GetScrollY());
+		// if(ImGui::Button(ICON_FA_ARROW_LEFT,{0,40.0f})) io.MouseWheel=-1.0f;
+		// ImGui::SameLine(0.0f,0.0f);
+		// ImGui::SetCursorPosX(ImGui::GetScrollY()+20.0f);
+		// if(ImGui::Button(ICON_FA_ARROW_RIGHT,{0,40.0f})) io.MouseWheel=1.0f;
+		// ImGui::SameLine(0.0f,0.0f);
 
 		bool removeTab=false;
-		for(auto it=tabs.begin();it!=tabs.end();it++){
+		for(auto it=tabs.begin();it!=tabs.end();){
 			if(RenderTab(it,removeTab) && !it->isActive) {
 				for(auto&tab:Get().mTabs) tab.isActive=false;
 				it->isActive=true;
@@ -48,15 +63,35 @@ void TabsManager::Render(ImGuiWindowClass& window_class,int winFlags){
 				it->isTemp=false;
 				ImGui::GetIO().MouseDoubleClicked[0]=0;
 			}
+			if(ImGui::IsItemHovered() && ImGui::IsItemClicked(ImGuiMouseButton_Right)) ImGui::OpenPopup("##tab_menu");
 			if(removeTab){
-				tabs.erase(it);
+				it=tabs.erase(it);
+				if(tabs.empty()){} //Clear the buffer from editor
 				removeTab=false;
-			}
+			}else  it++;
 			ImGui::SameLine(0.0f,0.0f);
+
 		}
+		static const char* names[] = { "Close Tabs to the Right", "Close UnModified Tabs", "Close UnModified Tabs to Right", "Close Tabs with Deleted Files" };
+		bool selected=-1;
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 5.0f));
+		if(ImGui::BeginPopup("##tab_menu")){
+			if(ImGui::Selectable("Close Tab")){
+				ImGui::GetHoveredID()
+			}
+			ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
+            for (int i = 0; i < IM_ARRAYSIZE(names); i++)
+                if (ImGui::Selectable(names[i]))
+                    selected = i;
+			ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
+			ImGui::Selectable("New File");
+			ImGui::Selectable("Open File");
+			ImGui::EndPopup();
+		}
+		ImGui::PopStyleVar();
 
 
-		ImGuiIO& io=ImGui::GetIO();
+		
 		if (ImGui::IsWindowHovered() &&  io.MouseWheel != 0.0f) {
 	        // Apply the vertical scroll value to horizontal scroll
 	        ImGui::SetScrollX(ImGui::GetCurrentWindow(), ImGui::GetScrollX() - io.MouseWheel * 25.0f); // Adjust the multiplier as needed
@@ -85,7 +120,10 @@ bool TabsManager::RenderTab(std::vector<FileTab>::iterator tab,bool& shouldDelet
 
 
 	ImGui::ItemSize(rect,0.0f);
-	if(!ImGui::ItemAdd(rect, id)) return false;
+	if(!ImGui::ItemAdd(rect, id)){
+		ImGui::PopFont();
+		return false;
+	}
 
 	bool isHovered,isHeld;
 	bool isClicked=ImGui::ButtonBehavior(rect, id,&isHovered,&isHeld,0);
@@ -110,8 +148,8 @@ bool TabsManager::RenderTab(std::vector<FileTab>::iterator tab,bool& shouldDelet
 
 	if(!tab->isSaved) drawlist->AddCircleFilled({pos.x+tabSize.x-20.0f,pos.y+((tabSize.y-10.0f)*0.5f)+5.0f}, 5.0f, IM_COL32(100,100,100,255));
 	else{
-		ImVec2 btnPos{pos.x+tabSize.x-21.0f,pos.y+((tabSize.y-10.0f)*0.5f)-1.0f};
-		ImRect btnRect(btnPos,{btnPos.x+12,btnPos.y+12});
+		ImVec2 btnPos{pos.x+tabSize.x-22.0f,pos.y+((tabSize.y-10.0f)*0.5f)-2.0f};
+		ImRect btnRect(btnPos,{btnPos.x+14,btnPos.y+14});
 		bool isHovered;
 		ImGui::ButtonBehavior(btnRect, id,&isHovered,NULL,0);
 		drawlist->AddText({pos.x+tabSize.x-20.0f,pos.y+((tabSize.y-ImGui::CalcTextSize(ICON_FA_XMARK).y)*0.5f)},isHovered? IM_COL32(255,255,255,255) :IM_COL32(100,100,100,255),ICON_FA_XMARK);

@@ -1,10 +1,11 @@
 TODO
-1.Use enum for storing different fonts
-2.Use two fonts 1 for editor and other for UI
-3.Complete the working of tabsmanager - italic font for temp file - close btn to close the tab - check if file is already opened
-4.Render and implement the working of the arrows present in the tab bar
-5.Add additional editor.height amt of scrolling in editor
-6.Fix the bug related to filename overflow and use a small font like arial
-7.Use a proper algorithm to detect the brackets beyond the visible buffer
-8.Implement a ThreadPool class
-9.Fix line number cliping for large files
+» Fix bug related to invalid cursor pos when changelog.txt is opened
+» Open the prev tab if current tab is closed
+» Render and implement the working of the arrows present in the tab bar
+» Add additional editor.height amt of scrolling in editor
+» Fix the bug related to filename overflow and use a small font like arial
+» Use a proper algorithm to detect the brackets beyond the visible buffer
+» Implement a ThreadPool class
+» Fix line number cliping for large files
+» Implement a FileBuffer class that handles all the info related to a current state of file buffer and editor
+» Change the font of inputpanel to editor font
