@@ -20,7 +20,13 @@ void Editor::HandleKeyboardInputs()
 		        break;
 		    }
 		}
-		if (anyKeyPressed && !mScrollAnimation.hasStarted && !IsCursorVisible()) ScrollToLineNumber(mState.mCursorPosition.mLine+1);
+		if (
+			ImGui::IsKeyPressed(ImGuiKey_Space) || 
+			ImGui::IsKeyPressed(ImGuiKey_RightArrow) || 
+			ImGui::IsKeyPressed(ImGuiKey_LeftArrow) ||
+			ImGui::IsKeyPressed(ImGuiKey_UpArrow) || 
+			ImGui::IsKeyPressed(ImGuiKey_UpArrow) 
+			&& !mScrollAnimation.hasStarted && !IsCursorVisible()) ScrollToLineNumber(mState.mCursorPosition.mLine+1);
 
 		io.WantCaptureKeyboard = true;
 		io.WantTextInput = true;

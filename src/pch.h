@@ -1,4 +1,7 @@
 #pragma once
+#define GL_BUILD_OPENGL2
+#define APP_NAME "TxEdit"
+
 #include <iostream>
 #include <cmath>
 
@@ -16,7 +19,11 @@
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl2.h"
+#ifdef GL_BUILD_OPENGL2
+	#include "imgui_impl_opengl2.h"
+#else
+	#include "imgui_impl_opengl3.h"
+#endif
 #include "imgui_internal.h"
 
 
@@ -27,9 +34,9 @@
 #include "Timer.h"
 
 //Icon and Font
-#include "fa-solid-900.h"
-#include "fa-regular.h"
-#include "recursive_linear_medium.h"
-#include "monolisa_medium.h"
+#include "resources/FontAwesomeSolid.embed"
+#include "resources/FontAwesomeRegular.embed"
+#include "resources/RecursiveLinearMedium.embed"
+#include "resources/MonoLisaMedium.embed"
 #include "images.h"
 

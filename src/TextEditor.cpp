@@ -1,7 +1,12 @@
+#include "Coordinates.h"
+#include "FontAwesome6.h"
+#include "Lexer.h"
 #include "Timer.h"
+#include "imgui_internal.h"
 #include "pch.h"
 #include "TextEditor.h"
 
+#include <cstdint>
 #include <ctype.h>
 #include <filesystem>
 #include <ios>
@@ -19,6 +24,7 @@
 #include "Log.h"
 #include "imgui.h"
 #include "StatusBarManager.h"
+#include "TabsManager.h"
 
 
 Editor::Editor()
@@ -132,17 +138,73 @@ std::string Editor::GetFileType(){
 	return ext;
 }
 
+
+
 void Editor::Render(){
+	ImGuiStyle& style=ImGui::GetStyle();
+	float width=style.ScrollbarSize;
+	style.ScrollbarSize=20.0f;
+
+
+
+	//Hiding Tab Bar
+	ImGuiWindowClass window_class;
+	window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_NoDockingOverMe;
+	static int winFlags=ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus;
+	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+
+	ImGui::SetNextWindowClass(&window_class);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::PushStyleColor(ImGuiCol_WindowBg,mGruvboxPalletDark[(size_t)Pallet::Background]);
-	ImGui::SetNextWindowContentSize(ImVec2(ImGui::GetContentRegionMax().x + 1500.0f, 0));
-	ImGui::Begin("Editor", 0, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_HorizontalScrollbar|ImGuiWindowFlags_AlwaysAutoResize);
-	ImGui::PopStyleVar();
-	ImGui::PopStyleColor();
-	ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-	this->Draw();
-	ImGui::PopFont();
+	ImGui::Begin("#editor_container",0,winFlags | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoDecoration);
+		ImGui::PopStyleVar();
+
+
+
+
+	    ImGuiID dockspace_id = ImGui::GetID("EditorDockSpace");
+	    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags | ImGuiDockNodeFlags_NoResize);
+
+		static bool isFirst=true;
+		if(isFirst){
+			isFirst=false;
+			ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
+			ImGui::DockBuilderAddNode(dockspace_id,dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+			ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetWindowSize());
+
+			auto doc_id_top = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Up, 0.0f, nullptr, &dockspace_id);
+			ImGui::DockBuilderSetNodeSize(doc_id_top, {ImGui::GetWindowWidth(),40.0f});
+			ImGui::DockBuilderDockWindow("#tabs_area", doc_id_top);
+			ImGui::DockBuilderDockWindow("#text_editor", dockspace_id);
+
+			ImGui::DockBuilderFinish(dockspace_id);
+		}
+
+
+		TabsManager::Render(window_class,winFlags);
+
+
+
+		ImGui::SetNextWindowClass(&window_class);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		ImGui::PushStyleColor(ImGuiCol_WindowBg,mGruvboxPalletDark[(size_t)Pallet::Background]);
+		ImGui::SetNextWindowContentSize(ImVec2(ImGui::GetContentRegionMax().x + 1500.0f, 0));
+		ImGui::Begin("#text_editor", 0, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_HorizontalScrollbar|winFlags);
+			ImGui::PopStyleVar();
+			ImGui::PopStyleColor();
+			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[(uint8_t)Fonts::MonoLisaRegular]);
+			this->Draw();
+			ImGuiWindow* window = ImGui::GetCurrentWindow();
+			ImGuiID hover_id = ImGui::GetHoveredID();
+			bool scrollbarHovered = hover_id && (hover_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_X) || hover_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_Y));
+			if(scrollbarHovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+			ImGui::PopFont();
+			style.ScrollbarSize=width;
+		ImGui::End();  // #text_editor
+
+
+
 	ImGui::End();
+
 }
 
 
@@ -164,7 +226,7 @@ bool Editor::Draw()
 		mLinePosition = ImVec2({mEditorPosition.x + mLineBarWidth + mPaddingLeft, mEditorPosition.y});
 		mLineHeight = mLineSpacing + mCharacterSize.y;
 
-		mTitleBarHeight = ImGui::GetWindowHeight() - ImGui::GetContentRegionAvail().y;
+		mTitleBarHeight = 0;
 		mSelectionMode = SelectionMode::Normal;
 
 		GL_WARN("LINE HEIGHT:{}", mLineHeight);
@@ -745,7 +807,7 @@ void Editor::SearchWordInCurrentVisibleBuffer(){
 	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
 	int end = std::min(start + lineCount + 1,(int)mLines.size()-1);
 
-
+ 
 	std::string currentWord=mLines[mState.mCursorPosition.mLine].substr(start_idx,end_idx-start_idx);
 	mSearchState.mWord=currentWord;
 
@@ -1041,6 +1103,9 @@ void Editor::SaveFile(){
 
 void Editor::SelectAll(){
 	GL_INFO("SELECT ALL");
+	mState.mSelectionEnd=mState.mCursorPosition=Coordinates(mLines.size()-1,0);
+	mState.mSelectionStart=Coordinates(0,0);
+	mSelectionMode=SelectionMode::Word;
 }
 
 
@@ -1051,6 +1116,7 @@ void Editor::Find(){
 		// StatusBarManager::ShowNotification("Created:", file_path,StatusBarManager::NotificationType::Success);
 	},nullptr,true,"Save");
 }
+
 
 
 

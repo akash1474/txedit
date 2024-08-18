@@ -4,6 +4,7 @@
 #include "FileNavigation.h"
 #include "DirectoryHandler.h"
 #include "StatusBarManager.h"
+#include "TabsManager.h"
 #include <filesystem>
 
 void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
@@ -134,7 +135,7 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot){
 			ShowContextMenu(item.path,item.is_directory); // UnExplored Folder
 		}
 		else{
-			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,8.0f));
 			ImGui::PushStyleColor(ImGuiCol_Header,ImGui::GetStyle().Colors[ImGuiCol_SliderGrabActive]);
 			ImGui::PushStyleColor(ImGuiCol_HeaderHovered,ImGui::GetStyle().Colors[ImGuiCol_SliderGrab]);
@@ -147,6 +148,7 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot){
 				if(!std::filesystem::exists(item.path))
 					UpdateDirectory(std::filesystem::path(item.path).parent_path().generic_string());
 
+				TabsManager::Get().OpenFile(item.path);
 				this->mTextEditor->LoadFile(item.path.c_str());
 			}
 			ImGui::PopFont();

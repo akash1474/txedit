@@ -52,7 +52,6 @@ void StatusBarManager::Render(ImVec2& size,const ImGuiViewport* viewport){
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(4.0f,0.0f));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,0.0f);
 	ImGui::PushStyleColor(ImGuiCol_WindowBg,ImGui::GetStyle().Colors[ImGuiCol_TitleBg]);
-	ImGui::PushFont(io.Fonts->Fonts[1]);
 	ImGui::Begin("Status Bar",0,ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize );
 
 		ImGui::PushFont(io.Fonts->Fonts[0]);
@@ -101,7 +100,6 @@ void StatusBarManager::Render(ImVec2& size,const ImGuiViewport* viewport){
 		ImGui::Text("%s", mTextEditor->fileType.c_str());
 
 	ImGui::End();
-	ImGui::PopFont();
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar(3);
 

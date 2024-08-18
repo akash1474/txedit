@@ -14,19 +14,28 @@
 # [ FEATURE ] Auto-Save and Backup
 
 
-########################################################################################
+## 28th July 2024
++ [ UPGRADE ] Added support for Latest OpenGL
++ [ REFACTOR ] Separating core app initialization logic to Application.cpp
++ [ UPGRADE ] Switched to ImGui 1.90.9 from 1.89.9
+
+## 27th July 2024
++ [   BUG   ] Fixed cursor type on scrollbar of editor
++ [ FEATURE ] Added SelectAll Feature
+
+
 ## 16th Dec 2023
 + [ UPGRADE ] Improve API
 
-########################################################################################
+
 ## 4th Dec 2023
 + [ FEATURE ] Highlight opening and closing end of brackets,quotations
 
-########################################################################################
+
 ## 27th Nov 2023
 + [   BUG   ] Fix Surround when tabs present and support for multiple cursors
 
-########################################################################################
+
 ## 20th-22nd Nov 2023
 + [   BUG   ] Fixed Scroll when cursor goes off screen while pressing enter
 + [   BUG   ] Fixed Line Render after some gap at top
@@ -35,40 +44,40 @@
 + [ FEATURE ] Set a default ini file location
 
 
-########################################################################################
+
 ## Friday 19th Nov 2023
 + [ FEATURE ] Drag and Drop File and Folders
 + [ FEATURE ] Show File Extension in Status Bar
 + [ FEATURE ] Take cmd arguments like folder/file path
 + [ FEATURE ] Support OpenWith Feature
 
-########################################################################################
+
 ## Friday 18th Nov 2023
 + [ FEATURE ] Place Cursor at 0,0 when loading a file
 
-########################################################################################
+
 ## Friday 15th - 17th Nov 2023
 + [ FEATURE ] Color Scheme Improvement
 + [ FEATURE ] File Saving
 
-########################################################################################
+
 
 ## Tuesday 14th Nov 2023
 + [ FEATURE ] Status Bar containing (lineNo,colNo,gitbranch,tabsize)
 + [   BUG   ] Update window size when new file is opened
 
-########################################################################################
+
 
 ## Monday 13th Nov 2023
 + [ FEATURE ] File Explorer Prototype (Selecting folder,selecting file, tree branching, file save)
 
-########################################################################################
+
 
 
 ## Sunday 14th Oct 2023
 + [   BUG   ] Fixing Quotations both single and double Quotations
 
-########################################################################################
+
 
 
 ##  Saturday 14th Oct 2023
@@ -78,7 +87,7 @@
 + [ FEATURE ] Add Delete KeyBinding
 + [   BUG   ] Ctrl+Shift Multi-Cursor Selection
 
-########################################################################################
+
 
 
 ##  Thursday 7th Oct 2023
@@ -86,7 +95,7 @@
 + [ FEATURE ] Using Ctrl+Click to place multiple cursors
 + [ FEATURE ] Ctrl+D Selection and Editing at multiple positions
 
-########################################################################################
+
 
 
 ##  Sunday 24th Sept 2023
@@ -97,7 +106,7 @@
 + [ FEATURE ] Render a line for indentation
 
 
-########################################################################################
+
 
 
 ##  Saturday 23th Sept 2023
@@ -107,14 +116,14 @@
 + [     BUG     ] Calculate lineposition based on editor position.y
 
 
-########################################################################################
+
 
 
 ##  Friday 22th Sept 2023
 + [ FEATURE ] Working on Lexer
 
 
-########################################################################################
+
 
 
 ## Thursday 21th Sept 2023
@@ -124,7 +133,7 @@
 + [   BUG   ] Selecting Word and using CTRL+D causes error
 
 
-########################################################################################
+
 
 
 ## Wednersday 20th Sept 2023
@@ -133,7 +142,7 @@
 
 
 
-########################################################################################
+
 
 
 ## Tuesday 19th Sept 2023
@@ -146,7 +155,7 @@
 + [ FEATURE ] Handle Horizontal Scrolling using `shift+mouseWheel`
 
 
-########################################################################################
+
 
 
 ## Monday 18th Sept 2023
@@ -157,7 +166,7 @@
 + [ UPGRADE ] Show one width for empty line selection
 
 
-########################################################################################
+
 
 
 ## Sunday 17th Sept 2023
@@ -170,7 +179,7 @@
 + [ FEATURE ] Copying/Cutting/Pasting Word Selection
 
 
-########################################################################################
+
 
 
 ## Saturday 16th Sept 2023
@@ -182,7 +191,7 @@
 + [   BUG   ] Fix RightArrow and LeftArrow on '\t'
 
 
-########################################################################################
+
 
 
 ## Monday 11th Sept 2023
@@ -192,14 +201,14 @@
 + [ FEATURE ] Double Paranthesis and Quotations 
 
 
-########################################################################################
+
 
 
 ## Sunday 10th Sept 2023
 - [   BUG   ] Fix currentline selection on mouse click
 
 
-########################################################################################                                                                                                                                                                   
+                                                                                                                                                                   
                                                                                                                                                                        
                                                                                                                                                                             
                                                                                                                                                                                
