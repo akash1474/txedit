@@ -1,5 +1,4 @@
 TODO
-» Fix bug related to invalid cursor pos when changelog.txt is opened
 » Open the prev tab if current tab is closed
 » Render and implement the working of the arrows present in the tab bar
 » Add additional editor.height amt of scrolling in editor
@@ -9,3 +8,5 @@ TODO
 » Fix line number cliping for large files
 » Implement a FileBuffer class that handles all the info related to a current state of file buffer and editor
 » Change the font of inputpanel to editor font
+» Full UTF8 support
+           

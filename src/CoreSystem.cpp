@@ -217,11 +217,12 @@ void CoreSystem::InitFonts(){
 	ImFontConfig font_config;
 	font_config.FontDataOwnedByAtlas = false;
 	const float font_size=GetFontSize();
-	// io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\Arial.ttf",font_size,&font_config);
-	io.Fonts->AddFontFromMemoryTTF((void*)GudeaRegular, IM_ARRAYSIZE(GudeaRegular), font_size+2, &font_config);
+	io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf",font_size+3,&font_config);
+	// io.Fonts->AddFontFromMemoryTTF((void*)GudeaRegular, IM_ARRAYSIZE(GudeaRegular), font_size+2, &font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeSolid, IM_ARRAYSIZE(FontAwesomeSolid), (font_size+4.0f) * 2.0f / 3.0f, &icon_config, icons_ranges);
 
-	io.Fonts->AddFontFromMemoryTTF((void*)GudeaItalic, IM_ARRAYSIZE(GudeaItalic), font_size+2, &font_config);
+	io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeuii.ttf",font_size+3,&font_config);
+	// io.Fonts->AddFontFromMemoryTTF((void*)GudeaItalic, IM_ARRAYSIZE(GudeaItalic), font_size+2, &font_config);
 
 	io.Fonts->AddFontFromMemoryTTF((void*)MonoLisaRegular, IM_ARRAYSIZE(MonoLisaRegular), font_size-4.0f, &font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeRegular, IM_ARRAYSIZE(FontAwesomeRegular), (font_size+4.0f) * 2.0f / 3.0f, &icon_config, icons_ranges);

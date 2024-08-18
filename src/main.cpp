@@ -15,6 +15,7 @@ int CALLBACK EnumFontFamExProc(const LOGFONT* lpelfe, const TEXTMETRIC* lpntme, 
     return 1; // Continue enumeration
 }
 
+
 // Function to get installed fonts
 std::vector<std::string> GetInstalledFonts() {
     std::vector<std::string> fonts;
@@ -74,3 +75,4 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 }
 #endif
 #endif
+                                                                            

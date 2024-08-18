@@ -77,7 +77,7 @@ void TabsManager::Render(ImGuiWindowClass& window_class,int winFlags){
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 5.0f));
 		if(ImGui::BeginPopup("##tab_menu")){
 			if(ImGui::Selectable("Close Tab")){
-				ImGui::GetHoveredID()
+				// ImGui::GetHoveredID()
 			}
 			ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
             for (int i = 0; i < IM_ARRAYSIZE(names); i++)
