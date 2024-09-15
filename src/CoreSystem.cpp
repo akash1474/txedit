@@ -1,3 +1,4 @@
+#include "imgui.h"
 #include "pch.h"
 #include "CoreSystem.h"
 #include "ImageTexture.h"
@@ -5,10 +6,12 @@
 #include "resources/FontAwesomeRegular.embed"
 #include "resources/FontAwesomeSolid.embed"
 #include "resources/MonoLisaRegular.embed"
-#include "resources/GudeaRegular.embed"
-#include "resources/GudeaItalic.embed"
+#include "resources/JetBrainsMonoNLRegular.embed"
+#include "resources/JetBrainsMonoNLItalic.embed"
 
 #ifdef GL_DEBUG
+
+
 
 void CoreSystem::RenderDebugInfo(){
 	static bool show_demo=true;
@@ -19,7 +22,7 @@ void CoreSystem::RenderDebugInfo(){
 
 	static int LineSpacing = 15.0f;
 	if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
-		Get().mTextEditor.setLineSpacing(LineSpacing);
+		Get().mTextEditor.SetLineSpacing(LineSpacing);
 	}
 
     ImGui::Spacing();
@@ -28,7 +31,10 @@ void CoreSystem::RenderDebugInfo(){
     ImGui::Text("mCursorPosition: X:%d  Y:%d",Get().mTextEditor.GetEditorState()->mCursorPosition.mColumn,Get().mTextEditor.GetEditorState()->mCursorPosition.mLine);
     ImGui::Text("mSelectionStart: X:%d  Y:%d",Get().mTextEditor.GetEditorState()->mSelectionStart.mColumn,Get().mTextEditor.GetEditorState()->mSelectionStart.mLine);
     ImGui::Text("mSelectionEnd:   X:%d  Y:%d",Get().mTextEditor.GetEditorState()->mSelectionEnd.mColumn,Get().mTextEditor.GetEditorState()->mSelectionEnd.mLine);
+    ImGui::Text("mUndoManagerTop:   X:%d  Y:%d",Get().mTextEditor.GetEditorState()->mSelectionEnd.mColumn,Get().mTextEditor.GetEditorState()->mSelectionEnd.mLine);
 
+    ImGui::Spacing();
+    CoreSystem::GetTextEditor()->GetUndoMananger()->DisplayUndoStack();
 
     ImGui::Spacing();
     ImGui::Spacing();
@@ -217,12 +223,12 @@ void CoreSystem::InitFonts(){
 	ImFontConfig font_config;
 	font_config.FontDataOwnedByAtlas = false;
 	const float font_size=GetFontSize();
-	io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf",font_size+3,&font_config);
-	// io.Fonts->AddFontFromMemoryTTF((void*)GudeaRegular, IM_ARRAYSIZE(GudeaRegular), font_size+2, &font_config);
+	// io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf",font_size+3,&font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size+2, &font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeSolid, IM_ARRAYSIZE(FontAwesomeSolid), (font_size+4.0f) * 2.0f / 3.0f, &icon_config, icons_ranges);
 
-	io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeuii.ttf",font_size+3,&font_config);
-	// io.Fonts->AddFontFromMemoryTTF((void*)GudeaItalic, IM_ARRAYSIZE(GudeaItalic), font_size+2, &font_config);
+	// io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeuii.ttf",font_size+3,&font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLItalic, IM_ARRAYSIZE(JetBrainsMonoNLItalic), font_size+2, &font_config);
 
 	io.Fonts->AddFontFromMemoryTTF((void*)MonoLisaRegular, IM_ARRAYSIZE(MonoLisaRegular), font_size-4.0f, &font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeRegular, IM_ARRAYSIZE(FontAwesomeRegular), (font_size+4.0f) * 2.0f / 3.0f, &icon_config, icons_ranges);

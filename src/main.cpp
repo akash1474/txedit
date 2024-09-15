@@ -8,6 +8,7 @@
 #include <wingdi.h>
 #include "Application.h"
 #include "TabsManager.h"
+#include "Lexer.h"
 
 // Callback function for EnumFontFamiliesEx
 int CALLBACK EnumFontFamExProc(const LOGFONT* lpelfe, const TEXTMETRIC* lpntme, DWORD FontType, LPARAM lParam) {
@@ -41,7 +42,18 @@ int main(int argc,char* argv[])
 	if(argc > 1) Application::HandleArguments(GetCommandLineW());
 
 	CoreSystem::GetFileNavigation()->AddFolder("D:/Projects/c++/txedit");
-	// TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
+	// size_t size{0};
+	// std::ifstream t("D:/Projects/c++/txedit/src/main.cpp");
+
+	// std::string file_data{0};
+	// t.seekg(0, std::ios::end);
+	// size = t.tellg();
+	// file_data.resize(size, ' ');
+	// t.seekg(0);
+	// t.read(&file_data[0], size);
+	// Lexer lex(file_data);
+	// lex.Tokenize();
+	TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
 	// TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/Application.cpp");
 	// TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/TabsManager.cpp");
 

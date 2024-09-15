@@ -31,13 +31,11 @@ void Editor::HandleKeyboardInputs()
 		io.WantCaptureKeyboard = true;
 		io.WantTextInput = true;
 
-		// if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Z)))
-		// 	Undo();
+		if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Z))) mUndoManager.Undo(7,this);
 		// else if (!IsReadOnly() && !ctrl && !shift && alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
 		// 	Undo();
-		// else if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Y)))
-		// 	Redo();
-		if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow))) 
+		else if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Y))) mUndoManager.Redo(7, this);
+		else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow))) 
 			MoveUp();
 		else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow)))
 			MoveDown();
@@ -58,8 +56,8 @@ void Editor::HandleKeyboardInputs()
 				if(mSelectionMode!=SelectionMode::Word) HandleDoubleClick();
 				if(mState.mSelectionStart==mState.mSelectionEnd) return;
 				
-				int start_idx=GetCurrentLineIndex(mState.mSelectionStart);
-				int end_idx=GetCurrentLineIndex(mState.mSelectionEnd);
+				int start_idx=GetCharacterIndex(mState.mSelectionStart);
+				int end_idx=GetCharacterIndex(mState.mSelectionEnd);
 
 				if(start_idx>end_idx) std::swap(start_idx,end_idx);
 
@@ -132,88 +130,7 @@ void Editor::HandleKeyboardInputs()
 			SaveFile();
 		else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)))
 			InsertLine();
-		else if (!IsReadOnly() && !ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Tab))) {
-
-			if(mSearchState.isValid()) mSearchState.reset();
-
-			if (mSelectionMode == SelectionMode::Normal) {
-				if(!mCursors.empty()){
-					for(int i=0;i<mCursors.size();i++){
-						int lineIdx=mCursors[i].mCursorPosition.mLine;
-						int idx = GetCurrentLineIndex(mCursors[i].mCursorPosition);
-						GL_INFO("IDX:", idx);
-
-						mLines[lineIdx].insert(mLines[lineIdx].begin() + idx, 1, '\t');
-
-						mCursors[i].mCursorPosition.mColumn += mTabWidth;
-
-						for(int j=i+1;j<mCursors.size();j++){
-							if(mCursors[j].mCursorPosition.mLine==mCursors[i].mCursorPosition.mLine)
-								mCursors[j].mCursorPosition.mColumn+=mTabWidth;
-						}
-
-					}
-				}else{
-					int idx = GetCurrentLineIndex(mState.mCursorPosition);
-					GL_INFO("IDX:", idx);
-
-					mLines[mState.mCursorPosition.mLine].insert(mLines[mState.mCursorPosition.mLine].begin() + idx, 1, '\t');
-					mState.mCursorPosition.mColumn += mTabWidth;
-				}
-				
-				return;
-			}
-
-			if(mSelectionMode==SelectionMode::Line){
-
-				int value=shift ? -1 : 1;
-
-				if(shift){
-					if(mLines[mState.mCursorPosition.mLine][0]!='\t') return;
-					if(mState.mSelectionStart.mColumn==0)
-						mState.mSelectionStart.mColumn+=mTabWidth;
-					mLines[mState.mCursorPosition.mLine].erase(0,1);
-				}
-				else
-					mLines[mState.mCursorPosition.mLine].insert(mLines[mState.mCursorPosition.mLine].begin(), 1, '\t');
-
-
-				mState.mCursorPosition.mColumn += mTabWidth*value;
-				mState.mSelectionStart.mColumn += mTabWidth*value;
-				mState.mSelectionEnd.mColumn +=mTabWidth*value;
-				return;
-			}
-
-
-			if(mSelectionMode==SelectionMode::Word && mState.mSelectionStart.mLine!=mState.mSelectionEnd.mLine){
-				GL_INFO("INDENTING");
-
-
-				int startLine=mState.mSelectionStart.mLine;
-				int endLine=mState.mSelectionEnd.mLine;
-
-				if(startLine>endLine) std::swap(startLine,endLine);
-
-
-				int value=shift ? -1 : 1;
-				while(startLine<=endLine){
-
-					if(shift){
-						if(mLines[startLine][0]=='\t') mLines[startLine].erase(0,1);
-					}
-					else
-						mLines[startLine].insert(mLines[startLine].begin(), 1, '\t');
-
-
-					startLine++;
-				}
-				mState.mSelectionStart.mColumn += mTabWidth*value;
-				mState.mSelectionEnd.mColumn +=mTabWidth*value;
-				mState.mCursorPosition.mColumn+=mTabWidth*value;
-
-			}
-
-		}
+		else if (!IsReadOnly() && !ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Tab))) InsertTab(shift);
 
 		if (!mReadOnly && !io.InputQueueCharacters.empty()) {
 

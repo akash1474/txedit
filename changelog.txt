@@ -1,6 +1,5 @@
 TODO
 » Open the prev tab if current tab is closed
-» Render and implement the working of the arrows present in the tab bar
 » Add additional editor.height amt of scrolling in editor
 » Fix the bug related to filename overflow and use a small font like arial
 » Use a proper algorithm to detect the brackets beyond the visible buffer
@@ -9,4 +8,21 @@ TODO
 » Implement a FileBuffer class that handles all the info related to a current state of file buffer and editor
 » Change the font of inputpanel to editor font
 » Full UTF8 support
+
+Today:
++ Batch undoing for multiple cursors
++ Batch undoing for multi-line indentation
++ Fix brackets undo
+
+7th Sept 2024 Saturday
++ Batch undoing for a group of 7 text
+
            
+6th Sept 2024 Friday
++ Update the editor API functions name(eg GetCurrentLineLength --> GetCurrentLineMaxColumn)
++ Added debug table for undo stack representation
++ Single line indentation undo/redo
+
+1-5th Sept 2024
++ Code Refactoring and reorganization
++ Implemented UndoManager class and UndoRecord

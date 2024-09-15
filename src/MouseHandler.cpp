@@ -26,7 +26,7 @@ void Editor::HandleMouseInputs()
 					GL_INFO("TRIPLE CLICK");
 					mSelectionMode=SelectionMode::Line;
 					mState.mSelectionStart.mColumn=0;
-					mState.mSelectionEnd.mColumn=GetCurrentLineLength();
+					mState.mSelectionEnd.mColumn=GetCurrentLineMaxColumn();
 					mState.mCursorPosition.mColumn=mState.mSelectionEnd.mColumn;
 				}
 				mLastClick = -1.0f;
@@ -78,7 +78,9 @@ void Editor::HandleMouseInputs()
 
 				mState.mCursorDirectionChanged=false;
 				mLastClick = (float)ImGui::GetTime();
-				mBracketsCoordinates.coords=GetMatchingBracketsCoordinates();
+				const auto pos=GetMatchingBracketsCoordinates();
+				if(mBracketsCoordinates.hasMatched) 
+					mBracketsCoordinates.coords=pos;
 			}
 
 			//Mouse Click And Dragging
@@ -103,7 +105,7 @@ void Editor::HandleDoubleClick(){
 			mSelectionMode = SelectionMode::Word;
 
 	#ifdef GL_DEBUG
-		int idx = GetCurrentLineIndex(mState.mCursorPosition);
+		int idx = GetCharacterIndex(mState.mCursorPosition);
 	#endif
 
 

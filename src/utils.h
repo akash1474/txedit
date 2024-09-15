@@ -8,8 +8,8 @@
 #include "userenv.h"
 
 enum class Fonts{
-    GudeaRegular,
-    GudeaItalic,
+    JetBrainsMonoNLRegular,
+    JetBrainsMonoNLItalic,
     MonoLisaRegular,
     MonoLisaMedium,
 };
