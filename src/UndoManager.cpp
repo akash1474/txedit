@@ -48,18 +48,44 @@ void UndoRecord::Redo(Editor* aEditor)
 
 void UndoManager::Undo(int aSteps,Editor* editor)
 {
-	while (CanUndo() && aSteps-- > 0) mUndoBuffer[--mUndoIndex].Undo(editor);
+	if(!CanUndo()) return;
+	GL_INFO("IDX:{}, SIZE:{}",mUndoIndex,mUndoBuffer.size());
+	if(!mUndoBuffer[mUndoIndex-1].isBatchEnd){
+		while (CanUndo() && aSteps-- > 0){
+			if(mUndoBuffer[mUndoIndex-1].isBatchEnd) break;
+			else mUndoBuffer[--mUndoIndex].Undo(editor);
+		}
+	}else{
+		--mUndoIndex;
+		while(CanUndo()){
+			mUndoBuffer[mUndoIndex].Undo(editor);
+			if(mUndoBuffer[mUndoIndex--].isBatchStart) break;
+		}
+		++mUndoIndex;
+	}
 }
 
 void UndoManager::Redo(int aSteps,Editor* editor)
 {
-	while (CanRedo() && aSteps-- > 0) mUndoBuffer[mUndoIndex++].Redo(editor);
+	if(!CanRedo()) return;
+	// while (CanRedo() && aSteps-- > 0) mUndoBuffer[mUndoIndex++].Redo(editor);
+	if(!mUndoBuffer[mUndoIndex].isBatchStart){
+		while(CanRedo() && aSteps-->0){
+			if(mUndoBuffer[mUndoIndex].isBatchStart) break;
+			else mUndoBuffer[mUndoIndex++].Redo(editor);
+		}
+	}else{
+		while(CanRedo()){
+			mUndoBuffer[mUndoIndex].Redo(editor);
+			if(mUndoBuffer[mUndoIndex++].isBatchEnd) break;
+		}
+	}
 }
 
 
 void UndoManager::AddUndo(UndoRecord& aValue)
 {
-	mUndoBuffer.resize((size_t)(mUndoIndex + 1));
+	mUndoBuffer.resize((size_t)(mUndoIndex+1));
 	mUndoBuffer.back() = aValue;
 	++mUndoIndex;
 }

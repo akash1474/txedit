@@ -8,6 +8,10 @@
 #include "resources/MonoLisaRegular.embed"
 #include "resources/JetBrainsMonoNLRegular.embed"
 #include "resources/JetBrainsMonoNLItalic.embed"
+#include <chrono>
+#include <cstring>
+#include <thread>
+#include "Terminal.h"
 
 #ifdef GL_DEBUG
 
@@ -104,6 +108,9 @@ void CoreSystem::RenderDebugInfo(){
 #endif
 
 
+
+
+
 void CoreSystem::Render(){
 
 	static const ImGuiIO& io=ImGui::GetIO();
@@ -127,6 +134,8 @@ void CoreSystem::Render(){
 	ImGui::Begin("Container",nullptr, window_flags);
 	ImGui::PopStyleVar(3);
 
+	static Terminal terminal;
+
 
 	if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable){
         ImGuiID dockspace_id = ImGui::GetID("DDockSpace");
@@ -143,6 +152,7 @@ void CoreSystem::Render(){
 			// auto dock_id_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.7f, nullptr, &dockspace_id);
 			ImGui::DockBuilderDockWindow("Project Directory", dock_id_left);
 			ImGui::DockBuilderDockWindow("#editor_container", dockspace_id);
+			// ImGui::DockBuilderDockWindow("#terminal", dockspace_id);
 			#ifdef GL_DEBUG
 			ImGui::DockBuilderDockWindow("Dear ImGui Demo", dock_id_left);
 			ImGui::DockBuilderDockWindow("Project", dock_id_left);
@@ -187,9 +197,8 @@ void CoreSystem::Render(){
 	#endif
 
 	if(Get().mFileNavigation.IsOpen()) Get().mFileNavigation.Render();
-
 	Get().mTextEditor.Render();
-
+	terminal.Render();
 	StatusBarManager::Render(size,viewport);
 
 }

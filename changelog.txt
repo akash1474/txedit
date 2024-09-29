@@ -13,6 +13,10 @@ Today:
 + Batch undoing for multiple cursors
 + Batch undoing for multi-line indentation
 + Fix brackets undo
+TODO:
+- Implement lite version of terminal
+- 
+29th Sept 2024 Sunday
 
 7th Sept 2024 Saturday
 + Batch undoing for a group of 7 text

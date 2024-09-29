@@ -381,9 +381,8 @@ void Editor::InsertCharacter(char newChar)
 	}else if(mCursors.size()>0){
 
 
-		// if(mSelectionMode == SelectionMode::Word) Backspace();
-		// if(mSelectionMode!=SelectionMode::Normal) 
-		// 	mSelectionMode=SelectionMode::Normal;
+		if(mSelectionMode == SelectionMode::Word) Backspace();
+		if(mSelectionMode!=SelectionMode::Normal) mSelectionMode=SelectionMode::Normal;
 
 
 		int cidx=0;
@@ -459,6 +458,88 @@ void Editor::InsertCharacter(char newChar)
 
 		mState.mCursorPosition=mCursors[0].mCursorPosition;
 	}
+	// uRecord.mAfterState=mState;
+	// uRecord.mAddedEnd=mState.mCursorPosition;
+	// mUndoManager.AddUndo(uRecord);
+}
+
+void Editor::InsertLineBreak(EditorState& cursorState,int cursorIdx){
+	UndoRecord uRecord;
+	uRecord.mBeforeState=mState;
+	uRecord.mAddedText='\n';
+	uRecord.mAddedStart=mState.mCursorPosition;
+
+	int idx = GetCharacterIndex(cursorState.mCursorPosition);
+	reCalculateBounds = true;
+
+	int lineIndex=cursorState.mCursorPosition.mLine;
+
+	//CR Between
+	if (idx != mLines[lineIndex].size()) {
+		std::string substr = mLines[lineIndex].substr(idx);
+		mLines[lineIndex].erase(idx);
+
+		lineIndex++;
+		mLines.insert(mLines.begin() + lineIndex, substr);
+	} else {
+		lineIndex++;
+		mLines.insert(mLines.begin() + lineIndex, std::string(""));
+	}
+
+
+
+	int increments=1;
+	// Cursors - On same line
+	if(mCursors.size()>1){
+		for(int j=cursorIdx+1;j < mCursors.size() && mCursors[j].mCursorPosition.mLine==cursorState.mCursorPosition.mLine;j++){
+			GL_INFO("CR SAMELINE");
+			mCursors[j].mCursorPosition.mLine++;
+			mCursors[j].mCursorPosition.mColumn-=cursorState.mCursorPosition.mColumn;
+			increments++;
+		}
+	}
+
+	cursorState.mCursorPosition.mLine++;
+
+	//Cursors - Following lines
+	if(mCursors.size()>1){
+		for(int j=cursorIdx+increments;j < mCursors.size() && mCursors[j].mCursorPosition.mLine >= cursorState.mCursorPosition.mLine;j++){
+			GL_INFO("CR NEXT LINES");
+			mCursors[j].mCursorPosition.mLine++;
+		}
+	}
+
+
+	cursorState.mCursorPosition.mLine--;
+
+	int prev_line=lineIndex-1;
+	uint8_t tabCounts=GetTabCountsUptoCursor(cursorState.mCursorPosition);
+
+	if(mLines[prev_line].size()>0){
+		std::string begin="";
+		while(begin.size()<tabCounts) begin+='\t';
+		// uRecord.mAddedText+=begin;
+		// begin.clear();
+		bool isOpenParen=false;
+		if(mLines[prev_line].back()=='{') {
+			isOpenParen=true;
+			begin+='\t';
+			tabCounts++;
+		}
+		
+		if(isOpenParen && mLines[lineIndex].size() > 0 && mLines[lineIndex].back()=='}'){
+			uRecord.mAddedText+=begin;
+			// uRecord.mAddedText+='\n';
+			mLines.insert(mLines.begin()+lineIndex,begin);
+			mLines[lineIndex+1].insert(0,begin.substr(0,begin.size()-1));
+		}else{
+			mLines[lineIndex].insert(0,begin.c_str());
+		}
+	}
+	cursorState.mCursorPosition.mLine++;
+	cursorState.mCursorPosition.mColumn = tabCounts*mTabWidth;
+
+	if(cursorIdx==0) mState=cursorState;
 	uRecord.mAfterState=mState;
 	uRecord.mAddedEnd=mState.mCursorPosition;
 	mUndoManager.AddUndo(uRecord);
@@ -472,103 +553,19 @@ void Editor::InsertLine()
 	if(mCursors.empty()) mCursors.push_back(mState);
 
 
-	UndoRecord uRecord;
-	uRecord.mBeforeState=mState;
-	uRecord.mAddedText='\n';
-	uRecord.mAddedStart=mState.mCursorPosition;
 
-	for(int i=0;i<mCursors.size();i++){
-		int idx = GetCharacterIndex(mCursors[i].mCursorPosition);
-		reCalculateBounds = true;
-
-		int lineIndex=mCursors[i].mCursorPosition.mLine;
-
-		//CR Between
-		if (idx != mLines[lineIndex].size()) {
-
-			std::string substr = mLines[lineIndex].substr(idx);
-			mLines[lineIndex].erase(idx);
-
-			lineIndex++;
-			mLines.insert(mLines.begin() + lineIndex, substr);
-
-		} else {
-			lineIndex++;
-			mLines.insert(mLines.begin() + lineIndex, std::string(""));
-		}
+	for(int i=0;i<mCursors.size();i++)
+		InsertLineBreak(mCursors[i],i);
 
 
-
-		int increments=1;
-		// Cursors - On same line
-		if(mCursors.size()>1){
-			for(int j=i+1;j < mCursors.size() && mCursors[j].mCursorPosition.mLine==mCursors[i].mCursorPosition.mLine;j++){
-				GL_INFO("CR SAMELINE");
-				mCursors[j].mCursorPosition.mLine++;
-				mCursors[j].mCursorPosition.mColumn-=mCursors[i].mCursorPosition.mColumn;
-				increments++;
-			}
-		}
-
-		mCursors[i].mCursorPosition.mLine++;
-
-		//Adding the newline to uStack
-		// if(mCursors.size()==1) {
-		// 	uRecord.mAfterState=mState;
-		// 	uRecord.mAddedEnd=Coordinates(lineIndex,0);
-		// 	mUndoManager.AddUndo(uRecord);
-		// }
-
-
-		//Cursors - Following lines
-		if(mCursors.size()>1){
-			for(int j=i+increments;j < mCursors.size() && mCursors[j].mCursorPosition.mLine >= mCursors[i].mCursorPosition.mLine;j++){
-				GL_INFO("CR NEXT LINES");
-				mCursors[j].mCursorPosition.mLine++;
-			}
-		}
-
-
-		mCursors[i].mCursorPosition.mLine--;
-
-		int prev_line=lineIndex-1;
-		uint8_t tabCounts=GetTabCountsUptoCursor(mCursors[i].mCursorPosition);
-
-		if(mLines[prev_line].size()>0){
-			std::string begin="";
-			while(begin.size()<tabCounts){
-				begin+='\t';
-			}
-
-			bool isOpenParen=false;
-			if(mLines[prev_line].back()=='{') {
-				isOpenParen=true;
-				begin+='\t';
-				tabCounts++;
-			}
-			if(isOpenParen && mLines[lineIndex].size() > 0 && mLines[lineIndex].back()=='}'){
-				mLines.insert(mLines.begin()+lineIndex,begin);
-				mLines[lineIndex+1].insert(0,begin.substr(0,begin.size()-1));
-			}else{
-				mLines[lineIndex].insert(0,begin.c_str());
-			}
-		}
-		mCursors[i].mCursorPosition.mLine++;
-		mCursors[i].mCursorPosition.mColumn = tabCounts*mTabWidth;
-	}
 	mState=mCursors[0];
 
 	int start = std::min(int(mMinLineVisible),(int)mLines.size());
 	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
 
 	//Scroll if cursor goes off screen while pressing enter
-	if(mMinLineVisible+lineCount-2<=mState.mCursorPosition.mLine){
+	if(mMinLineVisible+lineCount-2<=mState.mCursorPosition.mLine)
 		ImGui::SetScrollY(ImGui::GetScrollY()+mLineHeight);
-	}
-
-	uRecord.mAfterState=mState;
-	uRecord.mAddedEnd=mState.mCursorPosition;
-	mUndoManager.AddUndo(uRecord);
 
 	if(mCursors.size()==1)  mCursors.clear();
 }
@@ -953,30 +950,53 @@ void Editor::InsertTab(bool isShiftPressed){
 
 	if(mSelectionMode==SelectionMode::Word && mState.mSelectionStart.mLine!=mState.mSelectionEnd.mLine){
 		GL_INFO("INDENTING");
-
-
 		int startLine=mState.mSelectionStart.mLine;
 		int endLine=mState.mSelectionEnd.mLine;
 
 		if(startLine>endLine) std::swap(startLine,endLine);
+		int indentValue=isShiftPressed ? -1 : 1;
 
 
-		int value=isShiftPressed ? -1 : 1;
+		bool isFirst=true;
+
 		while(startLine<=endLine){
 
 			if(isShiftPressed){
 				if(mLines[startLine][0]=='\t') mLines[startLine].erase(0,1);
-			}
-			else
+
+				uRecord.mRemovedText='\t';
+				uRecord.mRemovedStart=Coordinates(startLine,0);
+				uRecord.mRemovedEnd=Coordinates(startLine,1);
+				uRecord.mAfterState=mState;
+				if(isFirst){
+					uRecord.isBatchStart=true;
+					isFirst=false;
+				} else uRecord.isBatchStart=false;
+
+				if(startLine==endLine) uRecord.isBatchEnd=true;
+				mUndoManager.AddUndo(uRecord);
+
+			}else{
 				mLines[startLine].insert(mLines[startLine].begin(), 1, '\t');
 
+				uRecord.mAddedText='\t';
+				uRecord.mAddedStart=Coordinates(startLine,0);
+				uRecord.mAddedEnd=Coordinates(startLine,1);
+				uRecord.mAfterState=mState;
+				if(isFirst){
+					uRecord.isBatchStart=true;
+					isFirst=false;
+				} else uRecord.isBatchStart=false;
 
+				if(startLine==endLine) uRecord.isBatchEnd=true;
+				mUndoManager.AddUndo(uRecord);
+			}
+			
 			startLine++;
 		}
-		mState.mSelectionStart.mColumn += mTabWidth*value;
-		mState.mSelectionEnd.mColumn +=mTabWidth*value;
-		mState.mCursorPosition.mColumn+=mTabWidth*value;
-
+		mState.mSelectionStart.mColumn += mTabWidth*indentValue;
+		mState.mSelectionEnd.mColumn +=mTabWidth*indentValue;
+		mState.mCursorPosition.mColumn+=mTabWidth*indentValue;
 	}
 }
 

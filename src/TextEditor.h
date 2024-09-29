@@ -167,8 +167,11 @@ private:
 	uint8_t GetTabCountsUptoCursor(const Coordinates& coords)const;
 	uint32_t GetCharacterIndex(const Coordinates& coords)const;
 
+	void CalculateBracketMatch();
 	std::array<Coordinates,2> GetMatchingBracketsCoordinates();
-	Coordinates FindMatchingBracket(const Coordinates& coords, bool searchForward,char& match);
+	Coordinates FindStartBracket(const Coordinates& coords);
+	Coordinates FindEndBracket(const Coordinates& coords);
+	Coordinates FindMatchingBracket(const Coordinates& coords,bool searchForward)const;
 
 	bool IsCursorVisible();
 	void RenderStatusBar();
@@ -218,6 +221,7 @@ private:
 	void InsertTextAt(Coordinates& aWhere, std::string& aValue);
 	void Backspace();
 	void InsertLine();
+	void InsertLineBreak(EditorState& state,int idx);
 
 	void DeleteRange(const Coordinates & aStart, const Coordinates & aEnd);
 	void DeleteSelection();

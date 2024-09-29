@@ -34,6 +34,8 @@ public:
     Coordinates mRemovedEnd;
     EditorState mBeforeState;
     EditorState mAfterState;
+    bool isBatchStart{0};
+    bool isBatchEnd{0};
 };
 
 

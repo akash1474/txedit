@@ -31,10 +31,18 @@ void Editor::HandleKeyboardInputs()
 		io.WantCaptureKeyboard = true;
 		io.WantTextInput = true;
 
-		if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Z))) mUndoManager.Undo(7,this);
+		if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Z))){
+			if(mSelectionMode!=SelectionMode::Normal) mSelectionMode=SelectionMode::Normal;
+			mUndoManager.Undo(7,this);
+			CalculateBracketMatch();
+		}
 		// else if (!IsReadOnly() && !ctrl && !shift && alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
 		// 	Undo();
-		else if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Y))) mUndoManager.Redo(7, this);
+		else if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Y))){
+			if(mSelectionMode!=SelectionMode::Normal) mSelectionMode=SelectionMode::Normal;
+			mUndoManager.Redo(7, this);
+			CalculateBracketMatch();
+		}
 		else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow))) 
 			MoveUp();
 		else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow)))

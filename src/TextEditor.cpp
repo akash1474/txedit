@@ -554,22 +554,30 @@ bool Editor::Draw()
 	return true;
 }
 
+void Editor::CalculateBracketMatch(){
+	const auto pos=GetMatchingBracketsCoordinates();
+	if(mBracketsCoordinates.hasMatched) 
+		mBracketsCoordinates.coords=pos;
+}
+
 
 std::array<Coordinates,2> Editor::GetMatchingBracketsCoordinates(){
 	OpenGL::ScopedTimer timer("BracketMatching");
 	std::array<Coordinates,2> coords;
 	bool hasBracketsMatched=true;
 	mBracketsCoordinates.hasMatched=false;
-	char match=-1;
 	GL_INFO("CHAR:{}",mLines[mState.mCursorPosition.mLine][GetCharacterIndex(mState.mCursorPosition)]);
 
-	const Coordinates cStart=FindMatchingBracket(mState.mCursorPosition, false,match);
+	// const Coordinates cStart=FindMatchingBracket(mState.mCursorPosition, false);
+	const Coordinates cStart=FindStartBracket(mState.mCursorPosition);
 	if(cStart.mLine==INT_MAX) hasBracketsMatched=false;
 	if(!hasBracketsMatched) return coords;
 	coords[0]=cStart;
 	GL_INFO("BracketMatch Start:[{},{}]",coords[0].mLine,coords[0].mColumn);
 
-	const Coordinates cEnd=FindMatchingBracket(mState.mCursorPosition, true,match);
+	// const Coordinates cEnd=FindMatchingBracket(mState.mCursorPosition, true);
+	const Coordinates cEnd=FindEndBracket(mState.mCursorPosition);
+	if(cStart.mLine==INT_MAX) hasBracketsMatched=false;
 	if(cEnd.mLine==INT_MAX) hasBracketsMatched=false;
 
 	if(hasBracketsMatched){
@@ -581,7 +589,17 @@ std::array<Coordinates,2> Editor::GetMatchingBracketsCoordinates(){
 	return coords;
 }
 
-Coordinates Editor::FindMatchingBracket(const Coordinates& coords,bool searchForward,char& match){
+
+
+int IsBracket(const char x){
+	if(x=='(' || x=='{' || x=='[') return -1;
+	else if(x==')' || x=='}' || x==']') return 1;
+
+	return 0;
+}
+
+
+Coordinates Editor::FindStartBracket(const Coordinates& coords){
 	Coordinates coord{INT_MAX,INT_MAX};
 
 	int cLine=coords.mLine;
@@ -590,63 +608,90 @@ Coordinates Editor::FindMatchingBracket(const Coordinates& coords,bool searchFor
 	bool isFound=false;
 	int ignore=0;
 	char x=-1;
-	while(
-		searchForward ? 
-		(cLine < mLines.size()) :  
-		(cLine>=0))
+
+	for(;cLine>=0;cLine--)
 	{
 		const auto& line=mLines[cLine];
 		if(line.empty()){
-			if(searchForward){cColumn=0; cLine++; } 
-			else{cColumn=mLines[cLine-1].size()-1; cLine--; }
-			if(cLine<0 || cLine==mLines.size()) break;
+			if(cLine>0 && !mLines[cLine - 1].empty()) 
+				cColumn=mLines[cLine - 1].size() - 1;
+			else cColumn=0;
 			continue;
 		}
 
-		while(
-			searchForward ? 
-			(cColumn < line.size()) : 
-			(cColumn>=0))
-		{
-			if(line[cColumn]==x){ x=-1; searchForward ? cColumn++ : cColumn--;   continue; }
-			if(line[cColumn]=='\'' || line[cColumn]=='"'){x=line[cColumn]; searchForward ? cColumn++ : cColumn--; continue; }
-			if(x!=-1) {searchForward ? cColumn++ : cColumn--;continue;}
-			if(searchForward){
-				switch(line[cColumn]){
-					case '(': ignore++; break;
-					case '[': ignore++; break;
-					case '{': ignore++; break;
-					case ')':{if(ignore>0) ignore--; break; }
-					case ']':{if(ignore>0) ignore--; break; }
-					case '}':{if(ignore>0) ignore--; break; }
-				}
-				if(match>0 && ignore==0 && match==line[cColumn]) isFound=true;
-			}else{
-				switch(line[cColumn]) {
-					case ')': ignore++;break;
-					case ']': ignore++;break;
-					case '}': ignore++;break;
-					case '(':{if(!ignore){match = ')'; isFound=true;} if(ignore>0) ignore--; break; }
-					case '[':{if(!ignore){match = ']'; isFound=true;} if(ignore>0) ignore--; break; }
-					case '{':{if(!ignore){match = '}'; isFound=true;} if(ignore>0) ignore--; break; }
-				}
+		for(;cColumn>=0;cColumn--){
+			if(line[cColumn]==x){ x=-1; continue; }
+			if(line[cColumn]=='\'' || line[cColumn]=='"'){
+				x=line[cColumn]; 
+				continue; 
 			}
+			if(x!=-1) continue;
+
+			switch(line[cColumn]) {
+				case ')': ignore++;break;
+				case ']': ignore++;break;
+				case '}': ignore++;break;
+				case '(':{if(!ignore){isFound=true;} if(ignore>0) ignore--; break; }
+				case '[':{if(!ignore){isFound=true;} if(ignore>0) ignore--; break; }
+				case '{':{if(!ignore){isFound=true;} if(ignore>0) ignore--; break; }
+			}
+
 			if(isFound)	{
 				coord.mLine=cLine;
 				coord.mColumn=cColumn;
 				return coord;
 			}
-
-			searchForward ? cColumn++ : cColumn--;
 		}
 
-		if(cLine==0 || cLine==mLines.size()-1) break;
-		if(searchForward){cColumn=0; cLine++; } 
-		else{
-			cColumn = mLines[cLine - 1].empty() ? 0 : mLines[cLine - 1].size() - 1;
-			cLine--;
+		if(cLine>0 && !mLines[cLine - 1].empty()) 
+			cColumn=mLines[cLine - 1].size() - 1;
+		else cColumn=0;
+	}
+	return coord;
+}
+
+
+Coordinates Editor::FindEndBracket(const Coordinates& coords){
+	Coordinates coord{INT_MAX,INT_MAX};
+
+	int cLine=coords.mLine;
+	int cColumn=(int)GetCharacterIndex(coords);
+
+	int ignore=0;
+	bool isFound=false;
+	char stringQuotes=-1;
+	for(;cLine < mLines.size();cLine++)
+	{
+		const auto& line=mLines[cLine];
+		if(line.empty()) continue;
+
+		for(;cColumn < line.size();cColumn++)
+		{
+			//Ignoring the brackets inside quotes
+			if(line[cColumn]==stringQuotes){ stringQuotes=-1; continue; }
+			if(line[cColumn]=='\'' || line[cColumn]=='"'){
+				stringQuotes=line[cColumn];
+				continue; 
+			}
+			if(stringQuotes!=-1) continue;
+
+
+			switch(line[cColumn]){
+				case '(': ignore++; break;
+				case '[': ignore++; break;
+				case '{': ignore++; break;
+				case ')':{if(!ignore) isFound=true; if(ignore>0) ignore--; break; }
+				case ']':{if(!ignore) isFound=true; if(ignore>0) ignore--; break; }
+				case '}':{if(!ignore) isFound=true; if(ignore>0) ignore--; break; }
+			}
+
+			if(isFound){
+				coord.mLine=cLine;
+				coord.mColumn=cColumn;
+				return coord;
+			}
 		}
-		
+		cColumn=0;
 	}
 	return coord;
 }

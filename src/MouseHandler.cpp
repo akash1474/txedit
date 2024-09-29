@@ -78,9 +78,9 @@ void Editor::HandleMouseInputs()
 
 				mState.mCursorDirectionChanged=false;
 				mLastClick = (float)ImGui::GetTime();
-				const auto pos=GetMatchingBracketsCoordinates();
-				if(mBracketsCoordinates.hasMatched) 
-					mBracketsCoordinates.coords=pos;
+
+
+				this->CalculateBracketMatch();
 			}
 
 			//Mouse Click And Dragging
