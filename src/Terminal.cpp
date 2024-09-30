@@ -1,9 +1,13 @@
+#include "DataTypes.h"
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "pch.h"
 #include <handleapi.h>
 #include <ioapiset.h>
 #include "Terminal.h"
+
+// TODO:
+// Separate read output to different lines and implement selection copy + rightclick copy
 
 Terminal::Terminal() : mIsCommandRunning(false), mScrollToBottom(false),mTerminalThread(false) {
     mCurrentDirectory = GetCurrentDirectory();
@@ -16,36 +20,57 @@ Terminal::~Terminal() {
 
 void Terminal::Render() {
     ImGui::Begin("Terminal");
-    ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Current Directory: %s", mCurrentDirectory.c_str());
-  	static size_t prevSize=0;
+    // ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Current Directory: %s", mCurrentDirectory.c_str());
+
+    static size_t prevSize=0;
+    static ImVec2 pos;
+    static int bufferUpdated=0;
     if(mOutputBuffer.size()!=prevSize){
-    	{
+        {
             std::lock_guard<std::mutex> lock(mOutputMutex);
-    		for(int i=prevSize;i<mOutputBuffer.size();i++) 
-    			mBuffer+=mOutputBuffer[i];
-    	}
-    	prevSize=mOutputBuffer.size();
-    }
-
-    if (ImGui::BeginChild("TerminalOutput", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()), true)) {
-        ImGui::TextUnformatted(mBuffer.c_str());
-        if (mScrollToBottom) {
-            ImGui::SetScrollHereY(1.0f);
-            mScrollToBottom = false;
+            for(int i=prevSize;i<mOutputBuffer.size();i++) 
+                mBuffer+=mOutputBuffer[i];
         }
+        prevSize=mOutputBuffer.size();
+        bufferUpdated=1;
     }
-    ImGui::EndChild();
 
-    ImGui::Text("Command:"); ImGui::SameLine();
-    if (ImGui::InputText("##Command", mCommandBuffer, IM_ARRAYSIZE(mCommandBuffer), ImGuiInputTextFlags_EnterReturnsTrue)) {
+    // if (ImGui::BeginChild("TerminalOutput", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()*1.2f), true)) {
+    //     std::lock_guard<std::mutex> lock(mOutputMutex);
+    //     for(const auto& line:mOutputBuffer){
+    //         ImGui::TextUnformatted(line.c_str());
+    //     }
+    //     if (mScrollToBottom) {
+    //         ImGui::SetScrollHereY(1.0f);
+    //         mScrollToBottom = false;
+    //     }
+    // }
+    // ImGui::EndChild();
+    ImGui::PushStyleColor(ImGuiCol_FrameBg,ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
+    ImGui::InputTextMultiline("##toutput", (char*)mBuffer.c_str(), mBuffer.size(),{-1,-ImGui::GetFrameHeightWithSpacing()*1.2f},ImGuiInputTextFlags_ReadOnly|ImGuiInputTextFlags_HideCursor);
+    if(bufferUpdated){
+        ImGuiContext& g = *GImGui;
+        static const char* child_window_name = NULL;
+        ImFormatStringToTempBuffer(&child_window_name, NULL, "%s/%s_%08X", g.CurrentWindow->Name, "##toutput", ImGui::GetID("##toutput"));
+        ImGuiWindow* child_window = ImGui::FindWindowByName(child_window_name);
+        ImGui::SetScrollY(child_window, child_window->ScrollMax.y);
+        if(bufferUpdated>4) bufferUpdated=0;
+        else bufferUpdated++;
+    }
+    ImGui::PopStyleColor();
+
+
+    ImGui::TextColored({0.196f,0.808f,0.659f,1.0f},"Command:>>"); ImGui::SameLine();
+    if (ImGui::InputTextMultiline("##Command", mCommandBuffer, IM_ARRAYSIZE(mCommandBuffer),{-1,-1}, ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CtrlEnterForNewLine)) {
         RunCommand();
     }
-    if(ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0)){
-    	// GL_INFO("FOCUSING..");
+    if(ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && !ImGui::IsItemFocused() && !ImGui::IsMouseClicked(0)){
     	ImGui::SetKeyboardFocusHere(-1);
     }
 
     ImGui::End();
+
+
 }
 
 std::string Terminal::GetCurrentDirectory() {
@@ -107,7 +132,7 @@ void Terminal::StartShell() {
 
 // Read from the shell continuously and update the output
 void Terminal::ShellReader() {
-    char buffer[256];
+    char buffer[4096];
     DWORD bytesRead;
     OVERLAPPED readOverlapped = {};
     readOverlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -127,7 +152,36 @@ void Terminal::ShellReader() {
     	}
         buffer[bytesRead] = '\0';
         std::lock_guard<std::mutex> lock(mOutputMutex);
-        mOutputBuffer.push_back(std::string(buffer));
+        mOutputBuffer.push_back(buffer);
+        // bool isFirst=false;
+        // std::string temp;
+        // static bool isFinished=false;
+        // for(int i=0;i<bytesRead;i++){
+        //     if(buffer[i]=='\r'){
+        //         isFinished=true;
+        //         continue;
+        //     }
+        //     if(buffer[i]=='\n'){
+        //         if(temp.empty()) continue;
+        //         if(isFirst){
+        //             if(!mOutputBuffer.empty()) mOutputBuffer.back()+=temp;
+        //             else mOutputBuffer.push_back(temp);
+        //             isFirst=false;
+        //             isFinished=true;
+        //         }
+        //         else{
+        //             mOutputBuffer.push_back(temp);
+        //             isFinished=false;
+        //         }
+        //         temp.clear();
+        //     }else temp+=buffer[i];
+        // }
+        // if(temp.size()){
+        //     if(!isFinished && !mOutputBuffer.empty()) mOutputBuffer.back()+=temp;
+        //     else mOutputBuffer.push_back(temp);
+        //     isFinished=true;
+        //     temp.clear();
+        // }
         mScrollToBottom = true;
     }
 }
@@ -176,8 +230,6 @@ void Terminal::RunCommand() {
     mIsCommandRunning=false;
     mScrollToBottom = true;
 }
-
-
 
 void Terminal::CheckWriteFileErrors() {
 	DWORD error = GetLastError();

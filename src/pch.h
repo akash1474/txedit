@@ -17,6 +17,10 @@
 #include <GLFW/glfw3.h>
 #include <GL/gl.h>
 
+#ifndef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
+#endif
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #ifdef GL_BUILD_OPENGL2
