@@ -201,7 +201,6 @@ inline std::string ToUTF8(std::wstring wideString){
 
 inline std::wstring StringToWString(const std::string& narrowString) {
     int length = MultiByteToWideChar(CP_UTF8, 0, narrowString.c_str(), -1, nullptr, 0);
-    
     if (length == 0) return L"";
 
     std::wstring wideString(length, L'\0');

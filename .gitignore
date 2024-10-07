@@ -7,6 +7,8 @@ bin/
 !packages/imgui/premake5.lua
 !packages/glfw/premake5.lua
 !packages/lunasvg/premake5.lua
+!packages/tree-sitter-cpp/premake5.lua
+!packages/tree-sitter/premake5.lua
 packages/mINI
 *.sln
 *.filters

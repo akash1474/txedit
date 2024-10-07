@@ -9,14 +9,25 @@ TODO
 » Change the font of inputpanel to editor font
 » Full UTF8 support
 
-Today:
-+ Batch undoing for multiple cursors
-+ Batch undoing for multi-line indentation
-+ Fix brackets undo
-TODO:
-- Implement lite version of terminal
-- 
-29th Sept 2024 Sunday
+TASK
+» Add UTF8 support to Terminal
+» Add UTF8 support to Editor
+» Undo for Brackets
+
+06th Sept 2024 Sunday
++ added 'SetConsoleOutputCP( CP_UTF8 )' to Log.cpp for utf8 encoded string output to console using spdlog
++ Experimentation with UTF8/UTF16(wchar_t) encoding in ImGui & WindowsConsole.
+
+05th Sept 2024 Sunday
++ Fixed the docking and terminal resizing issue
++ TreeSitter Experimentation
+
+02th Sept 2024 Sunday
++ Bug fix related to text selection using shift(+ctrl) and arrow keys
+
+30th Sept 2024 Sunday
++ Added a lite version of terminal
++ Update internal imgui api [imgui_widgets.cpp(L5161)] - Added ImGuiInputTextFlags_HideCursor and Updated the InputTextEx Fn 
 
 7th Sept 2024 Saturday
 + Batch undoing for a group of 7 text

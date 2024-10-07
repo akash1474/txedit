@@ -166,7 +166,7 @@ void Editor::MoveRight(bool ctrl, bool shift)
 
 		if(mSearchState.isValid()) mSearchState.reset();
 
-
+		//Disable selection if only right key pressed without	
 		if (!shift && mSelectionMode != SelectionMode::Normal) {
 			mode = SelectionMode::Normal;
 			if(cursorState.mSelectionStart > cursorState.mSelectionEnd)
@@ -177,9 +177,7 @@ void Editor::MoveRight(bool ctrl, bool shift)
 		if(shift && mSelectionMode == SelectionMode::Normal){
 			// mSelectionMode=SelectionMode::Word;
 			mode=SelectionMode::Word;
-			cursorState.mSelectionEnd=cursorState.mCursorPosition;
-
-			cursorState.mSelectionStart=cursorState.mCursorPosition;
+			cursorState.mSelectionStart=cursorState.mSelectionEnd=cursorState.mCursorPosition;
 			cursorState.mSelectionEnd.mColumn=(++cursorState.mCursorPosition.mColumn);
 
 			//Selection Started From Line End the Cursor mColumn > len

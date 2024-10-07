@@ -143,10 +143,10 @@ void Editor::HandleKeyboardInputs()
 		if (!mReadOnly && !io.InputQueueCharacters.empty()) {
 
 			if(mSearchState.isValid()) mSearchState.reset();
-			// if (mSelectionMode == SelectionMode::Word) Backspace();
+			if (mSelectionMode == SelectionMode::Word) Backspace();
 
-			// if(mSelectionMode!=SelectionMode::Normal) 
-			// 	mSelectionMode=SelectionMode::Normal;
+			if(mSelectionMode!=SelectionMode::Normal) 
+				mSelectionMode=SelectionMode::Normal;
 
 			auto c = io.InputQueueCharacters[0];
 

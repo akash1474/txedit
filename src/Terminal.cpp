@@ -6,6 +6,7 @@
 #include <ioapiset.h>
 #include "Terminal.h"
 
+
 // TODO:
 // Separate read output to different lines and implement selection copy + rightclick copy
 
@@ -20,11 +21,8 @@ Terminal::~Terminal() {
 
 void Terminal::Render() {
     ImGui::Begin("Terminal");
-    // ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Current Directory: %s", mCurrentDirectory.c_str());
-
     static size_t prevSize=0;
-    static ImVec2 pos;
-    static int bufferUpdated=0;
+    static int bufferUpdated=0; //using a bool doesn't do the job to scroll to bottom
     if(mOutputBuffer.size()!=prevSize){
         {
             std::lock_guard<std::mutex> lock(mOutputMutex);
@@ -35,19 +33,13 @@ void Terminal::Render() {
         bufferUpdated=1;
     }
 
-    // if (ImGui::BeginChild("TerminalOutput", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()*1.2f), true)) {
-    //     std::lock_guard<std::mutex> lock(mOutputMutex);
-    //     for(const auto& line:mOutputBuffer){
-    //         ImGui::TextUnformatted(line.c_str());
-    //     }
-    //     if (mScrollToBottom) {
-    //         ImGui::SetScrollHereY(1.0f);
-    //         mScrollToBottom = false;
-    //     }
-    // }
-    // ImGui::EndChild();
     ImGui::PushStyleColor(ImGuiCol_FrameBg,ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
     ImGui::InputTextMultiline("##toutput", (char*)mBuffer.c_str(), mBuffer.size(),{-1,-ImGui::GetFrameHeightWithSpacing()*1.2f},ImGuiInputTextFlags_ReadOnly|ImGuiInputTextFlags_HideCursor);
+    ImGui::PopStyleColor();
+    static bool isFocused=false;
+    if(ImGui::IsItemHovered() && !ImGui::IsMouseDragging(0) && ImGui::IsMouseReleased(0)) isFocused=true;
+    else isFocused=false;
+    
     if(bufferUpdated){
         ImGuiContext& g = *GImGui;
         static const char* child_window_name = NULL;
@@ -57,20 +49,16 @@ void Terminal::Render() {
         if(bufferUpdated>4) bufferUpdated=0;
         else bufferUpdated++;
     }
-    ImGui::PopStyleColor();
-
 
     ImGui::TextColored({0.196f,0.808f,0.659f,1.0f},"Command:>>"); ImGui::SameLine();
     if (ImGui::InputTextMultiline("##Command", mCommandBuffer, IM_ARRAYSIZE(mCommandBuffer),{-1,-1}, ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CtrlEnterForNewLine)) {
         RunCommand();
     }
-    if(ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && !ImGui::IsItemFocused() && !ImGui::IsMouseClicked(0)){
+    if(ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)  && isFocused){
     	ImGui::SetKeyboardFocusHere(-1);
     }
 
     ImGui::End();
-
-
 }
 
 std::string Terminal::GetCurrentDirectory() {
@@ -81,6 +69,7 @@ std::string Terminal::GetCurrentDirectory() {
 
 void Terminal::StartShell() {
 	GL_WARN("STARTING SHELL");
+
     SECURITY_ATTRIBUTES saAttr;
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
     saAttr.bInheritHandle = TRUE;

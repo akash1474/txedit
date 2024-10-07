@@ -159,7 +159,7 @@ void Editor::Render(){
 	ImGuiWindowClass window_class;
 	window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_NoDockingOverMe;
 	static int winFlags=ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus;
-	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingOverMe;
 
 	ImGui::SetNextWindowClass(&window_class);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -170,7 +170,7 @@ void Editor::Render(){
 
 
 	    ImGuiID dockspace_id = ImGui::GetID("EditorDockSpace");
-	    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags | ImGuiDockNodeFlags_NoResize);
+	    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 
 		static bool isFirst=true;
 		if(isFirst){
@@ -438,6 +438,7 @@ bool Editor::Draw()
 		// 		break;
 		// 	}
 		// }	
+
 		float linePosY = mEditorPosition.y + (lineNo * mLineHeight) + mTitleBarHeight+(0.5*mLineSpacing);
 		mEditorWindow->DrawList->AddText({mLinePosition.x, linePosY}, mGruvboxPalletDark[(size_t)Pallet::Text], mLines[start].c_str());
 
@@ -1040,9 +1041,15 @@ void Editor::ScrollToLineNumber(int lineNo,bool animate){
 	}
 
 	mLastClick=(float)ImGui::GetTime();
-	if(mSelectionMode!=SelectionMode::Normal){
-		mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition;
-	}
+
+	//=================NOTE===================
+	//Enabling the below code updates the selectionStart 
+	// thus disabling the selection using arrow keys
+	// I don't remember why I added hence commenting it out
+
+	// if(mSelectionMode!=SelectionMode::Normal){
+	// 	mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition;
+	// }
 }
 
 
