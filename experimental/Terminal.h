@@ -4,7 +4,6 @@
 #include "Windows.h"
 #include <thread>
 #include <wincontypes.h>
-#include "ConPTY.h"
 
 
 
@@ -16,22 +15,32 @@ public:
     void Render();
 
 private:
+    char mCommandBuffer[512];    // Buffer to hold input commands
+    std::vector<std::string> mOutputBuffer; // Stores output of commands
     std::mutex mOutputMutex;          // To synchronize output access
     bool mIsCommandRunning;           // Flag to indicate a command is running
     bool mScrollToBottom;             // Flag to auto-scroll output
-    std::string mBuffer,mDisplayBuffer;
+    std::string mCurrentDirectory;    // Store the current directory path
+    std::string mBuffer;
     std::thread mThread;
     bool mTerminalThread;
-    ConPTY mConPTY;
-    size_t mPrevBufferSize=0;
-    double mPrevTime=0;
     // Shell process variables
+    PROCESS_INFORMATION mProcessInfo;
+    HANDLE mHStdInWrite, mHStdOutRead,mHStdInRead,mHStdOutWrite;
+    HPCON hPC;
 
+
+    std::string GetCurrentDirectory();
 
     void StartShell();
     void CloseShell();
     void ShellReader();
 
+    void CheckWriteFileErrors();
+    void CheckReadFileErrors();
+
+    bool SendInterrupt();
+
     // Function to send a command to the shell
-    void RunCommand(std::string& command);
+    void RunCommand();
 };

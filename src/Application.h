@@ -5,7 +5,7 @@
 class Application{
 	GLFWwindow* mWindow{0};
 	int width=1200;
-	int height=800;
+	int height=700;
 	CoreSystem* mCoreSystem;
 
 public:

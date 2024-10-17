@@ -1,3 +1,4 @@
+#include "GLFW/glfw3.h"
 #include "imgui.h"
 #include "pch.h"
 #include "CoreSystem.h"
@@ -21,8 +22,14 @@ void CoreSystem::RenderDebugInfo(){
 	static bool show_demo=true;
 	ImGui::ShowDemoWindow(&show_demo);
 
-
 	ImGui::Begin("Project");
+	const char* utf8="Mastering » Ñandú.txt";
+	ImGui::Text("%s",utf8);
+	ImGui::Text("Length:%d",ImTextCountCharsFromUtf8(utf8,0));
+	ImGui::Text("Time:%f",glfwGetTime());
+
+	ImWchar buff[100];
+	int count = ImTextStrFromUtf8(buff, 100, utf8, nullptr,0);
 
 	static int LineSpacing = 15.0f;
 	if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {

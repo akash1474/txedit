@@ -65,14 +65,14 @@ project "text_editor"
       symbols "On"
       staticruntime "On"
       optimize "Off"
-      buildoptions { "/MP","/DEBUG:FULL","/utf-8" }
+      characterset ("Unicode") -- Default
+      buildoptions { "/MP","/DEBUG:FULL","/utf-8" } --"/utf-8" - tells compiler to interprete string literals as utf8
       defines {"GL_DEBUG"} 
 
    filter {"configurations:Release"}
       runtime "Release"
       optimize "On"
       symbols "Off"
-      characterset ("MBCS")
       staticruntime "On"
       buildoptions { "/MP","/utf-8" }
       defines {"GL_DEBUG","_CRT_SECURE_NO_WARNINGS"}
@@ -82,7 +82,6 @@ project "text_editor"
       runtime "Release"
       optimize "On"
       symbols "Off"
-      characterset ("MBCS")
       staticruntime "On"
       buildoptions { "/MP","/utf-8"}
       linkoptions {"/ENTRY:mainCRTStartup"}
