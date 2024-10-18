@@ -14,15 +14,33 @@ TASK
 » Add UTF8 support to Editor
 » Undo for Brackets
 
-06th Sept 2024 Sunday
+
+
+18th Oct 2024
++ Complete Input Handling
++ Terminal History Mgmt
++ Full Unicode Support + input parsing for alt keycodes
+
+
+17th Oct 2024
++ Custom Terminal Shell Text Render implemenation (Keyboard input remaining)
+
+16th Oct 2024
++ Regex parsing of ANSI Sequences in terminal output
+
+13th Oct 2024
++ added ConPTY support to Integrated Terminal
++ Experimentation with ImGui::InputTextMultiline for terminal UI Implementation
+
+06th Oct 2024 Sunday
 + added 'SetConsoleOutputCP( CP_UTF8 )' to Log.cpp for utf8 encoded string output to console using spdlog
 + Experimentation with UTF8/UTF16(wchar_t) encoding in ImGui & WindowsConsole.
 
-05th Sept 2024 Sunday
+05th Oct 2024 Sunday
 + Fixed the docking and terminal resizing issue
 + TreeSitter Experimentation
 
-02th Sept 2024 Sunday
+02th Oct 2024 Sunday
 + Bug fix related to text selection using shift(+ctrl) and arrow keys
 
 30th Sept 2024 Sunday
