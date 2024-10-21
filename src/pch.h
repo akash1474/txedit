@@ -13,6 +13,7 @@
 #include <iomanip>
 #include <map>
 #include <algorithm>
+#include <list>
 
 #include <GLFW/glfw3.h>
 #include <GL/gl.h>

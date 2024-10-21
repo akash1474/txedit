@@ -12,38 +12,37 @@ void Editor::HandleKeyboardInputs()
 
 	if (ImGui::IsWindowFocused()) {
 
-		if (ImGui::IsWindowHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_TextInput);
+		if (ImGui::IsWindowHovered())
+			ImGui::SetMouseCursor(ImGuiMouseCursor_TextInput);
 		bool anyKeyPressed = false;
 		for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) {
-		    if (io.KeysDown[i]) {
-		        anyKeyPressed = true;
-		        break;
-		    }
+			if (io.KeysDown[i]) {
+				anyKeyPressed = true;
+				break;
+			}
 		}
-		if (
-			ImGui::IsKeyPressed(ImGuiKey_Space) || 
-			ImGui::IsKeyPressed(ImGuiKey_RightArrow) || 
-			ImGui::IsKeyPressed(ImGuiKey_LeftArrow) ||
-			ImGui::IsKeyPressed(ImGuiKey_UpArrow) || 
-			ImGui::IsKeyPressed(ImGuiKey_UpArrow) 
-			&& !mScrollAnimation.hasStarted && !IsCursorVisible()) ScrollToLineNumber(mState.mCursorPosition.mLine+1);
+		if (ImGui::IsKeyPressed(ImGuiKey_Space) || ImGui::IsKeyPressed(ImGuiKey_RightArrow) || ImGui::IsKeyPressed(ImGuiKey_LeftArrow) ||
+		    ImGui::IsKeyPressed(ImGuiKey_UpArrow) ||
+		    ImGui::IsKeyPressed(ImGuiKey_UpArrow) && !mScrollAnimation.hasStarted && !IsCursorVisible())
+			ScrollToLineNumber(mState.mCursorPosition.mLine + 1);
 
 		io.WantCaptureKeyboard = true;
 		io.WantTextInput = true;
 
-		if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Z))){
-			if(mSelectionMode!=SelectionMode::Normal) mSelectionMode=SelectionMode::Normal;
-			mUndoManager.Undo(7,this);
+		if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Z))) {
+			if (mSelectionMode != SelectionMode::Normal)
+				mSelectionMode = SelectionMode::Normal;
+			mUndoManager.Undo(7, this);
 			CalculateBracketMatch();
 		}
 		// else if (!IsReadOnly() && !ctrl && !shift && alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
 		// 	Undo();
-		else if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Y))){
-			if(mSelectionMode!=SelectionMode::Normal) mSelectionMode=SelectionMode::Normal;
+		else if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Y))) {
+			if (mSelectionMode != SelectionMode::Normal)
+				mSelectionMode = SelectionMode::Normal;
 			mUndoManager.Redo(7, this);
 			CalculateBracketMatch();
-		}
-		else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow))) 
+		} else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow)))
 			MoveUp();
 		else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow)))
 			MoveDown();
@@ -55,52 +54,58 @@ void Editor::HandleKeyboardInputs()
 			MoveLeft(ctrl, shift);
 		else if (!alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_RightArrow)))
 			MoveRight(ctrl, shift);
-		else if (!alt && ctrl && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_D))){
+		else if (!alt && ctrl && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_D))) {
 
-			bool condition=(mSelectionMode==SelectionMode::Word) && mSearchState.mFoundPositions.empty();
+			bool condition = (mSelectionMode == SelectionMode::Word) && mSearchState.mFoundPositions.empty();
 
-			if(mSelectionMode==SelectionMode::Normal || condition){
+			if (mSelectionMode == SelectionMode::Normal || condition) {
 
-				if(mSelectionMode!=SelectionMode::Word) HandleDoubleClick();
-				if(mState.mSelectionStart==mState.mSelectionEnd) return;
-				
-				int start_idx=GetCharacterIndex(mState.mSelectionStart);
-				int end_idx=GetCharacterIndex(mState.mSelectionEnd);
+				if (mSelectionMode != SelectionMode::Word)
+					HandleDoubleClick();
+				if (mState.mSelectionStart == mState.mSelectionEnd)
+					return;
 
-				if(start_idx>end_idx) std::swap(start_idx,end_idx);
+				int start_idx = GetCharacterIndex(mState.mSelectionStart);
+				int end_idx = GetCharacterIndex(mState.mSelectionEnd);
+
+				if (start_idx > end_idx)
+					std::swap(start_idx, end_idx);
 
 				mSearchState.reset();
-				mSearchState.mWord=mLines[mState.mCursorPosition.mLine].substr(start_idx,end_idx-start_idx);
-				GL_INFO("Search: {}",mSearchState.mWord);
+				mSearchState.mWord = mLines[mState.mCursorPosition.mLine].substr(start_idx, end_idx - start_idx);
+				GL_INFO("Search: {}", mSearchState.mWord);
 
 				FindAllOccurancesOfWord(mSearchState.mWord);
 				mCursors.push_back(mState);
 
-				//Finding Index of Position same as currentLine to get next occurance 
-				auto it=std::find_if(mSearchState.mFoundPositions.begin(),mSearchState.mFoundPositions.end(),[&](const auto& coord){
-					return coord.mLine==mState.mCursorPosition.mLine;
-				});
+				// Finding Index of Position same as currentLine to get next occurance
+				auto it = std::find_if(mSearchState.mFoundPositions.begin(), mSearchState.mFoundPositions.end(),
+				                       [&](const auto& coord) { return coord.mLine == mState.mCursorPosition.mLine; });
 
-				if(it!=mSearchState.mFoundPositions.end())
-					mSearchState.mIdx=std::min((int)mSearchState.mFoundPositions.size()-1,(int)std::distance(mSearchState.mFoundPositions.begin(),it)+1);
-			}else{
+				if (it != mSearchState.mFoundPositions.end())
+					mSearchState.mIdx = std::min((int)mSearchState.mFoundPositions.size() - 1,
+					                             (int)std::distance(mSearchState.mFoundPositions.begin(), it) + 1);
+			} else {
 				GL_INFO("Finding Next");
-				const Coordinates& coord=mSearchState.mFoundPositions[mSearchState.mIdx];
-				ScrollToLineNumber(coord.mLine+1);
+				const Coordinates& coord = mSearchState.mFoundPositions[mSearchState.mIdx];
+				ScrollToLineNumber(coord.mLine + 1);
 
-				mState.mSelectionStart=mState.mSelectionEnd=coord;
-				mState.mSelectionEnd.mColumn=coord.mColumn+mSearchState.mWord.size();
-				GL_INFO("[{}  {} {}]",mState.mSelectionStart.mColumn,mState.mSelectionEnd.mColumn,mSearchState.mWord.size());
+				mState.mSelectionStart = mState.mSelectionEnd = coord;
+				mState.mSelectionEnd.mColumn = coord.mColumn + mSearchState.mWord.size();
+				GL_INFO("[{}  {} {}]", mState.mSelectionStart.mColumn, mState.mSelectionEnd.mColumn, mSearchState.mWord.size());
 
-				mState.mCursorPosition=mState.mSelectionEnd;
+				mState.mCursorPosition = mState.mSelectionEnd;
 				mCursors.push_back(mState);
 				mSearchState.mIdx++;
 
-				if(mSearchState.mIdx==mSearchState.mFoundPositions.size()) mSearchState.mIdx=0;
+				if (mSearchState.mIdx == mSearchState.mFoundPositions.size())
+					mSearchState.mIdx = 0;
 			}
-		}else if(!alt && !ctrl && !shift && ImGui::IsKeyPressed(ImGuiKey_Escape)){
-			if(mSelectionMode!=SelectionMode::Normal) mSelectionMode=SelectionMode::Normal;
-			if(mCursors.size()) mCursors.clear();
+		} else if (!alt && !ctrl && !shift && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+			if (mSelectionMode != SelectionMode::Normal)
+				mSelectionMode = SelectionMode::Normal;
+			if (mCursors.size())
+				mCursors.clear();
 		}
 		// else if (!alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_PageDown)))
 		// 	MoveDown(GetPageSize() - 4, shift);
@@ -138,24 +143,29 @@ void Editor::HandleKeyboardInputs()
 			SaveFile();
 		else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)))
 			InsertLine();
-		else if (!IsReadOnly() && !ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Tab))) InsertTab(shift);
+		else if (!IsReadOnly() && !ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Tab)))
+			InsertTab(shift);
 
 		if (!mReadOnly && !io.InputQueueCharacters.empty()) {
 
-			if(mSearchState.isValid()) mSearchState.reset();
-			if (mSelectionMode == SelectionMode::Word) Backspace();
+			if (mSearchState.isValid())
+				mSearchState.reset();
+			if (mSelectionMode == SelectionMode::Word)
+				Backspace();
 
-			if(mSelectionMode!=SelectionMode::Normal) 
-				mSelectionMode=SelectionMode::Normal;
+			if (mSelectionMode != SelectionMode::Normal)
+				mSelectionMode = SelectionMode::Normal;
 
 			auto c = io.InputQueueCharacters[0];
 
 			GL_INFO("{}", (char)c);
-			if (c != 0 && (c == '\n' || c >= 32)) InsertCharacter(c);
+			if (c != 0 && (c == '\n' || c >= 32))
+				InsertCharacter(c);
 
 			io.InputQueueCharacters.resize(0);
 		}
 
-		if(anyKeyPressed && !ctrl) mBracketsCoordinates.coords=GetMatchingBracketsCoordinates();
+		if (anyKeyPressed && !ctrl)
+			mBracketsCoordinates.coords = GetMatchingBracketsCoordinates();
 	}
 }
