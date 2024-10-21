@@ -1,3 +1,5 @@
+# Moved this line to the bottom to avoid overriding specific un-ignore rules
+packages/*/*
 bin/
 .cache/
 *.vcxproj
@@ -15,5 +17,3 @@ packages/mINI
 .vs
 *.log
 
-# Moved this line to the bottom to avoid overriding specific un-ignore rules
-packages/*/*
