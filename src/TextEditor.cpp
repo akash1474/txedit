@@ -60,15 +60,15 @@ void Editor::LoadFile(const char* filepath){
 	if(t.good()) mFilePath=filepath;
 	fileType=GetFileType();
 
-	std::string file_data{0};
 	t.seekg(0, std::ios::end);
 	size = t.tellg();
-	file_data.resize(size, ' ');
+	mFileContents.resize(size, ' ');
 	t.seekg(0);
-	t.read(&file_data[0], size);
-	this->SetBuffer(file_data);
+	t.read(&mFileContents[0], size);
+	this->SetBuffer(mFileContents);
 	isFileLoaded=true;
 	reCalculateBounds=true;
+	// this->InitTreeSitter();
 	// lex.SetData(file_data);
 	// lex.Tokenize();
 }
@@ -422,7 +422,6 @@ bool Editor::Draw()
 
 	int lineNo = 0;
 	int i_prev=0;
-	const std::vector<Lexer::Token>& tokens=lex.GetTokens();
 
 	//Rendering Lines and Vertical Indentation Lines
 	while (start != end) {
@@ -439,8 +438,39 @@ bool Editor::Draw()
 		// 	}
 		// }	
 
+
+
+
+
+
+
+
+
+
+
+
 		float linePosY = mEditorPosition.y + (lineNo * mLineHeight) + mTitleBarHeight+(0.5*mLineSpacing);
 		mEditorWindow->DrawList->AddText({mLinePosition.x, linePosY}, mGruvboxPalletDark[(size_t)Pallet::Text], mLines[start].c_str());
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 		//Indentation Lines
 		if(mLines[start].empty()){
@@ -559,6 +589,84 @@ void Editor::CalculateBracketMatch(){
 	const auto pos=GetMatchingBracketsCoordinates();
 	if(mBracketsCoordinates.hasMatched) 
 		mBracketsCoordinates.coords=pos;
+}
+
+
+
+void Editor::InitTreeSitter(){
+	OpenGL::ScopedTimer timer("TreeSitter Parsing");
+	mParser = ts_parser_new();
+	ts_parser_set_language(mParser, tree_sitter_cpp());
+
+	mTree = ts_parser_parse_string(mParser, nullptr, mFileContents.data(), mFileContents.size());
+
+	std::string query_string = R"((type_identifier) @type 
+    							(comment) @comment 
+    							(string_literal) @string 
+    							(primitive_type) @keyword 
+    							(function_declarator declarator:(_) @function) 
+    							(namespace_identifier) @namespace)";
+
+	// Define a simple query to match syntax elements
+	uint32_t error_offset;
+	TSQueryError error_type;
+	mQuery = ts_query_new(tree_sitter_cpp(), query_string.c_str(), query_string.size(), &error_offset, &error_type);
+
+	// Check if the query was successfully created
+	if (!mQuery) {
+		GL_ERROR("Error creating query at offset {}, error type: {}", error_offset, error_type);
+		ts_tree_delete(mTree);
+		ts_parser_delete(mParser);
+		return;
+	}
+
+	mCursor = ts_query_cursor_new();
+	ts_query_cursor_exec(mCursor, mQuery, ts_tree_root_node(mTree));
+
+
+	// 4. Styles for each syntax type
+	std::unordered_map<std::string, int> syntax_styles = {{"function", 1}, // Green for functions
+	                                                      {"type", 2},    // Blue for types
+	                                                      {"comment", 3}, // Grey for comments
+	                                                      {"string", 4},  // Yellow for strings
+	                                                      {"keyword", 5}, // Red for keywords
+	                                                      {"namespace", 6}};
+
+	GL_INFO("File Parsed");
+
+	struct Highlight{
+		size_t startByte;
+		size_t endByte;
+		std::string type;
+		Highlight(size_t s,size_t e,std::string t):startByte(s),endByte(e),type(t){}
+	};
+	std::vector<Highlight> highlights;
+
+	TSQueryMatch match;
+	unsigned long cursor_position = 0;
+	while (ts_query_cursor_next_match(mCursor, &match)) {
+		for (unsigned int i = 0; i < match.capture_count; ++i) {
+			TSQueryCapture capture = match.captures[i];
+			TSPoint point=ts_node_start_point(capture.node);
+			// if(point.row< start || point.row > end) continue;
+			uint32_t len;
+			std::string capture_name = ts_query_capture_name_for_id(mQuery, capture.index, &len);
+			TSNode node = capture.node;
+
+			// Extract the start and end byte positions of the node
+			uint32_t start_byte = ts_node_start_byte(node);
+			uint32_t end_byte = ts_node_end_byte(node);
+			std::string text=mFileContents.substr(cursor_position,start_byte-cursor_position);
+
+			highlights.emplace_back(start_byte,end_byte,capture_name);
+			// Update cursor position
+			cursor_position = end_byte;
+		}
+	}
+
+	// for(Highlight& highlight:highlights){
+	// 	GL_INFO("{}:{}",highlight.type,mFileContents.substr(highlight.startByte,highlight.endByte-highlight.startByte));
+	// }
 }
 
 

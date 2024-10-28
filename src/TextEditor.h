@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "string"
+#include "tree_sitter/api.h"
 #include "vector"
 #include <map>
 #include <stdint.h>
@@ -14,6 +15,25 @@
 #include "Animation.h"
 #include "Lexer.h"
 #include "UndoManager.h"
+
+
+#ifndef TREE_SITTER_CPP_H_
+	#define TREE_SITTER_CPP_H_
+
+typedef struct TSLanguage TSLanguage;
+
+	#ifdef __cplusplus
+extern "C" {
+	#endif
+
+	const TSLanguage* tree_sitter_cpp(void);
+
+	#ifdef __cplusplus
+}
+	#endif
+
+#endif // TREE_SITTER_CPP_H_
+
 
 class Editor
 {
@@ -73,6 +93,7 @@ class Editor
 	SelectionMode mSelectionMode{SelectionMode::Normal};
 	BracketCoordinates mBracketsCoordinates;
 	std::vector<EditorState> mCursors;
+	std::string mFileContents;
 
 public:
 	EditorState mState;
@@ -237,6 +258,17 @@ public:
 	size_t GetLineMaxColumn(int currLineIndex) const;
 	size_t GetCurrentLineMaxColumn() const;
 
+	struct Token{
+		
+	};
+
+	//TreeSitter Experimental
+	TSParser* mParser=nullptr;
+	TSTree* mTree=nullptr;
+	TSQuery* mQuery=nullptr;
+	TSQueryCursor* mCursor=nullptr;
+
+	void InitTreeSitter();
 
 	Editor();
 	~Editor();

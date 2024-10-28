@@ -1,6 +1,6 @@
 #include "Log.h"
 #include "Timer.h"
-#include "images.h"
+#include "resources/AppIcon.embed"
 #include "pch.h"
 #include "CoreSystem.h"
 #include <cstdint>
@@ -162,7 +162,7 @@ int main(int argc, char* argv[])
 	if (!Application::Init())
 		return -1;
 	Application::SetupSystemSignalHandling();
-	Application::SetApplicationIcon(logo_img, IM_ARRAYSIZE(logo_img));
+	Application::SetApplicationIcon(AppIcon, IM_ARRAYSIZE(AppIcon));
 
 
 	// std::string source_code = readFile("D:/Projects/c++/txedit/src/main.cpp");
@@ -222,7 +222,7 @@ int main(int argc, char* argv[])
 	if (argc > 1)
 		Application::HandleArguments(GetCommandLineW());
 
-	CoreSystem::GetFileNavigation()->AddFolder("D:/Projects/c++/txedit");
+	// CoreSystem::GetFileNavigation()->AddFolder("D:/Projects/c++/txedit");
 	// size_t size{0};
 	// std::ifstream t("D:/Projects/c++/txedit/src/main.cpp");
 
@@ -234,7 +234,7 @@ int main(int argc, char* argv[])
 	// t.read(&file_data[0], size);
 	// Lexer lex(file_data);
 	// lex.Tokenize();
-	TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
+	// TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
 	// TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/Application.cpp");
 	// TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/TabsManager.cpp");
 

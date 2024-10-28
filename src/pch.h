@@ -43,5 +43,5 @@
 #include "resources/FontAwesomeRegular.embed"
 #include "resources/RecursiveLinearMedium.embed"
 #include "resources/MonoLisaMedium.embed"
-#include "images.h"
+#include "resources/AppIcon.embed"
 
