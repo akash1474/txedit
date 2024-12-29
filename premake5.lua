@@ -15,6 +15,8 @@ includeDirs["ImGui"]="packages/imgui"
 includeDirs["Mini"]="packages/mINI/src/mini"
 includeDirs["LunaSVG"]="packages/lunasvg/include"
 includeDirs["UUID"]="packages/uuid_v4"
+includeDirs["TreeSitter"]="packages/tree-sitter/lib/include"
+includeDirs["TreeSitterCpp"]="packages/tree-sitter-cpp/src"
 
 -- /MP -- Multithreaded build 
 -- /MT -- Static Linking. Defines _MT 
@@ -22,6 +24,8 @@ includeDirs["UUID"]="packages/uuid_v4"
 include "packages/glfw"
 include "packages/imgui"
 include "packages/lunasvg"
+include "packages/tree-sitter"
+include "packages/tree-sitter-cpp"
 
 project "text_editor"
    kind "ConsoleApp"
@@ -33,7 +37,7 @@ project "text_editor"
    pchsource "src/pch.cpp"
 
    links {
-      "glfw","ImGui","opengl32","LunaSVG","userenv","Shell32","dwmapi"
+      "glfw","ImGui","opengl32","LunaSVG","userenv","Shell32","dwmapi","TreeSitter","TreeSitterCpp"
    }
 
    includedirs{
@@ -43,7 +47,9 @@ project "text_editor"
       "%{includeDirs.Mini}",
       "%{includeDirs.LunaSVG}",
       "%{includeDirs.SpdLog}",
-      "%{includeDirs.UUID}"
+      "%{includeDirs.UUID}",
+      "%{includeDirs.TreeSitter}",
+      "%{includeDirs.TreeSitterCpp}"
    }
 
    files { 
@@ -59,14 +65,14 @@ project "text_editor"
       symbols "On"
       staticruntime "On"
       optimize "Off"
-      buildoptions { "/MP","/DEBUG:FULL" }
+      characterset ("Unicode") -- Default
+      buildoptions { "/MP","/DEBUG:FULL","/utf-8" } --"/utf-8" - tells compiler to interprete string literals as utf8
       defines {"GL_DEBUG"} 
 
    filter {"configurations:Release"}
       runtime "Release"
       optimize "On"
       symbols "Off"
-      characterset ("MBCS")
       staticruntime "On"
       buildoptions { "/MP","/utf-8" }
       defines {"GL_DEBUG","_CRT_SECURE_NO_WARNINGS"}
@@ -76,7 +82,6 @@ project "text_editor"
       runtime "Release"
       optimize "On"
       symbols "Off"
-      characterset ("MBCS")
       staticruntime "On"
       buildoptions { "/MP","/utf-8"}
       linkoptions {"/ENTRY:mainCRTStartup"}

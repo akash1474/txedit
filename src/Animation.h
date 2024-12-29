@@ -9,11 +9,8 @@ class Animation{
 
 	inline float EaseOutQuadraticFn(float t) { return 1.0f - pow(1.0f - t, 4);}
 
-
-
 public:
 	bool hasStarted=false;
-
 
 	Animation(float duration=0.5f):mDuration(duration){}
 

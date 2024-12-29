@@ -8,8 +8,8 @@
 #include "userenv.h"
 
 enum class Fonts{
-    GudeaRegular,
-    GudeaItalic,
+    JetBrainsMonoNLRegular,
+    JetBrainsMonoNLItalic,
     MonoLisaRegular,
     MonoLisaMedium,
 };
@@ -192,24 +192,27 @@ inline void StyleColorsDracula()
     style.ChildRounding = 2;
 }
 
-inline std::string ToUTF8(std::wstring wideString){
-    int bufferSize = WideCharToMultiByte(CP_UTF8, 0, wideString.c_str(), -1, nullptr, 0, nullptr, nullptr);
-    std::string utf8String(bufferSize, '\0');
-    WideCharToMultiByte(CP_UTF8, 0, wideString.c_str(), -1, &utf8String[0], bufferSize, nullptr, nullptr); 
+
+
+//Converts UTF16LE encoded std::wstring to std::string with UTF8 Encoding
+inline std::string ToUTF8(std::wstring wString){
+    if(wString.empty()) return "";
+
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wString.c_str(), (int)wString.size(), nullptr, 0, nullptr, nullptr);
+    std::string utf8String(size_needed,0);
+    WideCharToMultiByte(CP_UTF8, 0, wString.c_str(), (int)wString.size(), &utf8String[0], size_needed, nullptr, nullptr); 
     return utf8String;
 }
 
-inline std::wstring StringToWString(const std::string& narrowString) {
-    int length = MultiByteToWideChar(CP_UTF8, 0, narrowString.c_str(), -1, nullptr, 0);
-    
-    if (length == 0) return L"";
+//Converts UTF8 encoded std::string to std::wstring with UTF16LE Encoding
+inline std::wstring StringToWString(const std::string& utf8_string) {
+    if(utf8_string.empty()) return L"";
 
-    std::wstring wideString(length, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, narrowString.c_str(), -1, &wideString[0], length);
-
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, utf8_string.c_str(), (int)utf8_string.size(), nullptr, 0);
+    std::wstring wideString(size_needed,0);
+    MultiByteToWideChar(CP_UTF8, 0, utf8_string.c_str(), (int)utf8_string.size(), &wideString[0], size_needed);
     return wideString;
 }
-
 
 inline std::string SelectFolder(){
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);

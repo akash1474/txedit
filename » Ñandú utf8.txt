@@ -1,0 +1,5 @@
+»     _setmode(_fileno(stdout), _O_U8TEXT);
+
+std::string utf8String = "Русский текст"; // Example UTF-8 string
+// Directly print UTF-8 string using printf
+printf("%s\n", utf8String.c_str()); // This works because the mode is set to UTF-8

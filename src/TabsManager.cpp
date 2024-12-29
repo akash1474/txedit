@@ -57,7 +57,6 @@ void TabsManager::Render(ImGuiWindowClass& window_class,int winFlags){
 				for(auto&tab:Get().mTabs) tab.isActive=false;
 				it->isActive=true;
 				CoreSystem::Get().GetTextEditor()->LoadFile(it->filepath.c_str());
-				GL_INFO("CLICKED");
 			}
 			if(ImGui::IsItemClicked(ImGuiMouseButton_Left) && ImGui::GetIO().MouseDoubleClicked[0]){
 				it->isTemp=false;
@@ -66,7 +65,13 @@ void TabsManager::Render(ImGuiWindowClass& window_class,int winFlags){
 			if(ImGui::IsItemHovered() && ImGui::IsItemClicked(ImGuiMouseButton_Right)) ImGui::OpenPopup("##tab_menu");
 			if(removeTab){
 				it=tabs.erase(it);
-				if(tabs.empty()){} //Clear the buffer from editor
+				if(tabs.empty()) CoreSystem::GetTextEditor()->ClearEditor();
+				else{
+					std::vector<FileTab>::iterator currTab=it;
+					if(currTab==tabs.end()) currTab=it-1;
+					currTab->isActive=true;
+					CoreSystem::GetTextEditor()->LoadFile(currTab->filepath.c_str());
+				}
 				removeTab=false;
 			}else  it++;
 			ImGui::SameLine(0.0f,0.0f);
@@ -110,9 +115,9 @@ bool TabsManager::RenderTab(std::vector<FileTab>::iterator tab,bool& shouldDelet
 
 	ImGuiID id=window->GetID(tab->id.c_str());
 
-	ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[ tab->isTemp ? (uint8_t)Fonts::GudeaItalic : (uint8_t)Fonts::GudeaRegular]);
+	ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[ tab->isTemp ? (uint8_t)Fonts::JetBrainsMonoNLItalic : (uint8_t)Fonts::JetBrainsMonoNLRegular]);
 	const ImVec2 fontSize=ImGui::CalcTextSize(tab->filename.c_str());
-	static const ImVec2 tabSize{fontSize.x>140.0f ? fontSize.x+50.0f: 200.0f,40.0f};
+	const ImVec2 tabSize{fontSize.x>140.0f ? fontSize.x+50.0f: 200.0f,40.0f};
 	ImDrawList* drawlist=ImGui::GetWindowDrawList();
 
 	const ImVec2 pos=window->DC.CursorPos;	

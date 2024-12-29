@@ -314,7 +314,7 @@ void Lexer::Tokenize()
     tkn = mGetNextToken();
     mTokens.push_back(tkn);
     while (tkn.type != End) {
-        // fprintf(stderr, "%.*s, (%s) [ %d, %d ]\n", (int)tkn.text_len, tkn.text, GetTokenType(tkn.type),tkn.location.mColumn,tkn.location.mLine);
+        fprintf(stderr, "%.*s, (%s) [ %d, %d ]\n", (int)tkn.text_len, tkn.text, GetTokenType(tkn.type),tkn.location.mColumn,tkn.location.mLine);
         tkn = mGetNextToken();
         mTokens.push_back(tkn);
     }

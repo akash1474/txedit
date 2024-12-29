@@ -13,9 +13,14 @@
 #include <iomanip>
 #include <map>
 #include <algorithm>
+#include <list>
 
 #include <GLFW/glfw3.h>
 #include <GL/gl.h>
+
+#ifndef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
+#endif
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -38,5 +43,5 @@
 #include "resources/FontAwesomeRegular.embed"
 #include "resources/RecursiveLinearMedium.embed"
 #include "resources/MonoLisaMedium.embed"
-#include "images.h"
+#include "resources/AppIcon.embed"
 

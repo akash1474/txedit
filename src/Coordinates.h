@@ -2,13 +2,14 @@
 #pragma once
 
 
+#include <cassert>
 struct Coordinates {
 	int mLine, mColumn;
 	Coordinates() : mLine(0), mColumn(0) {}
 	Coordinates(int aLine, int aColumn) : mLine(aLine), mColumn(aColumn)
 	{
-		// assert(aLine >= 0);
-		// assert(aColumn >= 0);
+		assert(aLine >= 0);
+		assert(aColumn >= 0);
 	}
 	static Coordinates Invalid()
 	{

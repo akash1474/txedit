@@ -1,6 +1,10 @@
 #include "pch.h"
+#include <consoleapi.h>
+#include <consoleapi2.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <winnls.h>
+#include <fcntl.h>
 
 namespace OpenGL {
 
@@ -8,6 +12,10 @@ namespace OpenGL {
 
 	void Log::Init()
 	{
+		//For utf8 encoded std::string output. 
+		//Note std::wcout or wprintf will not work until _setmode( _fileno( stdout ), _O_U16TEXT ); 
+		//used before wprintf/std::wcout
+		SetConsoleOutputCP(CP_UTF8);
 		std::vector<spdlog::sink_ptr> logSinks;
 		logSinks.emplace_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
 		logSinks.emplace_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>("OpenGL.log", true));
