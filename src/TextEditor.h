@@ -10,6 +10,8 @@
 #include <tuple>
 #include <array>
 #include <unordered_map>
+#include "unordered_set"
+#include "regex"
 
 
 #include "Animation.h"
@@ -35,42 +37,113 @@ extern "C" {
 #endif // TREE_SITTER_CPP_H_
 
 
+static bool IsUTFSequence(char c)
+{
+	return (c & 0xC0) == 0x80;
+}
+
+// https://en.wikipedia.org/wiki/UTF-8
+// We assume that the char is a standalone character (<128) or a leading byte of an UTF-8 code sequence (non-10xxxxxx code)
+static int UTF8CharLength(uint8_t c)
+{
+	if ((c & 0xFE) == 0xFC)
+		return 6;
+	if ((c & 0xFC) == 0xF8)
+		return 5;
+	if ((c & 0xF8) == 0xF0)
+		return 4;
+	else if ((c & 0xF0) == 0xE0)
+		return 3;
+	else if ((c & 0xE0) == 0xC0)
+		return 2;
+	return 1;
+}
+
+//converts a Unicode code point (c) into its corresponding UTF-8 encoded byte sequence and stores it in a buffer.
+static inline int ImTextCharToUtf8(char* buf, int buf_size, unsigned int c)
+{
+	if (c < 0x80)
+	{
+		buf[0] = (char)c;
+		return 1;
+	}
+	if (c < 0x800)
+	{
+		if (buf_size < 2) return 0;
+		buf[0] = (char)(0xc0 + (c >> 6));
+		buf[1] = (char)(0x80 + (c & 0x3f));
+		return 2;
+	}
+	if (c >= 0xdc00 && c < 0xe000)
+	{
+		return 0;
+	}
+	if (c >= 0xd800 && c < 0xdc00)
+	{
+		if (buf_size < 4) return 0;
+		buf[0] = (char)(0xf0 + (c >> 18));
+		buf[1] = (char)(0x80 + ((c >> 12) & 0x3f));
+		buf[2] = (char)(0x80 + ((c >> 6) & 0x3f));
+		buf[3] = (char)(0x80 + ((c) & 0x3f));
+		return 4;
+	}
+	//else if (c < 0x10000)
+	{
+		if (buf_size < 3) return 0;
+		buf[0] = (char)(0xe0 + (c >> 12));
+		buf[1] = (char)(0x80 + ((c >> 6) & 0x3f));
+		buf[2] = (char)(0x80 + ((c) & 0x3f));
+		return 3;
+	}
+}
+
+
 class Editor
 {
 	UndoManager mUndoManager;
-	enum class Pallet {
-		Background = 0,
-		BackgroundDark,
-		Text,
+	enum class PaletteIndex {
+		Default,
+		Keyword,
+		Number,
 		String,
+		CharLiteral,
+		Punctuation,
+		Preprocessor,
+		Identifier,
+		KnownIdentifier,
+		PreprocIdentifier,
 		Comment,
-		Indentation,
-		Highlight,
-		YellowLight,
-		YellowDark,
-		AquaLight,
-		AquaDark,
-		HighlightOne,
+		MultiLineComment,
+		Background,
+		BackgroundDark,
+		Cursor,
+		Selection,
+		ErrorMarker,
+		Breakpoint,
+		LineNumber,
+		CurrentLineFill,
+		CurrentLineFillInactive,
+		CurrentLineEdge,
 		Max
 	};
 	std::vector<ImU32> mGruvboxPalletDark;
 
-	void InitPallet()
-	{
-		mGruvboxPalletDark.resize((size_t)Pallet::Max);
-		mGruvboxPalletDark[(size_t)Pallet::Background] = ImColor(29, 32, 33, 255);     // 235
-		mGruvboxPalletDark[(size_t)Pallet::BackgroundDark] = ImColor(29, 32, 33, 255); // 235
-		mGruvboxPalletDark[(size_t)Pallet::Text] = ImColor(235, 219, 178, 255);        // 223
-		mGruvboxPalletDark[(size_t)Pallet::String] = ImColor(152, 151, 26, 255);       // 106
-		mGruvboxPalletDark[(size_t)Pallet::Comment] = ImColor(146, 131, 116, 255);     // 237
-		mGruvboxPalletDark[(size_t)Pallet::Indentation] = ImColor(60, 56, 54, 255);    // 237
-		mGruvboxPalletDark[(size_t)Pallet::Highlight] = ImColor(54, 51, 50, 255);      // 237
-		mGruvboxPalletDark[(size_t)Pallet::HighlightOne] = ImColor(150, 150, 150);     // 248 // Backup ImColor(102,92,84)
-		mGruvboxPalletDark[(size_t)Pallet::YellowLight] = ImColor(250, 189, 47, 255);  // 237
-		mGruvboxPalletDark[(size_t)Pallet::YellowDark] = ImColor(215, 153, 33, 255);   // 237
-		mGruvboxPalletDark[(size_t)Pallet::AquaLight] = ImColor(142, 192, 124, 255);   // 237
-		mGruvboxPalletDark[(size_t)Pallet::AquaDark] = ImColor(104, 157, 106, 255);    // 237
-	}
+	// void InitPallet()
+	// {
+	// 	mGruvboxPalletDark.resize((int)PaletteIndex::Max);
+	// 	mGruvboxPalletDark[(int)PaletteIndex::Background] = ImColor(29, 32, 33, 255);     // 235
+	// 	mGruvboxPalletDark[(int)PaletteIndex::BackgroundDark] = ImColor(29, 32, 33, 255); // 235
+	// 	mGruvboxPalletDark[(int)PaletteIndex::Text] = ImColor(235, 219, 178, 255);        // 223
+	// 	mGruvboxPalletDark[(int)PaletteIndex::String] = ImColor(152, 151, 26, 255);       // 106
+	// 	mGruvboxPalletDark[(int)PaletteIndex::Comment] = ImColor(146, 131, 116, 255);     // 237
+	// 	mGruvboxPalletDark[(int)PaletteIndex::Indentation] = ImColor(60, 56, 54, 255);    // 237
+	// 	mGruvboxPalletDark[(int)PaletteIndex::Highlight] = ImColor(54, 51, 50, 255);      // 237
+	// 	mGruvboxPalletDark[(int)PaletteIndex::HighlightOne] = ImColor(150, 150, 150);     // 248 // Backup ImColor(102,92,84)
+	// 	mGruvboxPalletDark[(int)PaletteIndex::YellowLight] = ImColor(250, 189, 47, 255);  // 237
+	// 	mGruvboxPalletDark[(int)PaletteIndex::YellowDark] = ImColor(215, 153, 33, 255);   // 237
+	// 	mGruvboxPalletDark[(int)PaletteIndex::AquaLight] = ImColor(142, 192, 124, 255);   // 237
+	// 	mGruvboxPalletDark[(int)PaletteIndex::AquaDark] = ImColor(104, 157, 106, 255);    // 237
+	// }
 
 
 	Animation mScrollAnimation;
@@ -88,12 +161,74 @@ class Editor
 	};
 
 
-	// Cursor & Selection
-	enum class SelectionMode { Normal, Word, Line };
-	SelectionMode mSelectionMode{SelectionMode::Normal};
+	/*
+	- `SelectionMode::Word`: Only one word selection
+	- `SelectionMode::Line`: Only one line selection
+	- `SelectionMode::Normal`: Any form of selection
+	- `SelectionMode::None`: No Selection. if this is set then `HasSelection()->false`
+	*/
+	enum class SelectionMode { Normal, Word, Line,None };
+	SelectionMode mSelectionMode{SelectionMode::None};
 	BracketCoordinates mBracketsCoordinates;
 	std::vector<EditorState> mCursors;
 	std::string mFileContents;
+
+
+	struct Identifier {
+		Coordinates mLocation;
+		std::string mDeclaration;
+	};
+
+	typedef std::string String;
+	typedef std::unordered_map<std::string, Identifier> Identifiers;
+	typedef std::unordered_set<std::string> Keywords;
+	typedef std::map<int, std::string> ErrorMarkers;
+	typedef std::unordered_set<int> Breakpoints;
+	typedef std::array<ImU32, (unsigned)PaletteIndex::Max> Palette;
+	typedef uint8_t Char;
+
+	struct Glyph {
+		Char mChar;
+		PaletteIndex mColorIndex = PaletteIndex::Default;
+		bool mComment : 1;
+		bool mMultiLineComment : 1;
+		bool mPreprocessor : 1;
+
+		Glyph(Char aChar, PaletteIndex aColorIndex)
+		    : mChar(aChar), mColorIndex(aColorIndex), mComment(false), mMultiLineComment(false), mPreprocessor(false)
+		{
+		}
+	};
+
+	typedef std::vector<Glyph> Line;
+	typedef std::vector<Line> Lines;
+
+	struct LanguageDefinition {
+		typedef std::pair<std::string, PaletteIndex> TokenRegexString;
+		typedef std::vector<TokenRegexString> TokenRegexStrings;
+		typedef bool (*TokenizeCallback)(const char* in_begin, const char* in_end, const char*& out_begin, const char*& out_end,
+		                                 PaletteIndex& paletteIndex);
+
+		std::string mName;
+		Keywords mKeywords;
+		Identifiers mIdentifiers;
+		Identifiers mPreprocIdentifiers;
+		std::string mCommentStart, mCommentEnd, mSingleLineComment;
+		char mPreprocChar;
+		bool mAutoIndentation;
+
+		TokenizeCallback mTokenize;
+
+		TokenRegexStrings mTokenRegexStrings;
+
+		bool mCaseSensitive;
+
+		LanguageDefinition() : mPreprocChar('#'), mAutoIndentation(true), mTokenize(nullptr), mCaseSensitive(true) {}
+
+		static const LanguageDefinition& CPlusPlus();
+		static const LanguageDefinition& C();
+		static const LanguageDefinition& Lua();
+	};
 
 public:
 	EditorState mState;
@@ -101,38 +236,77 @@ public:
 
 private:
 	// ##### LINE BAR #######
-	float mLineBarWidth{0.0f}; // init -> num_count+2*mLineBarPadding
-	float mLineBarPadding{15.0f};
-	float mLineBarMaxCountWidth{0};
-	inline uint8_t GetNumberWidth(int number)
-	{
-		uint8_t length = 0;
-		do {
-			length++;
-			number /= 10;
-		} while (number != 0);
-		return length;
-	}
+
+	int mColorRangeMin, mColorRangeMax;
+	typedef std::vector<std::pair<std::regex, PaletteIndex>> RegexList;
+
+	ImU32 GetGlyphColor(const Glyph& aGlyph) const;
+	void Colorize(int aFromLine = 0, int aCount = -1);
+	void ColorizeRange(int aFromLine = 0, int aToLine = 0);
+	void ColorizeInternal();
+	static const Palette& GetDarkPalette();
+
+	void SetLanguageDefinition(const LanguageDefinition& aLanguageDef);
+	void SetPalette(const Palette& aValue);
 
 
-	std::vector<std::string> mLines;
-	float mMinLineVisible{0.0f};
+	Palette mPaletteBase;
+	Palette mPalette;
+	LanguageDefinition mLanguageDefinition;
+	RegexList mRegexList;
+
+	bool mCheckComments;
+	bool mCursorPositionChanged;
+	Breakpoints mBreakpoints;
+	ErrorMarkers mErrorMarkers;
+	ImVec2 mCharAdvance;
+	std::string mLineBuffer;
+	bool mTextChanged;
+	bool mScrollToTop;
+	bool mShowWhitespaces{true};
+	bool mScrollToCursor;
+	uint64_t mStartTime;
+	uint64_t elapsed;
+
+
+	bool IsOnWordBoundary(const Coordinates& aAt) const;
+	Coordinates SanitizeCoordinates(const Coordinates& aValue) const;
+	bool HasSelection() const;
+	void SetSelectionStart(const Coordinates& aPosition);
+	void SetSelectionEnd(const Coordinates& aPosition);
+	void SetSelection(const Coordinates& aStart, const Coordinates& aEnd, SelectionMode aMode = SelectionMode::Normal);
+	/*
+		Clears the selection(Sets SelectionStart=SelectionEnd=CursorPosition)
+	
+	*/
+	void ClearSelection();
+	void SetCursorPosition(const Coordinates & aPosition);
+	Coordinates GetActualCursorCoordinates() const;
+	std::string GetCurrentLineText() const;
+	void EnsureCursorVisible();
+	Coordinates FindNextWord(Coordinates& aFrom)const;
+
+
+	std::vector<Line> mLines;
 	double mLastClick{-1.0f};
 
+	// Left Padding before the lineNumber Rendering
+	float mLineBarPadding{15.0f};
+	float mLineBarWidth;
 
 	// Editor Properties
 	ImVec2 mCharacterSize;
 	ImVec2 mEditorPosition;
 	ImVec2 mEditorSize;
 	ImRect mEditorBounds;
-	ImVec2 mLinePosition;
 	std::string mFilePath;
 	ImGuiWindow* mEditorWindow{0};
+	Coordinates mInteractiveStart, mInteractiveEnd;
 
-	int mLineHeight{0};
-	float mPaddingLeft{5.0f};
-	uint8_t mTabWidth{4};
-	float mTitleBarHeight{0.0f};
+	float mLineHeight;
+	float mPaddingLeft{10.0f}; // Padding after LineBar
+	uint8_t mTabSize{4};
+	float mTitleBarHeight;
 	float mLineSpacing = 10.f;
 	bool mReadOnly = false;
 
@@ -144,6 +318,8 @@ private:
 	void MoveRight(bool ctrl = false, bool shift = false);
 	void SwapLines(bool up = true);
 
+	void InsertText(const std::string& aValue);
+	void InsertText(const char* aValue);
 
 	// Utility
 	void Copy();
@@ -156,11 +332,12 @@ private:
 	Coordinates FindWordStart(const Coordinates& aFrom) const;
 	Coordinates FindWordEnd(const Coordinates& aFrom) const;
 
-	Coordinates MapScreenPosToCoordinates(const ImVec2& mousePosition);
+	Coordinates ScreenPosToCoordinates(const ImVec2& mousePosition) const;
 	float GetSelectionPosFromCoords(const Coordinates& coords) const;
 
 	int GetCharacterColumn(int aLine, int aIndex) const;
-	std::pair<int, int> GetIndexOfWordAtCursor(const Coordinates& coords) const;
+	int GetCharacterIndex(const Coordinates& aCoordinates) const;
+	std::pair<int, int> GetWordIndex(const Coordinates& coords) const;
 	std::string GetWordAt(const Coordinates& coords) const;
 
 	// Search & Find
@@ -191,7 +368,6 @@ private:
 
 
 	uint8_t GetTabCountsUptoCursor(const Coordinates& coords) const;
-	uint32_t GetCharacterIndex(const Coordinates& coords) const;
 
 	void CalculateBracketMatch();
 	std::array<Coordinates, 2> GetMatchingBracketsCoordinates();
@@ -201,11 +377,14 @@ private:
 
 	bool IsCursorVisible();
 	void RenderStatusBar();
+	float TextDistanceFromLineStart(const Coordinates& aFrom) const;
 
 	void DeleteCharacter(EditorState& cursor, int cidx = -1);
 	void ResetState();
 	void InitFileExtensions();
 	std::map<std::string, std::string> FileExtensions;
+
+	void Advance(Coordinates & aCoordinates) const;
 
 
 public:
@@ -238,15 +417,14 @@ public:
 	void RecalculateBounds() { this->reCalculateBounds = true; }
 	bool IsReadOnly() const { return mReadOnly; }
 
-	bool HasSelection() const;
-	inline uint8_t GetTabWidth() { return this->mTabWidth; }
+	inline uint8_t GetTabWidth() { return this->mTabSize; }
 
 
 	void InsertCharacter(char newChar);
 	void InsertTab(bool isShiftPressed);
-	void InsertTextAt(Coordinates& aWhere, std::string& aValue);
+	int InsertTextAt(Coordinates& aWhere, const char* aValue);
 	void Backspace();
-	void InsertLine();
+	Line& InsertLine(int aIndex);
 	void InsertLineBreak(EditorState& state, int idx);
 
 	void DeleteRange(const Coordinates& aStart, const Coordinates& aEnd);
@@ -255,18 +433,17 @@ public:
 	void RemoveLine(int aIndex);
 	void RemoveLine(int aStart, int aEnd);
 
-	size_t GetLineMaxColumn(int currLineIndex) const;
-	size_t GetCurrentLineMaxColumn() const;
+	int GetLineMaxColumn(int currLineIndex) const;
+	int GetCurrentLineMaxColumn() const;
 
-	struct Token{
-		
+	struct Token {
 	};
 
-	//TreeSitter Experimental
-	TSParser* mParser=nullptr;
-	TSTree* mTree=nullptr;
-	TSQuery* mQuery=nullptr;
-	TSQueryCursor* mCursor=nullptr;
+	// TreeSitter Experimental
+	TSParser* mParser = nullptr;
+	TSTree* mTree = nullptr;
+	TSQuery* mQuery = nullptr;
+	TSQueryCursor* mCursor = nullptr;
 
 	void InitTreeSitter();
 

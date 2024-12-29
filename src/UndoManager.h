@@ -56,6 +56,7 @@ public:
     void Redo(int aSteps,Editor* editor);
 
     void AddUndo(UndoRecord& aValue);
+    void Clear(){mUndoBuffer.clear();}
 
     void DisplayUndoStack();
 

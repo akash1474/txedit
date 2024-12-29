@@ -118,7 +118,6 @@ void highlight_cpp_code(const std::string& source_code)
 	                                                      {"string", 10},  // Yellow for strings
 	                                                      {"keyword", 13}, // Red for keywords
 	                                                      {"namespace", 14}};
-	// »
 
 
 	// 5. Highlight matching nodes
@@ -222,7 +221,8 @@ int main(int argc, char* argv[])
 	if (argc > 1)
 		Application::HandleArguments(GetCommandLineW());
 
-	// CoreSystem::GetFileNavigation()->AddFolder("D:/Projects/c++/txedit");
+	CoreSystem::GetFileNavigation()->AddFolder("D:/Projects/c++/txedit");
+	CoreSystem::GetTextEditor()->LoadFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
 	// size_t size{0};
 	// std::ifstream t("D:/Projects/c++/txedit/src/main.cpp");
 
@@ -246,7 +246,7 @@ int main(int argc, char* argv[])
 
 
 	GL_WARN("BootUp Time: {}ms", timer.ElapsedMillis());
-	const double TARGET_FPS = 60.0;
+	const double TARGET_FPS = 144.0;
 	const double TARGET_FRAME_TIME = 1.0 / TARGET_FPS;
 	while (!glfwWindowShouldClose(Application::GetGLFWwindow())) {
 		auto start = std::chrono::high_resolution_clock::now();

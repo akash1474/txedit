@@ -1,5 +1,5 @@
-#include "Log.h"
 #include "pch.h"
+#include "Log.h"
 #include "ConPTY.h"
 #include <consoleapi2.h>  // For ConPTY APIs
 #include <processthreadsapi.h>

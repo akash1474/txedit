@@ -1,3 +1,4 @@
+#include "Animation.h"
 #include "FileNavigation.h"
 #include "imgui.h"
 #include "string"

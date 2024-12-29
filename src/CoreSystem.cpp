@@ -90,6 +90,10 @@ void CoreSystem::RenderDebugInfo()
 			mode = "Line";
 			color = ImColor(231, 111, 81, 255);
 			break;
+		default:
+			mode = "None";
+			color = ImColor(255, 255, 255, 255);
+			break;
 	}
 	ImGui::Text("SelectionMode: ");
 	ImGui::SameLine();
