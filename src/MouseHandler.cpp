@@ -44,7 +44,7 @@ void Editor::HandleMouseInputs()
 					mSearchState.reset();
 
 				if(mCursors.size()==0) mCursors.push_back(mState);
-				mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition=MapScreenPosToCoordinates(ImGui::GetMousePos());
+				mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition=ScreenPosToCoordinates(ImGui::GetMousePos());
 				mCursors.push_back(mState);
 
 
@@ -71,7 +71,7 @@ void Editor::HandleMouseInputs()
 				if(!mCursors.empty()) mCursors.clear();
 
 
-				mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition=MapScreenPosToCoordinates(ImGui::GetMousePos());
+				mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition=ScreenPosToCoordinates(ImGui::GetMousePos());
 				mSelectionMode = SelectionMode::Normal;
 
 				SearchWordInCurrentVisibleBuffer();
@@ -80,17 +80,17 @@ void Editor::HandleMouseInputs()
 				mLastClick = (float)ImGui::GetTime();
 
 
-				this->CalculateBracketMatch();
+				// this->CalculateBracketMatch();
 			}
 
 			//Mouse Click And Dragging
 			else if (ImGui::IsMouseDragging(0) && ImGui::IsMouseDown(0)) {
-				if((ImGui::GetMousePos().y-mEditorPosition.y) < mTitleBarHeight) return;
+				if((ImGui::GetMousePos().y-mEditorPosition.y) <0.0f) return;
 
 				io.WantCaptureMouse = true;
 				if(mSearchState.isValid()) mSearchState.reset();
 
-				mState.mCursorPosition=mState.mSelectionEnd=MapScreenPosToCoordinates(ImGui::GetMousePos());
+				mState.mCursorPosition=mState.mSelectionEnd=ScreenPosToCoordinates(ImGui::GetMousePos());
 				mSelectionMode=SelectionMode::Word;
 
 				if (mState.mSelectionStart > mState.mSelectionEnd) mState.mCursorDirectionChanged=true;
@@ -119,8 +119,8 @@ void Editor::HandleDoubleClick(){
 		GL_INFO("TAB COUNT:{}", tabCount);
 	#endif
 
-		mState.mSelectionStart = Coordinates(mState.mCursorPosition.mLine, start_idx + (tabCount * (mTabWidth - 1)));
-		mState.mSelectionEnd = Coordinates(mState.mCursorPosition.mLine, end_idx + (tabCount * (mTabWidth - 1)));
+		mState.mSelectionStart = Coordinates(mState.mCursorPosition.mLine, start_idx + (tabCount * (mTabSize - 1)));
+		mState.mSelectionEnd = Coordinates(mState.mCursorPosition.mLine, end_idx + (tabCount * (mTabSize - 1)));
 
 		mState.mCursorPosition = mState.mSelectionEnd;
 }

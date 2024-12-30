@@ -33,14 +33,14 @@ UndoRecord::UndoRecord(
 void UndoRecord::Undo(Editor* aEditor)
 {
     aEditor->DeleteRange(mAddedStart, mAddedEnd);  // Delete the added text
-    aEditor->InsertTextAt(mRemovedStart, mRemovedText);  // Insert back the removed text
+    // aEditor->InsertTextAt(mRemovedStart, mRemovedText);  // Insert back the removed text
     aEditor->mState = mBeforeState;  // Restore the editor state
 }
 
 void UndoRecord::Redo(Editor* aEditor)
 {
     aEditor->DeleteRange(mRemovedStart, mRemovedEnd);  // Delete the removed text
-    aEditor->InsertTextAt(mAddedStart, mAddedText);  // Re-insert the added text
+    // aEditor->InsertTextAt(mAddedStart, mAddedText);  // Re-insert the added text
     aEditor->mState = mAfterState;  // Restore the editor state
 }
 
