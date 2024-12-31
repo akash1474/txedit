@@ -118,10 +118,10 @@ void Editor::HandleKeyboardInputs()
 		// 	MoveHome(shift);
 		// else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_End)))
 		// 	MoveEnd(shift);
-		// else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)))
-		// 	Delete();
-		// else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
-		// 	Backspace();
+		else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)))
+			Delete();
+		else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
+			Backspace();
 		// else if (!ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Insert)))
 		// 	mOverwrite ^= true;
 		// else if (ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Insert)))
@@ -142,29 +142,30 @@ void Editor::HandleKeyboardInputs()
 		// 	SelectAll();
 		// else if (ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_S)))
 		// 	SaveFile();
-		// else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)))
-		// 	InsertLine();
-		// else if (!IsReadOnly() && !ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Tab)))
-		// 	InsertTab(shift);
+		else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)))
+			InsertLineBreak();
+		else if (!IsReadOnly() && !ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Tab)))
+			InsertTab(shift);
 
-		// if (!mReadOnly && !io.InputQueueCharacters.empty()) {
+		if (!mReadOnly && !io.InputQueueCharacters.empty()) {
 
-		// 	if (mSearchState.isValid())
-		// 		mSearchState.reset();
-		// 	if (mSelectionMode == SelectionMode::Word)
-		// 		Backspace();
+			// if (mSearchState.isValid())
+			// 	mSearchState.reset();
 
-		// 	if (mSelectionMode != SelectionMode::Normal)
-		// 		mSelectionMode = SelectionMode::Normal;
+			if (HasSelection())
+				Backspace();
 
-		// 	auto c = io.InputQueueCharacters[0];
+			if (HasSelection())
+				DisableSelection();
 
-		// 	GL_INFO("{}", (char)c);
-		// 	if (c != 0 && (c == '\n' || c >= 32))
-		// 		InsertCharacter(c);
+			auto c = io.InputQueueCharacters[0];
 
-		// 	io.InputQueueCharacters.resize(0);
-		// }
+			GL_INFO("{}", (char)c);
+			if (c != 0 && (c == '\n' || c >= 32))
+				InsertCharacter(c);
+
+			io.InputQueueCharacters.resize(0);
+		}
 
 		// if (anyKeyPressed && !ctrl)
 		// 	mBracketsCoordinates.coords = GetMatchingBracketsCoordinates();

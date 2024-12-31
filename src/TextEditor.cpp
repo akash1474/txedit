@@ -261,6 +261,7 @@ ImVec2 Editor::GetLinePosition(const Coordinates& aCoords){
 
 bool Editor::Draw()
 {
+	// OpenGL::ScopedTimer timer("Editor::Draw");
 	if(!isFileLoaded) return false;
 	
 	static bool isInit = false;
@@ -342,7 +343,7 @@ bool Editor::Draw()
 
 
 	//Highlight Selections
-	if (mSelectionMode == SelectionMode::Word || mSelectionMode==SelectionMode::Line) {
+	if (HasSelection()) {
 		Coordinates selectionStart=mState.mSelectionStart;
 		Coordinates selectionEnd=mState.mSelectionEnd;
 
@@ -477,8 +478,7 @@ bool Editor::Draw()
 
 			if (glyph.mChar == '\t') {
 				auto oldX = bufferOffset.x;
-				bufferOffset.x =
-				    (1.0f + std::floor((1.0f + bufferOffset.x) / (float(mTabSize) * spaceSize))) * (float(mTabSize) * spaceSize);
+				bufferOffset.x = (1.0f + std::floor((1.0f + bufferOffset.x) / (float(mTabSize) * spaceSize))) * (float(mTabSize) * spaceSize);
 				++i;
 			} else if (glyph.mChar == ' ') {
 				bufferOffset.x += spaceSize;
@@ -504,25 +504,31 @@ bool Editor::Draw()
 
 
 
-		//Indentation Lines
-		// if(mLines[start].empty()){
-		// 	int i=i_prev;
-		// 	while(i>-1){
-		// 		ImVec2 indentStart{mLinePosition.x+(i*mTabSize*mCharacterSize.x), linePosY-(0.5f*mLineSpacing)};
-		// 		mEditorWindow->DrawList->AddLine(indentStart, {indentStart.x,indentStart.y+mLineHeight}, mGruvboxPalletDark[(size_t)Pallet::Indentation]);
-		// 		i--;
-		// 	}
-		// }else{
-		// 	int i=0;
-		// 	while(mLines[start].size() > i && mLines[start][i]=='\t'){
-		// 		ImVec2 indentStart{mLinePosition.x+(i*mTabSize*mCharacterSize.x), linePosY-(0.5f*mLineSpacing)};
-		// 		mEditorWindow->DrawList->AddLine(indentStart, {indentStart.x,indentStart.y+mLineHeight}, mGruvboxPalletDark[(size_t)Pallet::Indentation]);
-		// 		i++;
-		// 	}
-		// 	i_prev=--i;
-		// }
+		if(mLines[start].empty()){
+			int i=i_prev;
+			while(i>-1){
+				ImVec2 indentStart{mLinePosition.x+(i*mTabSize*mCharacterSize.x), linePosition.y};
+				mEditorWindow->DrawList->AddLine(indentStart, {indentStart.x,indentStart.y+mLineHeight}, mGruvboxPalletDark[(size_t)Pallet::Indentation]);
+				i--;
+			}
+		}else{
+			int i=0;
+			while(mLines[start].size() > i && mLines[start][i].mChar=='\t'){
+				ImVec2 indentStart{mLinePosition.x+(i*mTabSize*mCharacterSize.x), linePosition.y};
+				mEditorWindow->DrawList->AddLine(indentStart, {indentStart.x,indentStart.y+mLineHeight}, mGruvboxPalletDark[(size_t)Pallet::Indentation]);
+				i++;
+			}
+			i_prev=--i;
+		}
 
 
+		if (ImGui::IsWindowFocused() && start==mState.mCursorPosition.mLine) {
+			float cx = TextDistanceFromLineStart(mState.mCursorPosition);
+
+			ImVec2 cstart(textScreenPos.x + cx - 2.0f, linePosition.y);
+			ImVec2 cend(textScreenPos.x + cx, linePosition.y + mLineHeight);
+			drawList->AddRectFilled(cstart, cend, ImColor(255, 255, 255, 255));
+		}
 
 
 		start++;
@@ -532,19 +538,25 @@ bool Editor::Draw()
 
 
 
-	// Cursor
-	if(mCursors.empty()){
-		ImVec2 cursorPosition(mLinePosition.x - 1.0f + (mState.mCursorPosition.mColumn * mCharacterSize.x), mEditorPosition.y+(mState.mCursorPosition.mLine*mLineHeight)-scrollY);
-		mEditorWindow->DrawList->AddRectFilled(cursorPosition, {cursorPosition.x + 2.0f, cursorPosition.y + mLineHeight},ImColor(255, 255, 255, 255));
-	}else{
-		assert(false && "Feature not supported");
-		// for(const EditorState& cursor:mCursors){
-		// 	int lineY = (mEditorPosition.y + (cursor.mCursorPosition.mLine-floor(mMinLineVisible)) * mLineHeight);
-		// 	ImVec2 cursorPosition(mLinePosition.x - 1.0f + (cursor.mCursorPosition.mColumn * mCharacterSize.x), lineY);
-		// 	mEditorWindow->DrawList->AddRectFilled(cursorPosition, {cursorPosition.x + 2.0f, cursorPosition.y + mLineHeight},ImColor(255, 255, 255, 255));
-		// }
+	// // Cursor
+	// if(mCursors.empty()){
+	// 	float cx = TextDistanceFromLineStart(mState.mCursorPosition);
 
-	}
+	// 	ImVec2 cstart(textScreenPos.x + cx - 2.0f, linePosition.y);
+	// 	ImVec2 cend(textScreenPos.x + cx, linePosition.y + mLineHeight);
+	// 	drawList->AddRectFilled(cstart, cend, ImColor(255, 255, 255, 255));
+	// 	// ImVec2 cursorPos=TextDistanceFromLineStart()
+	// 	// ImVec2 cursorPosition(mLinePosition.x - 1.0f + (mState.mCursorPosition.mColumn * mCharacterSize.x), mEditorPosition.y+(mState.mCursorPosition.mLine*mLineHeight)-scrollY);
+	// 	// mEditorWindow->DrawList->AddRectFilled(cursorPosition, {cursorPosition.x + 2.0f, cursorPosition.y + mLineHeight},ImColor(255, 255, 255, 255));
+	// }else{
+	// 	assert(false && "Multiple Cursor Feature not supported");
+	// 	// for(const EditorState& cursor:mCursors){
+	// 	// 	int lineY = (mEditorPosition.y + (cursor.mCursorPosition.mLine-floor(mMinLineVisible)) * mLineHeight);
+	// 	// 	ImVec2 cursorPosition(mLinePosition.x - 1.0f + (cursor.mCursorPosition.mColumn * mCharacterSize.x), lineY);
+	// 	// 	mEditorWindow->DrawList->AddRectFilled(cursorPosition, {cursorPosition.x + 2.0f, cursorPosition.y + mLineHeight},ImColor(255, 255, 255, 255));
+	// 	// }
+
+	// }
 
 
 
@@ -1161,18 +1173,15 @@ int Editor::GetCurrentLineMaxColumn() const { return GetLineMaxColumn(mState.mCu
 uint8_t Editor::GetTabCountsUptoCursor(const Coordinates& coords)const
 {
 	uint8_t tabCounts = 0;
-
-	int col = 0;
 	int i = 0;
 
+	int max=GetCharacterIndex(coords);
 	const auto& line=mLines[coords.mLine];
-	for (i = 0; i < line.size();) {
-		if (line[i].mChar == '\t') {
+	for (; i < max;) 
+	{
+		if (line[i].mChar == '\t')
 			tabCounts++;
-			col += mTabSize;
-			continue;
-		}
-		col++;
+
 		i+=UTF8CharLength(line[i].mChar);
 	}
 
@@ -1606,13 +1615,14 @@ void Editor::Paste(){
 
 bool Editor::HasSelection() const
 {
-	return mState.mSelectionEnd > mState.mSelectionStart;
+	return mState.mSelectionEnd != mState.mSelectionStart;
 }
 
 
 
 void Editor::DeleteSelection() {
 	if(!HasSelection()) return;
+	if(mState.mSelectionStart>mState.mSelectionEnd) std::swap(mState.mSelectionStart,mState.mSelectionEnd);
 	DeleteRange(mState.mSelectionStart,mState.mSelectionEnd);
 	mState.mCursorPosition=mState.mSelectionEnd=mState.mSelectionStart;
 	Colorize(mState.mSelectionStart.mLine, 1);
@@ -1651,17 +1661,6 @@ void Editor::SetCursorPosition(const Coordinates& aPosition)
 Editor::Line& Editor::InsertLine(int aIndex)
 {
 	auto& result = *mLines.insert(mLines.begin() + aIndex, Line());
-
-	// ErrorMarkers etmp;
-	// for (auto& i : mErrorMarkers)
-	// 	etmp.insert(ErrorMarkers::value_type(i.first >= aIndex ? i.first + 1 : i.first, i.second));
-	// mErrorMarkers = std::move(etmp);
-
-	// Breakpoints btmp;
-	// for (auto i : mBreakpoints)
-	// 	btmp.insert(i >= aIndex ? i + 1 : i);
-	// mBreakpoints = std::move(btmp);
-
 	return result;
 }
 
@@ -1853,7 +1852,7 @@ void Editor::EnsureCursorVisible()
 	auto left = (int)ceil(scrollX / mCharacterSize.x);
 	auto right = (int)ceil((scrollX + width) / mCharacterSize.x);
 
-	auto pos = GetActualCursorCoordinates();
+	auto pos = mState.mCursorPosition;
 	// auto len = TextDistanceToLineStart(pos);
 
 	if (pos.mLine < top)
@@ -1866,7 +1865,29 @@ void Editor::EnsureCursorVisible()
 	// 	ImGui::SetScrollX(std::max(0.0f, len + mLineBarWidth+mPaddingLeft + 4 - width));
 }
 
+float Editor::TextDistanceFromLineStart(const Coordinates& aFrom) const
+{
+	auto& line = mLines[aFrom.mLine];
+	float distance = 0.0f;
+	float spaceSize = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, " ", nullptr, nullptr).x;
+	int colIndex = GetCharacterIndex(aFrom);
+	for (size_t it = 0u; it < line.size() && it < colIndex;) {
+		if (line[it].mChar == '\t') {
+			distance = (1.0f + std::floor((1.0f + distance) / (float(mTabSize) * spaceSize))) * (float(mTabSize) * spaceSize);
+			++it;
+		} else {
+			auto d = UTF8CharLength(line[it].mChar);
+			char tempCString[7];
+			int i = 0;
+			for (; i < 6 && d-- > 0 && it < (int)line.size(); i++, it++) tempCString[i] = line[it].mChar;
 
+			tempCString[i] = '\0';
+			distance += ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, tempCString, nullptr, nullptr).x;
+		}
+	}
+
+	return distance;
+}
 
 
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "Coordinates.h"
+#include "DataTypes.h"
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "string"
@@ -374,7 +375,10 @@ public:
 	void InsertTab(bool isShiftPressed);
 	void Backspace();
 	void InsertLine();
-	void InsertLineBreak(EditorState& state, int idx);
+	void InsertLineBreak();
+
+	void SnapCursorToNearestTab(EditorState& aEditor);
+	float TextDistanceFromLineStart(const Coordinates& aFrom) const;
 
 	void DeleteRange(const Coordinates& aStart, const Coordinates& aEnd);
 	void DeleteSelection();
