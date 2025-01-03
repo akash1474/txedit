@@ -334,7 +334,7 @@ void Editor::InsertCharacter(char chr){
 		// }
 
 		for (auto p = buf; *p != '\0'; p++, ++cindex)
-			line.insert(line.begin() + cindex, Glyph(*p, PaletteIndex::Default));
+			line.insert(line.begin() + cindex, Glyph(*p, ColorSchemeIdx::Default));
 		// u.mAdded = buf;
 
 		mState.mCursorPosition.mColumn++;
@@ -618,7 +618,7 @@ void Editor::InsertLineBreak(){
 
 	int tabCounts=GetTabCountsUptoCursor(coord);
 	int idx=tabCounts;
-	while(tabCounts-->0) newLine.insert(newLine.end(), Glyph('\t',PaletteIndex::Default));
+	while(tabCounts-->0) newLine.insert(newLine.end(), Glyph('\t',ColorSchemeIdx::Default));
 
 	newLine.insert(newLine.end(), line.begin() + cindex, line.end());
 	line.erase(line.begin() + cindex, line.begin() + line.size());
@@ -823,7 +823,7 @@ void Editor::InsertTab(bool isShiftPressed)
 				int idx = GetCharacterIndex(mCursors[i].mCursorPosition);
 				GL_INFO("IDX:", idx);
 
-				mLines[lineIdx].insert(mLines[lineIdx].begin() + idx, 1, Glyph('\t',PaletteIndex::Default));
+				mLines[lineIdx].insert(mLines[lineIdx].begin() + idx, 1, Glyph('\t',ColorSchemeIdx::Default));
 
 				mCursors[i].mCursorPosition.mColumn += mTabSize;
 
@@ -838,7 +838,7 @@ void Editor::InsertTab(bool isShiftPressed)
 
 			if(idx>0 && line[idx-1].mChar!='\t') return;
 
-			line.insert(line.begin() + idx, 1, Glyph('\t',PaletteIndex::Default));
+			line.insert(line.begin() + idx, 1, Glyph('\t',ColorSchemeIdx::Default));
 			mState.mCursorPosition.mColumn += mTabSize;
 		}
 
@@ -885,7 +885,7 @@ void Editor::InsertTab(bool isShiftPressed)
 				// mUndoManager.AddUndo(uRecord);
 
 			} else {
-				mLines[startLine].insert(mLines[startLine].begin(), 1, Glyph('\t',PaletteIndex::Default));
+				mLines[startLine].insert(mLines[startLine].begin(), 1, Glyph('\t',ColorSchemeIdx::Default));
 
 				// uRecord.mAddedText = '\t';
 				// uRecord.mAddedStart = Coordinates(startLine, 0);

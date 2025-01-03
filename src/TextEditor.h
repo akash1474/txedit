@@ -79,29 +79,64 @@ public:
 		mGruvboxPalletDark[(size_t)Pallet::AquaDark] = ImColor(104, 157, 106, 255);    // 237
 	}
 
-	enum class PaletteIndex
+enum class PaletteIndex {
+    BG,         // 0
+    RED,        // 1
+    GREEN,      // 2
+    YELLOW,     // 3
+    BLUE,       // 4
+    PURPLE,     // 5
+    AQUA,       // 6
+    GRAY,       // 7
+    BG0_H,      // 8
+    BG0,        // 9
+    BG0_S,      // 10
+    BG1,        // 11
+    BG2,        // 12
+    BG3,        // 13
+    BG4,        // 14
+    FG,         // 15
+    FG0,        // 16
+    FG1,        // 17
+    FG2,        // 18
+    FG3,        // 19
+    FG4,        // 20
+    ORANGE,     // 21
+    LIGHT_RED,  // 22
+    LIGHT_GREEN,// 23
+    LIGHT_BLUE, // 24
+    LIGHT_PURPLE,// 25
+    LIGHT_YELLOW,// 26
+    LIGHT_AQUA, // 27
+    BRIGHT_ORANGE,// 28
+    FG_HIGHLIGHT, // 29
+    FG_DARK,      // 30
+    Max         // Total number of colors
+};
+
+	enum class ColorSchemeIdx
 	{
-		Default,
-		Keyword,
-		Number,
-		String,
-		CharLiteral,
-		Punctuation,
-		Preprocessor,
-		Identifier,
-		KnownIdentifier,
-		PreprocIdentifier,
-		Comment,
-		MultiLineComment,
-		Background,
-		Cursor,
-		Selection,
-		ErrorMarker,
-		Breakpoint,
-		LineNumber,
-		CurrentLineFill,
-		CurrentLineFillInactive,
-		CurrentLineEdge,
+		Default=(int)PaletteIndex::FG0,
+		Keyword=(int)PaletteIndex::LIGHT_RED,
+		Number=(int)PaletteIndex::LIGHT_PURPLE,
+		String=(int)PaletteIndex::LIGHT_GREEN,
+		CharLiteral=(int)PaletteIndex::ORANGE,
+		Punctuation=(int)PaletteIndex::FG,
+		Preprocessor=(int)PaletteIndex::LIGHT_RED,
+		Identifier=(int)PaletteIndex::LIGHT_YELLOW,
+		KnownIdentifier=(int)PaletteIndex::LIGHT_AQUA,
+		PreprocIdentifier=(int)PaletteIndex::GREEN,
+		Comment=(int)PaletteIndex::GRAY,
+		MultiLineComment=(int)PaletteIndex::FG3,
+		Background=(int)PaletteIndex::BG0_H,
+		Cursor=(int)PaletteIndex::FG,
+		Selection=(int)PaletteIndex::FG4,
+		ErrorMarker=(int)PaletteIndex::RED,
+		Breakpoint=(int)PaletteIndex::RED,
+		LineNumber=(int)PaletteIndex::FG2,
+		CurrentLineFill=(int)PaletteIndex::FG3,
+		CurrentLineFillInactive=(int)PaletteIndex::FG4,
+		CurrentLineEdge=(int)PaletteIndex::FG4,
 		Max
 	};
 	struct Identifier {
@@ -120,13 +155,8 @@ public:
 	struct Glyph
 	{
 		Char mChar;
-		PaletteIndex mColorIndex = PaletteIndex::Default;
-		bool mComment : 1;
-		bool mMultiLineComment : 1;
-		bool mPreprocessor : 1;
-
-		Glyph(Char aChar, PaletteIndex aColorIndex) : mChar(aChar), mColorIndex(aColorIndex),
-			mComment(false), mMultiLineComment(false), mPreprocessor(false) {}
+		ColorSchemeIdx mColorIndex = ColorSchemeIdx::Default;
+		Glyph(Char aChar, ColorSchemeIdx aColorIndex) : mChar(aChar), mColorIndex(aColorIndex){}
 	};
 
 	typedef std::vector<Glyph> Line;
@@ -166,6 +196,11 @@ public:
 
 	enum class SelectionMode { Normal, Word, Line };
 
+	void UpdateSyntaxHighlighting(const std::string &sourceCode);
+	ColorSchemeIdx GetColorSchemeIndexForNode(const std::string &type);
+	void TraverseTreeAndHighlight(TSNode node, const std::string &sourceCode);
+
+
 private:
 	bool mCheckComments;
 	int mColorRangeMin, mColorRangeMax;
@@ -175,7 +210,7 @@ private:
 	void Colorize(int aFromLine = 0, int aCount = -1);
 	void ColorizeRange(int aFromLine = 0, int aToLine = 0);
 	void ColorizeInternal();
-	static const Palette& GetDarkPalette();
+	static const Palette& GetGruvboxPalette();
 
 	void SetLanguageDefinition(const LanguageDefinition& aLanguageDef);
 	void SetPalette(const Palette& aValue);

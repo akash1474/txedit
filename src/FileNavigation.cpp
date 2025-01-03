@@ -1,5 +1,6 @@
 #include "Log.h"
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "pch.h"
 #include "FileNavigation.h"
 #include "DirectoryHandler.h"
@@ -141,7 +142,6 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot){
 			ImGui::PushStyleColor(ImGuiCol_HeaderHovered,ImGui::GetStyle().Colors[ImGuiCol_SliderGrab]);
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX()+28.0f);
 			if(ImGui::Selectable(oss.str().c_str(),item.is_explored,ImGuiSelectableFlags_SpanAvailWidth|ImGuiSelectableFlags_SelectOnClick)){
-
 				for(Entity& en:entities) en.is_explored=false;
 				item.is_explored=true;
 
@@ -149,7 +149,6 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot){
 					UpdateDirectory(std::filesystem::path(item.path).parent_path().generic_string());
 
 				TabsManager::Get().OpenFile(item.path);
-				this->mTextEditor->LoadFile(item.path.c_str());
 			}
 			ImGui::PopFont();
 			ShowContextMenu(item.path);

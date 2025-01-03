@@ -29,6 +29,10 @@
 #include "StatusBarManager.h"
 #include "TabsManager.h"
 
+#include "tree_sitter/api.h"
+#include "tree_sitter/parser.h"
+
+
 template <class InputIt1, class InputIt2, class BinaryPredicate>
 bool equals(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2, BinaryPredicate p)
 {
@@ -60,7 +64,6 @@ const Editor::LanguageDefinition& Editor::LanguageDefinition::CPlusPlus()
 	static bool inited = false;
 	static LanguageDefinition langDef;
 	return langDef;
-
 }
 
 
@@ -68,7 +71,7 @@ Editor::Editor()
 {
 	InitPallet();
 	InitFileExtensions();
-	SetPalette(GetDarkPalette());
+	SetPalette(GetGruvboxPalette());
 	SetLanguageDefinition(LanguageDefinition::CPlusPlus());
 	mLines.push_back(Line());
 	// #undef IM_TABSIZE
@@ -92,6 +95,8 @@ void Editor::LoadFile(const char* filepath){
 		StatusBarManager::ShowNotification("Invalid Path",filepath,StatusBarManager::NotificationType::Error);
 		return;
 	}
+	GL_INFO("Editor::LoadFile - {}",filepath);
+	mFileContents.clear();
 	this->ResetState();
 	size_t size{0};
 	std::ifstream t(filepath);
@@ -279,6 +284,13 @@ bool Editor::Draw()
 
 		mSelectionMode = SelectionMode::Normal;
 
+		/* Update palette with the current alpha from style */
+		for (int i = 0; i < (int)PaletteIndex::Max; ++i) {
+			auto color = ImGui::ColorConvertU32ToFloat4(mPaletteBase[i]);
+			color.w *= 1.0f;
+			mPalette[i] = ImGui::ColorConvertFloat4ToU32(color);
+		}
+
 		GL_WARN("LINE HEIGHT:{}", mLineHeight);
 		isInit = true;
 	}
@@ -312,7 +324,7 @@ bool Editor::Draw()
 	// }
 
 	// // BackGrounds
-	// mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x + mLineBarWidth, mEditorPosition.y}, mEditorBounds.Max,mGruvboxPalletDark[(size_t)Pallet::Background]); // Code
+	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x + mLineBarWidth, mEditorPosition.y}, mEditorBounds.Max,mGruvboxPalletDark[(size_t)Pallet::Background]); // Code
 
 
 
@@ -440,6 +452,11 @@ bool Editor::Draw()
 	int end = std::min(start+lineCount+1,(int)mLines.size());
 
 	// GL_INFO("Lines:{}-{}",start,end);
+	if (start >= mLines.size()) {
+		ImGui::SetScrollY(0);
+		start = 0;
+		end = std::min(start+lineCount+1,(int)mLines.size());
+	}
 
 	int lineNo = 0;
 	int i_prev=0;
@@ -459,7 +476,7 @@ bool Editor::Draw()
 
 		Line& line=mLines[start];
 		// Render colorized text
-		auto prevColor = line.empty() ? mPalette[(int)PaletteIndex::Default] : GetGlyphColor(line[0]);
+		auto prevColor = line.empty() ? mPalette[(int)ColorSchemeIdx::Default] : GetGlyphColor(line[0]);
 		ImVec2 bufferOffset;
 
 		for (int i = 0; i < line.size();) {
@@ -468,9 +485,8 @@ bool Editor::Draw()
 
 			if ((color != prevColor || glyph.mChar == '\t' || glyph.mChar == ' ') && !mLineBuffer.empty()) {
 				const ImVec2 newOffset(textScreenPos.x + bufferOffset.x, textScreenPos.y + bufferOffset.y);
-				drawList->AddText(newOffset, IM_COL32(255,255,255,255), mLineBuffer.c_str());
-				auto textSize =
-				    ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, mLineBuffer.c_str(), nullptr, nullptr);
+				drawList->AddText(newOffset, prevColor, mLineBuffer.c_str());
+				auto textSize = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, mLineBuffer.c_str(), nullptr, nullptr);
 				bufferOffset.x += textSize.x;
 				mLineBuffer.clear();
 			}
@@ -478,7 +494,7 @@ bool Editor::Draw()
 
 			if (glyph.mChar == '\t') {
 				auto oldX = bufferOffset.x;
-				bufferOffset.x = (1.0f + std::floor((1.0f + bufferOffset.x) / (float(mTabSize) * spaceSize))) * (float(mTabSize) * spaceSize);
+				bufferOffset.x += mTabSize*spaceSize;
 				++i;
 			} else if (glyph.mChar == ' ') {
 				bufferOffset.x += spaceSize;
@@ -491,17 +507,9 @@ bool Editor::Draw()
 
 		if (!mLineBuffer.empty()) {
 			const ImVec2 newOffset(textScreenPos.x + bufferOffset.x, textScreenPos.y + bufferOffset.y);
-			drawList->AddText(newOffset, IM_COL32(255,255,255,255), mLineBuffer.c_str());
+			drawList->AddText(newOffset, prevColor, mLineBuffer.c_str());
 			mLineBuffer.clear();
 		}
-
-
-
-
-
-
-
-
 
 
 		if(mLines[start].empty()){
@@ -853,79 +861,312 @@ int IsBracket(const char x){
 // 	return coord;
 // }
 
+// Function to set PaletteIndex based on Tree-sitter node type
+Editor::ColorSchemeIdx Editor::GetColorSchemeIndexForNode(const std::string &type)
+{
+    if (type == "type" || type=="keyword" || type=="statement" || type=="function.namespace")
+        return Editor::ColorSchemeIdx::Keyword;
+    else if (type == "type.indentifier")
+        return Editor::ColorSchemeIdx::Identifier;
+    else if (type == "string")
+        return Editor::ColorSchemeIdx::String;
+    else if (type == "primitive_type" || type=="number")
+        return Editor::ColorSchemeIdx::Number;
+    else if (type == "comment")
+        return Editor::ColorSchemeIdx::Comment;
+    else if (type == "assignment")
+        return Editor::ColorSchemeIdx::KnownIdentifier;
+    else if (type == "function")
+        return Editor::ColorSchemeIdx::KnownIdentifier;
+    else if (type == "primitive_type")
+        return Editor::ColorSchemeIdx::Preprocessor;
+    else if (type == "namespace")
+        return Editor::ColorSchemeIdx::String;
+    else if (type == "scope_resolution")
+        return Editor::ColorSchemeIdx::Default;
+    else
+        return Editor::ColorSchemeIdx::Default;
+}
+
+
+// Function to update Glyphs using Tree-sitter
+void Editor::UpdateSyntaxHighlighting(const std::string &sourceCode)
+{
+	OpenGL::ScopedTimer timer("UpdateSyntaxHighlighting");
+	// Initialize Tree-sitter parser
+    TSParser *parser = ts_parser_new();
+    ts_parser_set_language(parser,tree_sitter_cpp());
+    TSTree *tree = ts_parser_parse_string(parser, nullptr, sourceCode.c_str(), sourceCode.size());
+
+	static std::string query_string = R"(
+	[ "if" 
+		"else" 
+		"while" 
+		"do" 
+		"for" 
+		"switch" 
+		"case" 
+		"default" 
+		"return" 
+		"break" 
+		"continue"
+		"static"
+	] @keyword
+
+	(auto) @keyword
+
+	; anything.[captured]
+	(field_expression
+		field:(field_identifier) @assignment)
+
+	;array access captured[]
+	(subscript_expression
+		argument:(identifier) @assignment)
+
+	(number_literal) @number
+
+	(type_identifier) @type.indentifier
+	(comment) @comment 
+	(string_literal) @string 
+	(raw_string_literal) @string
+	(primitive_type) @keyword
+	(function_declarator declarator:(_) @function) 
+	;(namespace_identifier) @namespace
+
+	(preproc_include (string_literal) @string)
+	(preproc_include (system_lib_string) @string)
+	(preproc_include) @keyword
+    (preproc_def) @keyword
+    (preproc_ifdef) @keyword
+    (preproc_ifdef
+    	(identifier) @scope_resolution) 
+    (preproc_else) @keyword
+
+	"::" @scope_resolution
+	(assignment_expression
+		left:(identifier) @assignment)
+	; Keywords
+	[
+	  "try"
+	  "catch"
+	  "noexcept"
+	  "throw"
+	] @keyword
+
+	[
+	  "decltype"
+	  "explicit"
+	  "friend"
+	  "override"
+	  "using"
+	  "requires"
+	  "constexpr"
+	] @keyword
+
+	[
+	  "class"
+	  "namespace"
+	  "template"
+	  "typename"
+	  "concept"
+	] @keyword
+
+	[
+	  "co_await"
+	  "co_yield"
+	  "co_return"
+	] @keyword
+
+	[
+	  "public"
+	  "private"
+	  "protected"
+	  "final"
+	] @keyword
+
+	[
+	  "new"
+	  "delete"
+	  "xor"
+	  "bitand"
+	  "bitor"
+	  "compl"
+	  "not"
+	  "xor_eq"
+	  "and_eq"
+	  "or_eq"
+	  "not_eq"
+	  "and"
+	  "or"
+	] @keyword
+
+
+	; functions
+	(call_expression
+		function: (identifier) @function)
+
+	(function_declarator
+	  (qualified_identifier
+	    name: (identifier) @function.namespace))
+
+	(function_declarator
+	  (template_function
+	    (identifier) @function))
+
+	(operator_name) @function
+
+	"operator" @function
+
+	"static_assert" @function
+
+	(call_expression
+	  (qualified_identifier
+	    (identifier) @function))
+
+	(call_expression
+	  (template_function
+	    (identifier) @function))
+
+	((namespace_identifier) @namespace
+			(#match? @namespace "^[A-Z]"))
+
+    )";
+
+	// Define a simple query to match syntax elements
+    OpenGL::Timer timerx;
+	uint32_t error_offset;
+	TSQueryError error_type;
+	TSQuery* query = ts_query_new(tree_sitter_cpp(), query_string.c_str(), query_string.size(), &error_offset, &error_type);
+
+	// Check if the query was successfully created
+	if (!query) {
+		GL_ERROR("Error creating query at offset {}, error type: {}", error_offset, error_type);
+		ts_tree_delete(tree);
+		ts_parser_delete(parser);
+		return;
+	}
+
+	TSQueryCursor* cursor = ts_query_cursor_new();
+	ts_query_cursor_exec(cursor, query, ts_tree_root_node(tree));
+    // GL_INFO("Duration:{}",timerx.ElapsedMillis());
+    char buff[32];
+    sprintf_s(buff,"%fms",timerx.ElapsedMillis());
+    StatusBarManager::ShowNotification("Query Execution:", buff,StatusBarManager::NotificationType::Success);
+
+	// 5. Highlight matching nodes
+	TSQueryMatch match;
+	while (ts_query_cursor_next_match(cursor, &match)) {
+		for (unsigned int i = 0; i < match.capture_count; ++i) {
+			TSQueryCapture capture = match.captures[i];
+			TSNode node = capture.node;
+
+		    // Get the type of the current node
+		    const char *nodeType = ts_node_type(node);
+		    unsigned int length;
+		    const char *captureName = ts_query_capture_name_for_id(query, capture.index, &length);
+			// GL_INFO(match.captures[i].index);
+			// GL_INFO(captureName);
+		    // GL_INFO(nodeType);
+
+		    TSPoint startPoint = ts_node_start_point(node);
+		    TSPoint endPoint = ts_node_end_point(node);
+		    endPoint.column--;
+
+		    ColorSchemeIdx colorIndex = GetColorSchemeIndexForNode(captureName);
+		    // GL_INFO("[{},{}]-[{},{}]:{}--{}",startPoint.row,startPoint.column,endPoint.row,endPoint.column,nodeType,(int)colorIndex);
+
+		    for (unsigned int row = startPoint.row; row <= endPoint.row; ++row)
+		    {
+		        for (unsigned int column = (row == startPoint.row ? startPoint.column : 0);
+		             column < mLines[row].size() && (row < endPoint.row || column <= endPoint.column); ++column)
+		        {
+		            mLines[row][column].mColorIndex = colorIndex;
+				    // GL_INFO("[{},{}]-[{},{}]:{}--{}--{}",startPoint.row,startPoint.column,endPoint.row,endPoint.column,nodeType,(int)colorIndex,(char)mLines[row][column].mChar);
+		        }
+		    }
+		}
+	}
+
+    // Get the start and end positions of the node
+    ts_tree_delete(tree);
+	ts_parser_delete(parser);
+}
+
 
 void Editor::SetBuffer(const std::string& text)
 {
+	GL_INFO("Editor::SetBuffer");
 	mLines.clear();
 	mLines.emplace_back(Line());
 
-	for (auto chr : text) {
+	for (auto chr : text) 
+	{
 		if (chr == '\r')
 			continue;
 
-		if (chr == '\n') {
+		if (chr == '\n')
 			mLines.emplace_back(Line());
-			if (mLines.size() == 2270) {
-				int a = 20;
-			}
-		} else
-			mLines.back().emplace_back(Glyph(chr, PaletteIndex::Default));
+		else
+			mLines.back().emplace_back(Glyph(chr, ColorSchemeIdx::Default));
 	}
 
 	if (mLines.back().size() > 400)
 		mLines.back().clear();
+
 	mTextChanged = true;
 	mScrollToTop = true;
 
 	GL_INFO("FILE INFO --> Lines:{}", mLines.size());
 	// mUndoManager.Clear();
+	UpdateSyntaxHighlighting(text);
 	Colorize();
+
 }
 
-const Editor::Palette& Editor::GetDarkPalette()
+const Editor::Palette& Editor::GetGruvboxPalette()
 {
-	const static Palette p = {{
-	    0xffd69c56, // Default
-	    0xffd69c56, // Keyword
-	    0xff00ff00, // Number
-	    0xff98971a, // String
-	    0xff70a0e0, // Char literal
-	    0xffffffff, // Punctuation
-	    0xff408080, // Preprocessor
-	    0xffaaaaaa, // Identifier
-	    0xff9bc64d, // Known identifier
-	    0xffc040a0, // Preproc identifier
-	    0xff206020, // Comment (single line)
-	    0xff406020, // Comment (multi line)
-	    0xff101010, // Background
-	    0xffe0e0e0, // Cursor
-	    0x80a06020, // Selection
-	    0x800020ff, // ErrorMarker
-	    0x40f08000, // Breakpoint
-	    0xff707000, // Line number
-	    0x40000000, // Current line fill
-	    0x40808080, // Current line fill (inactive)
-	    0x40a0a0a0, // Current line edge
+	constexpr const static Palette p = {{
+	    IM_COL32(40, 40, 40, 255),    // BG (#282828)
+	    IM_COL32(204, 36, 29, 255),   // RED (#cc241d)
+	    IM_COL32(152, 151, 26, 255),  // GREEN (#98971a)
+	    IM_COL32(215, 153, 33, 255),  // YELLOW (#d79921)
+	    IM_COL32(69, 133, 136, 255),  // BLUE (#458588)
+	    IM_COL32(177, 98, 134, 255),  // PURPLE (#b16286)
+	    IM_COL32(104, 157, 106, 255), // AQUA (#689d6a)
+	    IM_COL32(168, 153, 132, 255), // GRAY (#a89984)
+	    IM_COL32(29, 32, 33, 255),    // BG0_H (#1d2021)
+	    IM_COL32(40, 40, 40, 255),    // BG0 (#282828)
+	    IM_COL32(50, 48, 47, 255),    // BG0_S (#32302f)
+	    IM_COL32(60, 56, 54, 255),    // BG1 (#3c3836)
+	    IM_COL32(80, 73, 69, 255),    // BG2 (#504945)
+	    IM_COL32(102, 92, 84, 255),   // BG3 (#665c54)
+	    IM_COL32(124, 118, 100, 255), // BG4 (#7c6f64)
+	    IM_COL32(235, 219, 178, 255), // FG (#ebdbb2)
+	    IM_COL32(251, 241, 199, 255), // FG0 (#fbf1c7)
+	    IM_COL32(235, 219, 178, 255), // FG1 (#ebdbb2)
+	    IM_COL32(213, 196, 161, 255), // FG2 (#d5c4a1)
+	    IM_COL32(189, 174, 147, 255), // FG3 (#bdae93)
+	    IM_COL32(168, 153, 132, 255), // FG4 (#a89984)
+	    IM_COL32(214, 93, 14, 255),   // ORANGE (#d65d0e)
+	    IM_COL32(251, 73, 52, 255),   // LIGHT_RED (#fb4934)
+	    IM_COL32(184, 187, 38, 255),  // LIGHT_GREEN (#b8bb26)
+	    IM_COL32(131, 165, 152, 255), // LIGHT_BLUE (#83a598)
+	    IM_COL32(211, 134, 155, 255), // LIGHT_PURPLE (#d3869b)
+	    IM_COL32(250, 189, 47, 255),  // LIGHT_YELLOW (#fabd2f)
+	    IM_COL32(142, 192, 124, 255), // LIGHT_AQUA (#8ec07c)
+	    IM_COL32(254, 128, 25, 255),  // BRIGHT_ORANGE (#fe8019)
+	    IM_COL32(168, 153, 132, 255), // FG_HIGHLIGHT (Repeated FG4 #a89984)
+	    IM_COL32(92, 84, 78, 255)     // FG_DARK (#5c544e)
 	}};
+
 	return p;
 }
 
+
+
 ImU32 Editor::GetGlyphColor(const Glyph& aGlyph) const
 {
-	if (aGlyph.mComment)
-		return mPalette[(int)PaletteIndex::Comment];
-	if (aGlyph.mMultiLineComment)
-		return mPalette[(int)PaletteIndex::MultiLineComment];
-	auto const color = mPalette[(int)aGlyph.mColorIndex];
-	if (aGlyph.mPreprocessor) {
-		const auto ppcolor = mPalette[(int)PaletteIndex::Preprocessor];
-		const int c0 = ((ppcolor & 0xff) + (color & 0xff)) / 2;
-		const int c1 = (((ppcolor >> 8) & 0xff) + ((color >> 8) & 0xff)) / 2;
-		const int c2 = (((ppcolor >> 16) & 0xff) + ((color >> 16) & 0xff)) / 2;
-		const int c3 = (((ppcolor >> 24) & 0xff) + ((color >> 24) & 0xff)) / 2;
-		return ImU32(c0 | (c1 << 8) | (c2 << 16) | (c3 << 24));
-	}
-	return color;
+	return mPalette[(int)aGlyph.mColorIndex];
 }
 
 void Editor::Colorize(int aFromLine, int aLines)
@@ -958,7 +1199,7 @@ void Editor::ColorizeRange(int aFromLine, int aToLine)
 		for (size_t j = 0; j < line.size(); ++j) {
 			auto& col = line[j];
 			buffer[j] = col.mChar;
-			col.mColorIndex = PaletteIndex::Default;
+			col.mColorIndex = ColorSchemeIdx::Default;
 		}
 
 		const char* bufferBegin = &buffer.front();
@@ -969,55 +1210,50 @@ void Editor::ColorizeRange(int aFromLine, int aToLine)
 		for (auto first = bufferBegin; first != last;) {
 			const char* token_begin = nullptr;
 			const char* token_end = nullptr;
-			PaletteIndex token_color = PaletteIndex::Default;
+			ColorSchemeIdx token_color = ColorSchemeIdx::Default;
 
 			bool hasTokenizeResult = false;
 
-			if (mLanguageDefinition.mTokenize != nullptr) {
-				if (mLanguageDefinition.mTokenize(first, last, token_begin, token_end, token_color))
-					hasTokenizeResult = true;
-			}
+			// if (mLanguageDefinition.mTokenize != nullptr) {
+			// 	if (mLanguageDefinition.mTokenize(first, last, token_begin, token_end, token_color))
+			// 		hasTokenizeResult = true;
+			// }
 
-			if (hasTokenizeResult == false) {
-				// todo : remove
-				// printf("using regex for %.*s\n", first + 10 < last ? 10 : int(last - first), first);
+			// if (hasTokenizeResult == false) {
+			// 	// todo : remove
+			// 	// printf("using regex for %.*s\n", first + 10 < last ? 10 : int(last - first), first);
 
-				for (auto& p : mRegexList) {
-					if (std::regex_search(first, last, results, p.first, std::regex_constants::match_continuous)) {
-						hasTokenizeResult = true;
+			// 	for (auto& p : mRegexList) {
+			// 		if (std::regex_search(first, last, results, p.first, std::regex_constants::match_continuous)) {
+			// 			hasTokenizeResult = true;
 
-						auto& v = *results.begin();
-						token_begin = v.first;
-						token_end = v.second;
-						token_color = p.second;
-						break;
-					}
-				}
-			}
+			// 			auto& v = *results.begin();
+			// 			token_begin = v.first;
+			// 			token_end = v.second;
+			// 			token_color = p.second;
+			// 			break;
+			// 		}
+			// 	}
+			// }
 
 			if (hasTokenizeResult == false) {
 				first++;
 			} else {
 				const size_t token_length = token_end - token_begin;
 
-				if (token_color == PaletteIndex::Identifier) {
+				if (token_color == ColorSchemeIdx::Identifier) {
 					id.assign(token_begin, token_end);
 
 					// todo : allmost all language definitions use lower case to specify keywords, so shouldn't this use ::tolower ?
 					if (!mLanguageDefinition.mCaseSensitive)
 						std::transform(id.begin(), id.end(), id.begin(), ::toupper);
 
-					if (!line[first - bufferBegin].mPreprocessor) {
-						if (mLanguageDefinition.mKeywords.count(id) != 0)
-							token_color = PaletteIndex::Keyword;
-						else if (mLanguageDefinition.mIdentifiers.count(id) != 0)
-							token_color = PaletteIndex::KnownIdentifier;
-						else if (mLanguageDefinition.mPreprocIdentifiers.count(id) != 0)
-							token_color = PaletteIndex::PreprocIdentifier;
-					} else {
-						if (mLanguageDefinition.mPreprocIdentifiers.count(id) != 0)
-							token_color = PaletteIndex::PreprocIdentifier;
-					}
+					if (mLanguageDefinition.mKeywords.count(id) != 0)
+						token_color = ColorSchemeIdx::Keyword;
+					else if (mLanguageDefinition.mIdentifiers.count(id) != 0)
+						token_color = ColorSchemeIdx::KnownIdentifier;
+					else if (mLanguageDefinition.mPreprocIdentifiers.count(id) != 0)
+						token_color = ColorSchemeIdx::PreprocIdentifier;
 				}
 
 				for (size_t j = 0; j < token_length; ++j) line[(token_begin - bufferBegin) + j].mColorIndex = token_color;
@@ -1025,125 +1261,6 @@ void Editor::ColorizeRange(int aFromLine, int aToLine)
 				first = token_end;
 			}
 		}
-	}
-}
-
-void Editor::ColorizeInternal()
-{
-	if (mLines.empty())
-		return;
-
-	if (mCheckComments) {
-		auto endLine = mLines.size();
-		auto endIndex = 0;
-		auto commentStartLine = endLine;
-		auto commentStartIndex = endIndex;
-		auto withinString = false;
-		auto withinSingleLineComment = false;
-		auto withinPreproc = false;
-		auto firstChar = true;    // there is no other non-whitespace characters in the line before
-		auto concatenate = false; // '\' on the very end of the line
-		auto currentLine = 0;
-		auto currentIndex = 0;
-		while (currentLine < endLine || currentIndex < endIndex) {
-			auto& line = mLines[currentLine];
-
-			if (currentIndex == 0 && !concatenate) {
-				withinSingleLineComment = false;
-				withinPreproc = false;
-				firstChar = true;
-			}
-
-			concatenate = false;
-
-			if (!line.empty()) {
-				auto& g = line[currentIndex];
-				auto c = g.mChar;
-
-				if (c != mLanguageDefinition.mPreprocChar && !std::isspace(c))
-					firstChar = false;
-
-				if (currentIndex == (int)line.size() - 1 && line[line.size() - 1].mChar == '\\')
-					concatenate = true;
-
-				bool inComment = (commentStartLine < currentLine || (commentStartLine == currentLine && commentStartIndex <= currentIndex));
-
-				if (withinString) {
-					line[currentIndex].mMultiLineComment = inComment;
-
-					if (c == '\"') {
-						if (currentIndex + 1 < (int)line.size() && line[currentIndex + 1].mChar == '\"') {
-							currentIndex += 1;
-							if (currentIndex < (int)line.size())
-								line[currentIndex].mMultiLineComment = inComment;
-						} else
-							withinString = false;
-					} else if (c == '\\') {
-						currentIndex += 1;
-						if (currentIndex < (int)line.size())
-							line[currentIndex].mMultiLineComment = inComment;
-					}
-				} else {
-					if (firstChar && c == mLanguageDefinition.mPreprocChar)
-						withinPreproc = true;
-
-					if (c == '\"') {
-						withinString = true;
-						line[currentIndex].mMultiLineComment = inComment;
-					} else {
-						auto pred = [](const char& a, const Glyph& b) { return a == b.mChar; };
-						auto from = line.begin() + currentIndex;
-						auto& startStr = mLanguageDefinition.mCommentStart;
-						auto& singleStartStr = mLanguageDefinition.mSingleLineComment;
-
-						if (singleStartStr.size() > 0 && currentIndex + singleStartStr.size() <= line.size() &&
-						    equals(singleStartStr.begin(), singleStartStr.end(), from, from + singleStartStr.size(), pred)) {
-							withinSingleLineComment = true;
-						} else if (!withinSingleLineComment && currentIndex + startStr.size() <= line.size() &&
-						           equals(startStr.begin(), startStr.end(), from, from + startStr.size(), pred)) {
-							commentStartLine = currentLine;
-							commentStartIndex = currentIndex;
-						}
-
-						inComment = inComment =
-						    (commentStartLine < currentLine || (commentStartLine == currentLine && commentStartIndex <= currentIndex));
-
-						line[currentIndex].mMultiLineComment = inComment;
-						line[currentIndex].mComment = withinSingleLineComment;
-
-						auto& endStr = mLanguageDefinition.mCommentEnd;
-						if (currentIndex + 1 >= (int)endStr.size() &&
-						    equals(endStr.begin(), endStr.end(), from + 1 - endStr.size(), from + 1, pred)) {
-							commentStartIndex = endIndex;
-							commentStartLine = endLine;
-						}
-					}
-				}
-				line[currentIndex].mPreprocessor = withinPreproc;
-				currentIndex += UTF8CharLength(c);
-				if (currentIndex >= (int)line.size()) {
-					currentIndex = 0;
-					++currentLine;
-				}
-			} else {
-				currentIndex = 0;
-				++currentLine;
-			}
-		}
-		mCheckComments = false;
-	}
-
-	if (mColorRangeMin < mColorRangeMax) {
-		const int increment = (mLanguageDefinition.mTokenize == nullptr) ? 10 : 10000;
-		const int to = std::min(mColorRangeMin + increment, mColorRangeMax);
-		ColorizeRange(mColorRangeMin, to);
-		mColorRangeMin = to;
-
-		if (mColorRangeMax == mColorRangeMin) {
-			mColorRangeMin = std::numeric_limits<int>::max();
-			mColorRangeMax = 0;
-		}
-		return;
 	}
 }
 
@@ -1712,7 +1829,7 @@ int Editor::InsertTextAt(Coordinates& aWhere, const char* aValue)
 		} else {
 			auto& line = mLines[aWhere.mLine];
 			auto d = UTF8CharLength(*aValue);
-			while (d-- > 0 && *aValue != '\0') line.insert(line.begin() + cindex++, Glyph(*aValue++, PaletteIndex::Default));
+			while (d-- > 0 && *aValue != '\0') line.insert(line.begin() + cindex++, Glyph(*aValue++, ColorSchemeIdx::Default));
 			++aWhere.mColumn;
 		}
 
