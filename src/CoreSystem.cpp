@@ -167,8 +167,6 @@ void CoreSystem::Render()
 	ImGui::Begin("Container", nullptr, window_flags | ImGuiWindowFlags_NoResize);
 	ImGui::PopStyleVar(3);
 
-	static Terminal terminal;
-
 
 	if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
 		ImGuiID dockspace_id = ImGui::GetID("DDockSpace");
@@ -230,7 +228,7 @@ void CoreSystem::Render()
 	if (Get().mFileNavigation.IsOpen())
 		Get().mFileNavigation.Render();
 	Get().mTextEditor.Render();
-	terminal.Render();
+	Get().mTerminal.Render();
 	StatusBarManager::Render(size, viewport);
 }
 

@@ -1,3 +1,4 @@
+#pragma once
 #include "Coordinates.h"
 #include "DataTypes.h"
 #include "imgui_internal.h"

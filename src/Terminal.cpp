@@ -96,7 +96,7 @@ void Terminal::Render()
 
 
 	if ((glfwGetTime() - mPrevTime > 0.1f) && mIsCommandRunning) {
-		GL_INFO("COMPLETED");
+		GL_INFO("Command Running Completed");
 		mIsCommandRunning = false;
 		mReadOnlyCoords = GetCommandInsertPosition();
 	}
@@ -117,12 +117,13 @@ void Terminal::ShellReader()
 {
 	static std::string buffer;
 	while (mReaderThreadIsRunning) {
+		GL_INFO("Thread Running");
 		buffer = mConPTY.ReadOutput();
 		if (!buffer.empty()) {
 			mBuffer += RemoveANSISequences(buffer);
 			if (!mBuffer.empty() && mBuffer.back() == '\x07')
 				mBuffer.pop_back();
-			std::lock_guard<std::mutex> lock(mOutputMutex);
+			// std::lock_guard<std::mutex> lock(mOutputMutex);
 			// mDisplayBuffer=mBuffer;
 			GL_WARN(mBuffer);
 			this->AppendText(mBuffer);
@@ -139,8 +140,20 @@ void Terminal::ShellReader()
 
 void Terminal::CloseShell()
 {
+	std::string cmd="exit";
 	mReaderThreadIsRunning = false;
-	mConPTY.CloseShell();
+	mConPTY.WriteInput(cmd);
+    // Wait for the reader thread to finish
+    if (mReaderThread.valid()) {
+        try {
+            mReaderThread.get(); // Wait for the thread to complete
+        } catch (const std::exception& e) {
+            GL_ERROR("Terminal::CloseShell: Exception while joining thread: {}", e.what());
+        }
+    }
+
+    // Cleanup the ConPTY instance
+    mConPTY.CloseShell();
 }
 
 void Terminal::RunCommand(std::string& command)

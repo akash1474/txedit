@@ -6,17 +6,16 @@
 #include "string"
 #include "tree_sitter/api.h"
 #include "vector"
+#include <cstdint>
 #include <map>
 #include <regex>
 #include <stdint.h>
-#include <tuple>
 #include <array>
 #include <unordered_map>
 #include <unordered_set>
 
 
 #include "Animation.h"
-#include "Lexer.h"
 #include "UndoManager.h"
 
 
@@ -79,40 +78,40 @@ public:
 		mGruvboxPalletDark[(size_t)Pallet::AquaDark] = ImColor(104, 157, 106, 255);    // 237
 	}
 
-enum class PaletteIndex {
-    BG,         // 0
-    RED,        // 1
-    GREEN,      // 2
-    YELLOW,     // 3
-    BLUE,       // 4
-    PURPLE,     // 5
-    AQUA,       // 6
-    GRAY,       // 7
-    BG0_H,      // 8
-    BG0,        // 9
-    BG0_S,      // 10
-    BG1,        // 11
-    BG2,        // 12
-    BG3,        // 13
-    BG4,        // 14
-    FG,         // 15
-    FG0,        // 16
-    FG1,        // 17
-    FG2,        // 18
-    FG3,        // 19
-    FG4,        // 20
-    ORANGE,     // 21
-    LIGHT_RED,  // 22
-    LIGHT_GREEN,// 23
-    LIGHT_BLUE, // 24
-    LIGHT_PURPLE,// 25
-    LIGHT_YELLOW,// 26
-    LIGHT_AQUA, // 27
-    BRIGHT_ORANGE,// 28
-    FG_HIGHLIGHT, // 29
-    FG_DARK,      // 30
-    Max         // Total number of colors
-};
+	enum class PaletteIndex {
+	    BG,         // 0
+	    RED,        // 1
+	    GREEN,      // 2
+	    YELLOW,     // 3
+	    BLUE,       // 4
+	    PURPLE,     // 5
+	    AQUA,       // 6
+	    GRAY,       // 7
+	    BG0_H,      // 8
+	    BG0,        // 9
+	    BG0_S,      // 10
+	    BG1,        // 11
+	    BG2,        // 12
+	    BG3,        // 13
+	    BG4,        // 14
+	    FG,         // 15
+	    FG0,        // 16
+	    FG1,        // 17
+	    FG2,        // 18
+	    FG3,        // 19
+	    FG4,        // 20
+	    ORANGE,     // 21
+	    LIGHT_RED,  // 22
+	    LIGHT_GREEN,// 23
+	    LIGHT_BLUE, // 24
+	    LIGHT_PURPLE,// 25
+	    LIGHT_YELLOW,// 26
+	    LIGHT_AQUA, // 27
+	    BRIGHT_ORANGE,// 28
+	    FG_HIGHLIGHT, // 29
+	    FG_DARK,      // 30
+	    Max         // Total number of colors
+	};
 
 	enum class ColorSchemeIdx
 	{
@@ -196,10 +195,32 @@ enum class PaletteIndex {
 
 	enum class SelectionMode { Normal, Word, Line };
 
-	void UpdateSyntaxHighlighting(const std::string &sourceCode);
-	ColorSchemeIdx GetColorSchemeIndexForNode(const std::string &type);
-	void TraverseTreeAndHighlight(TSNode node, const std::string &sourceCode);
 
+	//TreeSitter Experimental
+	TSParser* mParser=nullptr;
+	TSTree* mTree=nullptr;
+	TSQuery* mQuery=nullptr;
+	TSQueryCursor* mCursor=nullptr;
+
+	std::vector<uint32_t> mLineOffset;
+
+	TSInputEdit mTSInputEdit;
+	void DisplayNearByText();
+	void TSInputEditStart(int aLine,int aLineCount);
+	void TSInputEditEnd(int aLine,int aLineCount);
+	void UpdateTree();
+	std::string GetFullText();
+
+	void ApplySyntaxHighlighting(const std::string &sourceCode);
+	ColorSchemeIdx GetColorSchemeIndexForNode(const std::string &type);
+
+	uint32_t GetLineLengthInBytes(int aLineIdx);
+	uint32_t GetBufferOffset(const Coordinates& aCoords);
+	void PrintTree(const TSNode &node, const std::string &source_code,std::string& output, int indent = 0);
+
+	//Backup Option
+	std::string GetNearbyLinesString(int aLineCount=3);
+	void UpdateSyntaxHighlighting(const std::string &sourceCode);
 
 private:
 	bool mCheckComments;
@@ -229,7 +250,6 @@ private:
 
 
 	bool isFileLoaded = false;
-	Lexer lex;
 
 
 
@@ -428,13 +448,7 @@ public:
 		
 	};
 
-	//TreeSitter Experimental
-	TSParser* mParser=nullptr;
-	TSTree* mTree=nullptr;
-	TSQuery* mQuery=nullptr;
-	TSQueryCursor* mCursor=nullptr;
 
-	void InitTreeSitter();
 
 	Editor();
 	~Editor();

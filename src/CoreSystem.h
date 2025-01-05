@@ -7,6 +7,7 @@
 #include "FileNavigation.h"
 #include "StatusBarManager.h"
 #include "filesystem"
+#include "Terminal.h"
 
 
 class CoreSystem{
@@ -14,6 +15,7 @@ class CoreSystem{
 	GLFWwindow* mWindow{0};
 	Editor mTextEditor;
 	FileNavigation mFileNavigation;
+	Terminal mTerminal;
 
 public:
 	CoreSystem(const CoreSystem&)=delete;

@@ -1,11 +1,15 @@
 #include "DataTypes.h"
+#include "Timer.h"
 #include "pch.h"
 #include "Coordinates.h"
 #include "Log.h"
 #include "UndoManager.h"
 #include "imgui.h"
 #include "TextEditor.h"
+#include "tree_sitter/api.h"
 #include <algorithm>
+#include <cstdint>
+#include <sstream>
 #include <unordered_map>
 #include <winnt.h>
 
@@ -312,16 +316,210 @@ char getClosingBracketFor(char x)
 	return x;
 }
 
+uint32_t Editor::GetBufferOffset(const Coordinates& aCoords){
+	uint32_t lineOffset=mLineOffset[aCoords.mLine];
+	int col=aCoords.mColumn;
+	for(const Glyph& glyph:mLines[aCoords.mLine]){
+		lineOffset++;
+		if(glyph.mChar=='\t') col-=mTabSize;
+		else col--;
+		if(col<=0) break;
+	}
+
+	return lineOffset;
+}
+
+static const char* ReadCallback(void* payload, uint32_t byte_offset, TSPoint position, uint32_t* bytes_read) {
+    std::string* text = static_cast<std::string*>(payload);
+    if (!text || byte_offset >= text->size()) {
+        *bytes_read = 0;
+        return nullptr;
+    }
+    *bytes_read = text->size() - byte_offset;
+    return text->c_str() + byte_offset;
+}
+
+//Take around 2ms at max
+std::string Editor::GetFullText() {
+	OpenGL::ScopedTimer timer("GetFullText");
+    std::string bufferContent;
+
+    size_t totalSize = 0;
+    for (const auto& line : mLines) {
+        totalSize += line.size() + 1;  // +1 for newline
+    }
+    
+    bufferContent.clear();
+    bufferContent.reserve(totalSize);
+    
+    for (size_t i = 0; i < mLines.size(); i++) {
+        for (const auto& glyph : mLines[i]) {
+            bufferContent += (char)glyph.mChar;
+        }
+        if (i < mLines.size() - 1) {
+            bufferContent += '\n';
+        }
+    }
+    return bufferContent;
+}
+
+void Editor::DisplayNearByText(){
+
+	std::string buffer=GetNearbyLinesString(1);
+
+    TSTree* tree = ts_parser_parse_string(mParser, nullptr, buffer.c_str(), buffer.size());
+	TSNode node=ts_tree_root_node(tree);
+
+	std::string output;
+	PrintTree(node,buffer,output);
+
+	ImGui::Begin("Debug NearBy Text");
+	ImGui::TextUnformatted(buffer.c_str());
+	ImGui::Separator();
+	ImGui::TextUnformatted(output.c_str());
+	ImGui::End();
+}
+
+void Editor::UpdateTree(){
+	OpenGL::ScopedTimer timer("UpdateTree");
+	GL_INFO("start:{} end:{}",mTSInputEdit.start_byte,mTSInputEdit.new_end_byte);
+
+	// TSInputEdit edit;
+    // edit.start_byte = aStartOffset;
+    // edit.old_end_byte = aStartOffset;
+    // edit.new_end_byte = aEndOffset;
+
+    // uint32_t row=mState.mCursorPosition.mLine;
+
+    // edit.start_point={row,aStartOffset};
+    // edit.old_end_point={row,aStartOffset};
+    // edit.new_end_point={row,aEndOffset};
+
+	GL_INFO("\nTSInputEdit:\n\tBytes:{},{},{}\n\tstart({},{}),newEnd({},{})",mTSInputEdit.start_byte,mTSInputEdit.old_end_byte,mTSInputEdit.new_end_byte,mTSInputEdit.start_point.row,mTSInputEdit.start_point.column,mTSInputEdit.new_end_point.row,mTSInputEdit.new_end_point.column);
+
+    // Apply the edit to the existing tree
+    ts_tree_edit(mTree, &mTSInputEdit);
+
+   	std::string fullText=GetFullText(); 
+    // Reparse the updated text to get the new tree
+    TSInput input;
+    input.payload = (void *)&fullText;
+    input.read = ReadCallback;  // Function to provide text for Treesitter
+    input.encoding = TSInputEncodingUTF8;
+
+    if(!mParser || !mTree) return;
+    ts_parser_set_timeout_micros(mParser, 5000);
+    TSTree *new_tree = ts_parser_parse(mParser, mTree, input);
+    if (!new_tree) return;
+
+
+	// Get changed ranges
+    uint32_t range_count;
+    TSRange* changed_ranges = ts_tree_get_changed_ranges(mTree, new_tree, &range_count);
+    GL_INFO("Range Count:{}",range_count);
+
+    // Only update highlighting for changed ranges
+    if (changed_ranges && range_count > 0) {
+        for (uint32_t i = 0; i < range_count; i++) {
+            TSRange range = changed_ranges[i];
+            GL_INFO("Range:({},{}) -> ({},{})",range.start_point.row,range.start_point.column,range.end_point.row,range.end_point.column);
+            ts_query_cursor_set_byte_range(mCursor, range.start_byte, range.end_byte);
+            ts_query_cursor_exec(mCursor, mQuery, ts_tree_root_node(new_tree));
+
+
+            TSQueryMatch match;
+            while (ts_query_cursor_next_match(mCursor, &match)) {
+				for (unsigned int i = 0; i < match.capture_count; ++i) {
+					TSQueryCapture capture = match.captures[i];
+					TSNode node = capture.node;
+
+				    const char *nodeType = ts_node_type(node);
+				    unsigned int length;
+				    const char *captureName = ts_query_capture_name_for_id(mQuery, capture.index, &length);
+
+				    TSPoint startPoint = ts_node_start_point(node);
+				    TSPoint endPoint = ts_node_end_point(node);
+				    endPoint.column--;
+
+				    ColorSchemeIdx colorIndex = GetColorSchemeIndexForNode(captureName);
+
+				    for (unsigned int row = startPoint.row; row <= endPoint.row; ++row)
+				    {
+				        for (unsigned int column = (row == startPoint.row ? startPoint.column : 0);
+				             column < mLines[row].size() && (row < endPoint.row || column <= endPoint.column); ++column)
+				        {
+				            mLines[row][column].mColorIndex = colorIndex;
+				        }
+				    }
+				}
+            }
+        }
+    }
+
+
+    free(changed_ranges);
+    ts_tree_delete(mTree);
+    mTree = new_tree;
+}
+
+uint32_t Editor::GetLineLengthInBytes(int aLineIdx){
+	return mLines[aLineIdx].size();
+}
+
+void Editor::TSInputEditStart(int aLine,int aLineCount){
+	uint32_t lBefore=0;
+	uint32_t startOffset=mLineOffset[aLine];
+
+	int end=aLine+aLineCount-1;
+	for(int i=aLine;i<=end;i++)
+		lBefore+=GetLineLengthInBytes(i);
+
+	uint32_t oldEnd=startOffset+lBefore;
+
+    mTSInputEdit.start_byte = startOffset;
+    mTSInputEdit.old_end_byte = oldEnd;
+
+    uint32_t row=aLine;
+
+    mTSInputEdit.start_point={row,0};
+    mTSInputEdit.old_end_point={row,GetLineLengthInBytes(row)};
+
+}
+void Editor::TSInputEditEnd(int aLine,int aLineCount){
+	uint32_t lAfter=0;
+	uint32_t start=mLineOffset[aLine];
+	int end=aLine+aLineCount-1;
+	for(int i=aLine;i<=end;i++)
+		lAfter+=GetLineLengthInBytes(i);
+
+	uint32_t newEnd=start+lAfter;
+
+    mTSInputEdit.new_end_byte = newEnd;
+
+    uint32_t row=end;
+    mTSInputEdit.new_end_point={row,GetLineLengthInBytes(row)};
+}
+
+
 void Editor::InsertCharacter(char chr){
 	uint8_t aChar=chr;
 	Coordinates& coord=mState.mCursorPosition;
 
-	char buf[7];
-	int e = ImTextCharToUtf8(buf,7, aChar);
+	char buff[7];
+	int e = ImTextCharToUtf8(buff,7, aChar);
+
+	// int startLine=coord.mLine;
+	// mTSInputEdit.start_byte=GetBufferOffset(mState.mCursorPosition);
+	// mTSInputEdit.old_end_byte=mTSInputEdit.start_byte;
+
+	// uint32_t col=mTSInputEdit.start_byte-mLineOffset[startLine];
+	// mTSInputEdit.start_point={(uint32_t)startLine,col};
+	// mTSInputEdit.old_end_point={(uint32_t)startLine,col};
+	// TSInputEditStart(startLine,1);
 
 	if (e > 0)
 	{
-		buf[e] = '\0';
+		buff[e] = '\0';
 		auto& line = mLines[coord.mLine];
 		auto cindex = GetCharacterIndex(coord);
 
@@ -333,17 +531,44 @@ void Editor::InsertCharacter(char chr){
 		// 	// u.mRemovedEnd = Coordinates(coord.mLine, GetCharacterColumn(coord.mLine, cindex + d));
 		// }
 
-		for (auto p = buf; *p != '\0'; p++, ++cindex)
+		for (auto p = buff; *p != '\0'; p++, ++cindex)
 			line.insert(line.begin() + cindex, Glyph(*p, ColorSchemeIdx::Default));
-		// u.mAdded = buf;
+		// u.mAdded = buff;
 
 		mState.mCursorPosition.mColumn++;
 		mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition;
 	}
 
+	// TSInputEditEnd(startLine,1);
+	// mTSInputEdit.new_end_byte=GetBufferOffset(mState.mCursorPosition);
+	// col=mTSInputEdit.new_end_byte-mLineOffset[startLine];
+	// mTSInputEdit.new_end_point={(uint32_t)startLine,col};
 
-	Colorize(mState.mCursorPosition.mLine - 1, 3);
-	EnsureCursorVisible();
+	// uint32_t lAfter=GetLineLengthInBytes(mState.mCursorPosition);
+	// int diff=lAfter-lBefore;
+	// uint32_t start=mLineOffset[mState.mCursorPosition.mLine];
+	// uint32_t newEnd=start+lAfter;
+	// uint32_t oldEnd=start+lBefore;
+
+	// TSInputEdit edit;
+    // edit.start_byte = start;
+    // edit.old_end_byte = oldEnd;
+    // edit.new_end_byte = newEnd;
+
+    // uint32_t row=mState.mCursorPosition.mLine;
+
+    // edit.start_point={row,0};
+    // edit.old_end_point={row,lBefore};
+    // edit.new_end_point={row,lAfter};
+    // int diff=mTSInputEdit.new_end_byte-mTSInputEdit.old_end_byte;
+	// UpdateTree();
+
+	// for(int i=mState.mCursorPosition.mLine+1;i<mLineOffset.size();i++){
+	// 	mLineOffset[i]+=diff;
+	// }
+	// EnsureCursorVisible();
+	std::string lineBuffer=GetNearbyLinesString(10);
+	UpdateSyntaxHighlighting(lineBuffer);
 }
 
 // Function to insert a character at a specific position in a line
@@ -609,6 +834,8 @@ void Editor::InsertCharacter(char chr){
 void Editor::InsertLineBreak(){
 	GL_INFO("InsertLineBreak");
 	Coordinates& coord=mState.mCursorPosition;
+
+
 	InsertLine(coord.mLine + 1);
 	auto& line = mLines[coord.mLine];
 	auto& newLine = mLines[coord.mLine + 1];
@@ -624,6 +851,7 @@ void Editor::InsertLineBreak(){
 	line.erase(line.begin() + cindex, line.begin() + line.size());
 
 	SetCursorPosition(Coordinates(coord.mLine + 1, GetCharacterColumn(coord.mLine + 1, idx)));
+
 }
 
 
@@ -668,6 +896,7 @@ void Editor::DeleteCharacter(EditorState& cursor, int cidx)
 				Colorize(mState.mCursorPosition.mLine, 1);
 				return;
 			}
+			int len=UTF8CharLength(line[cindex].mChar);
 			auto cend = cindex + 1;
 			while (cindex > 0 && IsUTFSequence(line[cindex].mChar))
 				--cindex;
@@ -681,6 +910,9 @@ void Editor::DeleteCharacter(EditorState& cursor, int cidx)
 			{
 				line.erase(line.begin() + cindex);
 			}
+			// uint32_t end=GetBufferOffset(mState.mCursorPosition);
+			// uint32_t start=end + len;
+			// UpdateTree(start, end);
 		}
 
 		mTextChanged = true;

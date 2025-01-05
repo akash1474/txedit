@@ -40,6 +40,7 @@ bool equals(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2, Bi
 		if (!p(*first1, *first2))
 			return false;
 	}
+
 	return first1 == last1 && first2 == last2;
 }
 
@@ -530,6 +531,7 @@ bool Editor::Draw()
 		}
 
 
+		//Rendering Cursor
 		if (ImGui::IsWindowFocused() && start==mState.mCursorPosition.mLine) {
 			float cx = TextDistanceFromLineStart(mState.mCursorPosition);
 
@@ -638,6 +640,7 @@ bool Editor::Draw()
 	HandleKeyboardInputs();
 	HandleMouseInputs();
 
+	DisplayNearByText();
 	return true;
 }
 
@@ -646,114 +649,6 @@ bool Editor::Draw()
 // 	if(mBracketsCoordinates.hasMatched) 
 // 		mBracketsCoordinates.coords=pos;
 // }
-
-
-
-void Editor::InitTreeSitter(){
-	OpenGL::ScopedTimer timer("TreeSitter Parsing");
-	mParser = ts_parser_new();
-	ts_parser_set_language(mParser, tree_sitter_cpp());
-
-	mTree = ts_parser_parse_string(mParser, nullptr, mFileContents.data(), mFileContents.size());
-
-	std::string query_string = R"((type_identifier) @type 
-    							(comment) @comment 
-    							(string_literal) @string 
-    							(primitive_type) @keyword 
-    							(function_declarator declarator:(_) @function) 
-    							(namespace_identifier) @namespace)";
-
-	// Define a simple query to match syntax elements
-	uint32_t error_offset;
-	TSQueryError error_type;
-	mQuery = ts_query_new(tree_sitter_cpp(), query_string.c_str(), query_string.size(), &error_offset, &error_type);
-
-	// Check if the query was successfully created
-	if (!mQuery) {
-		GL_ERROR("Error creating query at offset {}, error type: {}", error_offset, error_type);
-		ts_tree_delete(mTree);
-		ts_parser_delete(mParser);
-		return;
-	}
-
-	mCursor = ts_query_cursor_new();
-	ts_query_cursor_exec(mCursor, mQuery, ts_tree_root_node(mTree));
-
-
-	// 4. Styles for each syntax type
-	std::unordered_map<std::string, int> syntax_styles = {{"function", 1}, // Green for functions
-	                                                      {"type", 2},    // Blue for types
-	                                                      {"comment", 3}, // Grey for comments
-	                                                      {"string", 4},  // Yellow for strings
-	                                                      {"keyword", 5}, // Red for keywords
-	                                                      {"namespace", 6}};
-
-	GL_INFO("File Parsed");
-
-	struct Highlight{
-		size_t startByte;
-		size_t endByte;
-		std::string type;
-		Highlight(size_t s,size_t e,std::string t):startByte(s),endByte(e),type(t){}
-	};
-	std::vector<Highlight> highlights;
-
-	TSQueryMatch match;
-	unsigned long cursor_position = 0;
-	while (ts_query_cursor_next_match(mCursor, &match)) {
-		for (unsigned int i = 0; i < match.capture_count; ++i) {
-			TSQueryCapture capture = match.captures[i];
-			TSPoint point=ts_node_start_point(capture.node);
-			// if(point.row< start || point.row > end) continue;
-			uint32_t len;
-			std::string capture_name = ts_query_capture_name_for_id(mQuery, capture.index, &len);
-			TSNode node = capture.node;
-
-			// Extract the start and end byte positions of the node
-			uint32_t start_byte = ts_node_start_byte(node);
-			uint32_t end_byte = ts_node_end_byte(node);
-			std::string text=mFileContents.substr(cursor_position,start_byte-cursor_position);
-
-			highlights.emplace_back(start_byte,end_byte,capture_name);
-			// Update cursor position
-			cursor_position = end_byte;
-		}
-	}
-
-	// for(Highlight& highlight:highlights){
-	// 	GL_INFO("{}:{}",highlight.type,mFileContents.substr(highlight.startByte,highlight.endByte-highlight.startByte));
-	// }
-}
-
-
-// std::array<Coordinates,2> Editor::GetMatchingBracketsCoordinates(){
-// 	OpenGL::ScopedTimer timer("BracketMatching");
-// 	std::array<Coordinates,2> coords;
-// 	bool hasBracketsMatched=true;
-// 	mBracketsCoordinates.hasMatched=false;
-// 	GL_INFO("CHAR:{}",mLines[mState.mCursorPosition.mLine][GetCharacterIndex(mState.mCursorPosition)]);
-
-// 	// const Coordinates cStart=FindMatchingBracket(mState.mCursorPosition, false);
-// 	const Coordinates cStart=FindStartBracket(mState.mCursorPosition);
-// 	if(cStart.mLine==INT_MAX) hasBracketsMatched=false;
-// 	if(!hasBracketsMatched) return coords;
-// 	coords[0]=cStart;
-// 	GL_INFO("BracketMatch Start:[{},{}]",coords[0].mLine,coords[0].mColumn);
-
-// 	// const Coordinates cEnd=FindMatchingBracket(mState.mCursorPosition, true);
-// 	const Coordinates cEnd=FindEndBracket(mState.mCursorPosition);
-// 	if(cStart.mLine==INT_MAX) hasBracketsMatched=false;
-// 	if(cEnd.mLine==INT_MAX) hasBracketsMatched=false;
-
-// 	if(hasBracketsMatched){
-// 		coords[1]=cEnd;
-// 		mBracketsCoordinates.hasMatched=true;
-// 		GL_INFO("BracketMatch End:[{},{}]",coords[1].mLine,coords[1].mColumn);
-// 	}
-
-// 	return coords;
-// }
-
 
 
 int IsBracket(const char x){
@@ -890,16 +785,17 @@ Editor::ColorSchemeIdx Editor::GetColorSchemeIndexForNode(const std::string &typ
 
 
 // Function to update Glyphs using Tree-sitter
-void Editor::UpdateSyntaxHighlighting(const std::string &sourceCode)
+void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 {
-	OpenGL::ScopedTimer timer("UpdateSyntaxHighlighting");
+	OpenGL::ScopedTimer timer("ApplySyntaxHighlighting");
 	// Initialize Tree-sitter parser
-    TSParser *parser = ts_parser_new();
-    ts_parser_set_language(parser,tree_sitter_cpp());
-    TSTree *tree = ts_parser_parse_string(parser, nullptr, sourceCode.c_str(), sourceCode.size());
+    mParser = ts_parser_new();
+    ts_parser_set_language(mParser,tree_sitter_cpp());
+    mTree = ts_parser_parse_string(mParser, nullptr, sourceCode.c_str(), sourceCode.size());
 
 	static std::string query_string = R"(
-	[ "if" 
+	[   
+		"if" 
 		"else" 
 		"while" 
 		"do" 
@@ -911,6 +807,7 @@ void Editor::UpdateSyntaxHighlighting(const std::string &sourceCode)
 		"break" 
 		"continue"
 		"static"
+		"const"
 	] @keyword
 
 	(auto) @keyword
@@ -933,18 +830,19 @@ void Editor::UpdateSyntaxHighlighting(const std::string &sourceCode)
 	(function_declarator declarator:(_) @function) 
 	;(namespace_identifier) @namespace
 
+	;Preprocessor
 	(preproc_include (string_literal) @string)
 	(preproc_include (system_lib_string) @string)
 	(preproc_include) @keyword
+
     (preproc_def) @keyword
+    (preproc_def name:(identifier) @type.indentifier)
     (preproc_ifdef) @keyword
-    (preproc_ifdef
-    	(identifier) @scope_resolution) 
+    (preproc_ifdef name:(identifier) @type.indentifier)
     (preproc_else) @keyword
+    (preproc_directive) @keyword
 
 	"::" @scope_resolution
-	(assignment_expression
-		left:(identifier) @assignment)
 	; Keywords
 	[
 	  "try"
@@ -971,17 +869,12 @@ void Editor::UpdateSyntaxHighlighting(const std::string &sourceCode)
 	  "concept"
 	] @keyword
 
+	(access_specifier) @keyword
+
 	[
 	  "co_await"
 	  "co_yield"
 	  "co_return"
-	] @keyword
-
-	[
-	  "public"
-	  "private"
-	  "protected"
-	  "final"
 	] @keyword
 
 	[
@@ -1036,26 +929,26 @@ void Editor::UpdateSyntaxHighlighting(const std::string &sourceCode)
     OpenGL::Timer timerx;
 	uint32_t error_offset;
 	TSQueryError error_type;
-	TSQuery* query = ts_query_new(tree_sitter_cpp(), query_string.c_str(), query_string.size(), &error_offset, &error_type);
+	mQuery = ts_query_new(tree_sitter_cpp(), query_string.c_str(), query_string.size(), &error_offset, &error_type);
 
 	// Check if the query was successfully created
-	if (!query) {
+	if (!mQuery) {
 		GL_ERROR("Error creating query at offset {}, error type: {}", error_offset, error_type);
-		ts_tree_delete(tree);
-		ts_parser_delete(parser);
+		ts_tree_delete(mTree);
+		ts_parser_delete(mParser);
 		return;
 	}
-
-	TSQueryCursor* cursor = ts_query_cursor_new();
-	ts_query_cursor_exec(cursor, query, ts_tree_root_node(tree));
-    // GL_INFO("Duration:{}",timerx.ElapsedMillis());
     char buff[32];
     sprintf_s(buff,"%fms",timerx.ElapsedMillis());
     StatusBarManager::ShowNotification("Query Execution:", buff,StatusBarManager::NotificationType::Success);
 
+	mCursor = ts_query_cursor_new();
+	ts_query_cursor_exec(mCursor, mQuery, ts_tree_root_node(mTree));
+    // GL_INFO("Duration:{}",timerx.ElapsedMillis());
+
 	// 5. Highlight matching nodes
 	TSQueryMatch match;
-	while (ts_query_cursor_next_match(cursor, &match)) {
+	while (ts_query_cursor_next_match(mCursor, &match)) {
 		for (unsigned int i = 0; i < match.capture_count; ++i) {
 			TSQueryCapture capture = match.captures[i];
 			TSNode node = capture.node;
@@ -1063,7 +956,7 @@ void Editor::UpdateSyntaxHighlighting(const std::string &sourceCode)
 		    // Get the type of the current node
 		    const char *nodeType = ts_node_type(node);
 		    unsigned int length;
-		    const char *captureName = ts_query_capture_name_for_id(query, capture.index, &length);
+		    const char *captureName = ts_query_capture_name_for_id(mQuery, capture.index, &length);
 			// GL_INFO(match.captures[i].index);
 			// GL_INFO(captureName);
 		    // GL_INFO(nodeType);
@@ -1088,8 +981,8 @@ void Editor::UpdateSyntaxHighlighting(const std::string &sourceCode)
 	}
 
     // Get the start and end positions of the node
-    ts_tree_delete(tree);
-	ts_parser_delete(parser);
+    // ts_tree_delete(mTree);
+	// ts_parser_delete(mParser);
 }
 
 
@@ -1098,16 +991,21 @@ void Editor::SetBuffer(const std::string& text)
 	GL_INFO("Editor::SetBuffer");
 	mLines.clear();
 	mLines.emplace_back(Line());
+	mLineOffset.push_back(0);
 
-	for (auto chr : text) 
+	uint32_t offset=-1;
+	for (auto chr : text)
 	{
+		offset++;
 		if (chr == '\r')
 			continue;
 
-		if (chr == '\n')
+		if (chr == '\n'){
 			mLines.emplace_back(Line());
+			mLineOffset.push_back(offset+1);
+		}
 		else
-			mLines.back().emplace_back(Glyph(chr, ColorSchemeIdx::Default));
+			mLines.back().emplace_back(chr, ColorSchemeIdx::Default);
 	}
 
 	if (mLines.back().size() > 400)
@@ -1118,9 +1016,98 @@ void Editor::SetBuffer(const std::string& text)
 
 	GL_INFO("FILE INFO --> Lines:{}", mLines.size());
 	// mUndoManager.Clear();
-	UpdateSyntaxHighlighting(text);
+	ApplySyntaxHighlighting(text);
 	Colorize();
 
+}
+
+
+void Editor::PrintTree(const TSNode &node, const std::string &source_code,std::string& output, int indent){
+    // Create indentation for structured formatting
+    std::string indent_space(indent * 2, ' ');
+
+    // Get the type of the node and its text range
+    const char *node_type = ts_node_type(node);
+    uint32_t start_byte = ts_node_start_byte(node);
+    uint32_t end_byte = ts_node_end_byte(node);
+
+    // Extract text for the node from the source code
+    std::string node_text = source_code.substr(start_byte, end_byte - start_byte);
+
+    std::ostringstream oss;
+    // Print the node information
+    oss << indent_space << node_type << " [" << start_byte << ":" << end_byte
+              << "]\n";
+    // ImGui::Text("%s", oss.str().c_str());
+    output+=oss.str();
+    // Recursively print child nodes
+    uint32_t child_count = ts_node_child_count(node);
+    for (uint32_t i = 0; i < child_count; i++) {
+        PrintTree(ts_node_child(node, i), source_code,output, indent + 1);
+    }
+}
+
+
+std::string Editor::GetNearbyLinesString(int aLineCount) {
+    std::string result;
+
+    // Determine the range of lines to include
+    int currentLine = mState.mCursorPosition.mLine;
+    int startLine = std::max(0, currentLine - aLineCount);                       // One line above (if it exists)
+    int endLine = std::min((int)mLines.size() - 1, currentLine + aLineCount);   // One line below (if it exists)
+
+    // Concatenate the lines within the range
+    for (int lineIndex = startLine; lineIndex <= endLine; ++lineIndex) {
+        for (const Glyph& glyph : mLines[lineIndex]) {
+            result += (char)glyph.mChar;
+        }
+        result += '\n';
+    }
+
+    return result;
+}
+
+void Editor::UpdateSyntaxHighlighting(const std::string &sourceCode)
+{
+	OpenGL::ScopedTimer timer("UpdateSyntaxHighlighting");
+    TSTree* tree = ts_parser_parse_string(mParser, nullptr, sourceCode.c_str(), sourceCode.size());
+
+	mCursor = ts_query_cursor_new();
+	ts_query_cursor_exec(mCursor, mQuery, ts_tree_root_node(tree));
+    // GL_INFO("Duration:{}",timerx.ElapsedMillis());
+
+	// 5. Highlight matching nodes
+	TSQueryMatch match;
+	while (ts_query_cursor_next_match(mCursor, &match)) {
+		for (unsigned int i = 0; i < match.capture_count; ++i) {
+			TSQueryCapture capture = match.captures[i];
+			TSNode node = capture.node;
+
+		    // Get the type of the current node
+		    const char *nodeType = ts_node_type(node);
+		    unsigned int length;
+		    const char *captureName = ts_query_capture_name_for_id(mQuery, capture.index, &length);
+
+		    int startLine = std::max(0, mState.mCursorPosition.mLine-10);
+		    TSPoint startPoint = ts_node_start_point(node);
+		    startPoint.row+=startLine;
+		    TSPoint endPoint = ts_node_end_point(node);
+		    endPoint.row+=startLine;
+
+		    ColorSchemeIdx colorIndex = GetColorSchemeIndexForNode(captureName);
+            // GL_INFO("Range:({},{}) -> ({},{})",startPoint.row,startPoint.column,endPoint.row,endPoint.column);
+		    for (unsigned int row = startPoint.row; row <= endPoint.row; ++row)
+		    {
+		        for (unsigned int column = (row == startPoint.row ? startPoint.column : 0);
+		             column < mLines[row].size() && (row < endPoint.row || column < endPoint.column); ++column)
+		        {
+		            mLines[row][column].mColorIndex = colorIndex;
+		        }
+		    }
+		}
+	}
+    ts_tree_delete(tree);
+	// ts_parser_delete(mParser);
 }
 
 const Editor::Palette& Editor::GetGruvboxPalette()
@@ -1972,10 +1959,10 @@ void Editor::EnsureCursorVisible()
 	auto pos = mState.mCursorPosition;
 	// auto len = TextDistanceToLineStart(pos);
 
-	if (pos.mLine < top)
-		ImGui::SetScrollY(std::max(0.0f, (pos.mLine - 1) * mCharacterSize.y));
-	if (pos.mLine > bottom - 4)
-		ImGui::SetScrollY(std::max(0.0f, (pos.mLine + 4) * mCharacterSize.y - height));
+	// if (pos.mLine < top)
+	// 	ImGui::SetScrollY(std::max(0.0f, (pos.mLine - 1) * mCharacterSize.y));
+	// if (pos.mLine > bottom - 4)
+	// 	ImGui::SetScrollY(std::max(0.0f, (pos.mLine + 4) * mCharacterSize.y - height));
 	// if (len + mLineBarWidth+mPaddingLeft < left + 4)
 	// 	ImGui::SetScrollX(std::max(0.0f, len + mLineBarWidth+mPaddingLeft - 4));
 	// if (len + mLineBarWidth+mPaddingLeft > right - 4)
