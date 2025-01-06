@@ -1,37 +1,32 @@
+#include "pch.h"
 #include "Coordinates.h"
-#include "FontAwesome6.h"
-#include "Lexer.h"
 #include "Timer.h"
 #include "UndoManager.h"
 #include "imgui_internal.h"
-#include "pch.h"
 #include "TextEditor.h"
 
 #include <cassert>
+#include <chrono>
 #include <cstdint>
 #include <ctype.h>
 #include <filesystem>
 #include <ios>
-#include <iterator>
-#include <stack>
 #include <stdint.h>
 
 #include <cctype>
 #include <cmath>
-#include <future>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
+#include <thread>
+#include <utility>
 
-#include "GLFW/glfw3.h"
 #include "Log.h"
 #include "imgui.h"
 #include "StatusBarManager.h"
 #include "TabsManager.h"
 
 #include "tree_sitter/api.h"
-#include "tree_sitter/parser.h"
-
 
 template <class InputIt1, class InputIt2, class BinaryPredicate>
 bool equals(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2, BinaryPredicate p)
@@ -52,12 +47,6 @@ void Editor::SetPalette(const Palette & aValue)
 void Editor::SetLanguageDefinition(const LanguageDefinition & aLanguageDef)
 {
 	mLanguageDefinition = aLanguageDef;
-	mRegexList.clear();
-
-	// for (auto& r : mLanguageDefinition.mTokenRegexStrings)
-	// 	mRegexList.push_back(std::make_pair(std::regex(r.first, std::regex_constants::optimize), r.second));
-
-	Colorize();
 }
 
 const Editor::LanguageDefinition& Editor::LanguageDefinition::CPlusPlus()
@@ -75,10 +64,11 @@ Editor::Editor()
 	SetPalette(GetGruvboxPalette());
 	SetLanguageDefinition(LanguageDefinition::CPlusPlus());
 	mLines.push_back(Line());
-	// #undef IM_TABSIZE
-	// #define IM_TABSIZE mTabSize
+	workerThread_ = std::thread(&Editor::WorkerThread, this);
 }
-Editor::~Editor() {}
+Editor::~Editor() {
+	CloseDebounceThread();
+}
 
 void Editor::ResetState(){
 	mSearchState.reset();
@@ -448,16 +438,13 @@ bool Editor::Draw()
 	}
 
 
-	int start = (int)floor(scrollY / mLineHeight);
+	int start = std::min((int)mLines.size()-1,(int)floor(scrollY / mLineHeight));
 	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
 	int end = std::min(start+lineCount+1,(int)mLines.size());
 
-	// GL_INFO("Lines:{}-{}",start,end);
-	if (start >= mLines.size()) {
-		ImGui::SetScrollY(0);
-		start = 0;
-		end = std::min(start+lineCount+1,(int)mLines.size());
-	}
+	// if(start < (int)floor(scrollY / mLineHeight)){
+	// 	ImGui::SetScrollY(start*mLineHeight);
+	// }
 
 	int lineNo = 0;
 	int i_prev=0;
@@ -571,9 +558,6 @@ bool Editor::Draw()
 
 
 
-	start = (int)floor(scrollY / mLineHeight);
-	lineCount = (mEditorWindow->Size.y) / mLineHeight;
-	end = std::min(start+lineCount+1,(int)mLines.size());
 
 
 
@@ -623,6 +607,9 @@ bool Editor::Draw()
 		mEditorWindow->DrawList->AddRectFilledMultiColor(pos_start,{pos_start.x+10.0f,mEditorWindow->Size.y}, ImColor(19,21,21,130),ImColor(19,21,21,0),ImColor(19,21,21,0),ImColor(19,21,21,130));
 	}
 
+	start = std::min((int)mLines.size()-1, (int)floor(scrollY / mLineHeight));
+	lineCount = (mEditorWindow->Size.y) / mLineHeight;
+	end = std::min(start+lineCount+1,(int)mLines.size());
 
 	//Rendering Line Number
 	lineNo = 0;
@@ -640,7 +627,9 @@ bool Editor::Draw()
 	HandleKeyboardInputs();
 	HandleMouseInputs();
 
-	DisplayNearByText();
+#ifdef GL_DEBUG
+	DebugDisplayNearByText();
+#endif
 	return true;
 }
 
@@ -783,15 +772,60 @@ Editor::ColorSchemeIdx Editor::GetColorSchemeIndexForNode(const std::string &typ
         return Editor::ColorSchemeIdx::Default;
 }
 
+void Editor::ReparseEntireTree(){
+	std::string sourceCode=GetFullText();
+	ApplySyntaxHighlighting(sourceCode);
+	GL_WARN("Reparsing:{} Bytes",sourceCode.size());
+}
+
+
+void Editor::DebouncedReparse()
+{
+	{
+        std::lock_guard<std::mutex> lock(mutex_);
+        needsUpdate_ = true;
+    }
+    cv_.notify_one();
+}
+
+void Editor::WorkerThread() {
+    while (true) {
+        std::unique_lock<std::mutex> lock(mutex_);
+        
+        cv_.wait(lock, [this] { return needsUpdate_ || terminate_; });
+        
+        if (terminate_) {
+            break;
+        }
+        
+        // Reset the update flag before waiting
+        needsUpdate_ = false;
+        
+        // Release lock while waiting for debounce period
+        lock.unlock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        lock.lock();
+        
+        // Only process if no new updates came in during wait
+        if (!needsUpdate_) {
+            lock.unlock();
+            ReparseEntireTree();
+        }
+    }
+}
+
 
 // Function to update Glyphs using Tree-sitter
 void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 {
+	if(sourceCode.size() <2 ) return;
 	OpenGL::ScopedTimer timer("ApplySyntaxHighlighting");
 	// Initialize Tree-sitter parser
-    mParser = ts_parser_new();
-    ts_parser_set_language(mParser,tree_sitter_cpp());
-    mTree = ts_parser_parse_string(mParser, nullptr, sourceCode.c_str(), sourceCode.size());
+    TSParser* parser= ts_parser_new();
+    ts_parser_set_language(parser,tree_sitter_cpp());
+
+    if(mTree) ts_tree_delete(mTree);
+    mTree = ts_parser_parse_string(parser, nullptr, sourceCode.c_str(), sourceCode.size());
 
 	static std::string query_string = R"(
 	[   
@@ -821,8 +855,17 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 		argument:(identifier) @assignment)
 
 	(number_literal) @number
+	(true) @number
+	(false) @number
+	(auto) @type
+
+	; Constants
+	(this) @number
+	(null "nullptr" @number)
 
 	(type_identifier) @type.indentifier
+	(parameter_declaration
+		(identifier) @scope_resolution) 
 	(comment) @comment 
 	(string_literal) @string 
 	(raw_string_literal) @string
@@ -929,26 +972,27 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
     OpenGL::Timer timerx;
 	uint32_t error_offset;
 	TSQueryError error_type;
-	mQuery = ts_query_new(tree_sitter_cpp(), query_string.c_str(), query_string.size(), &error_offset, &error_type);
+	TSQuery* query = ts_query_new(tree_sitter_cpp(), query_string.c_str(), query_string.size(), &error_offset, &error_type);
+	if(!mQuery) mQuery=query;
 
 	// Check if the query was successfully created
-	if (!mQuery) {
+	if (!query) {
 		GL_ERROR("Error creating query at offset {}, error type: {}", error_offset, error_type);
 		ts_tree_delete(mTree);
-		ts_parser_delete(mParser);
+		ts_parser_delete(parser);
 		return;
 	}
     char buff[32];
     sprintf_s(buff,"%fms",timerx.ElapsedMillis());
     StatusBarManager::ShowNotification("Query Execution:", buff,StatusBarManager::NotificationType::Success);
 
-	mCursor = ts_query_cursor_new();
-	ts_query_cursor_exec(mCursor, mQuery, ts_tree_root_node(mTree));
+	TSQueryCursor* cursor = ts_query_cursor_new();
+	ts_query_cursor_exec(cursor, query, ts_tree_root_node(mTree));
     // GL_INFO("Duration:{}",timerx.ElapsedMillis());
 
 	// 5. Highlight matching nodes
 	TSQueryMatch match;
-	while (ts_query_cursor_next_match(mCursor, &match)) {
+	while (ts_query_cursor_next_match(cursor, &match)) {
 		for (unsigned int i = 0; i < match.capture_count; ++i) {
 			TSQueryCapture capture = match.captures[i];
 			TSNode node = capture.node;
@@ -956,7 +1000,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 		    // Get the type of the current node
 		    const char *nodeType = ts_node_type(node);
 		    unsigned int length;
-		    const char *captureName = ts_query_capture_name_for_id(mQuery, capture.index, &length);
+		    const char *captureName = ts_query_capture_name_for_id(query, capture.index, &length);
 			// GL_INFO(match.captures[i].index);
 			// GL_INFO(captureName);
 		    // GL_INFO(nodeType);
@@ -968,7 +1012,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 		    ColorSchemeIdx colorIndex = GetColorSchemeIndexForNode(captureName);
 		    // GL_INFO("[{},{}]-[{},{}]:{}--{}",startPoint.row,startPoint.column,endPoint.row,endPoint.column,nodeType,(int)colorIndex);
 
-		    for (unsigned int row = startPoint.row; row <= endPoint.row; ++row)
+		    for (unsigned int row = startPoint.row; row < mLines.size() && row <= endPoint.row; ++row)
 		    {
 		        for (unsigned int column = (row == startPoint.row ? startPoint.column : 0);
 		             column < mLines[row].size() && (row < endPoint.row || column <= endPoint.column); ++column)
@@ -981,8 +1025,8 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	}
 
     // Get the start and end positions of the node
-    // ts_tree_delete(mTree);
-	// ts_parser_delete(mParser);
+    // ts_tree_delete(tree);
+	ts_parser_delete(parser);
 }
 
 
@@ -1017,8 +1061,6 @@ void Editor::SetBuffer(const std::string& text)
 	GL_INFO("FILE INFO --> Lines:{}", mLines.size());
 	// mUndoManager.Clear();
 	ApplySyntaxHighlighting(text);
-	Colorize();
-
 }
 
 
@@ -1048,13 +1090,12 @@ void Editor::PrintTree(const TSNode &node, const std::string &source_code,std::s
 }
 
 
-std::string Editor::GetNearbyLinesString(int aLineCount) {
+std::string Editor::GetNearbyLinesString(int aLineNo,int aLineCount) {
     std::string result;
 
     // Determine the range of lines to include
-    int currentLine = mState.mCursorPosition.mLine;
-    int startLine = std::max(0, currentLine - aLineCount);                       // One line above (if it exists)
-    int endLine = std::min((int)mLines.size() - 1, currentLine + aLineCount);   // One line below (if it exists)
+    int startLine = std::max(0, aLineNo - aLineCount);                       // One line above (if it exists)
+    int endLine = std::min((int)mLines.size() - 1, aLineNo + aLineCount);   // One line below (if it exists)
 
     // Concatenate the lines within the range
     for (int lineIndex = startLine; lineIndex <= endLine; ++lineIndex) {
@@ -1067,18 +1108,30 @@ std::string Editor::GetNearbyLinesString(int aLineCount) {
     return result;
 }
 
-void Editor::UpdateSyntaxHighlighting(const std::string &sourceCode)
+void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
 {
 	OpenGL::ScopedTimer timer("UpdateSyntaxHighlighting");
-    TSTree* tree = ts_parser_parse_string(mParser, nullptr, sourceCode.c_str(), sourceCode.size());
+	std::string sourceCode=GetNearbyLinesString(aLineNo,aLineCount);
+	if(sourceCode.size() < 2) return;
 
-	mCursor = ts_query_cursor_new();
-	ts_query_cursor_exec(mCursor, mQuery, ts_tree_root_node(tree));
-    // GL_INFO("Duration:{}",timerx.ElapsedMillis());
+    TSParser* parser= ts_parser_new();
+    ts_parser_set_language(parser,tree_sitter_cpp());
 
-	// 5. Highlight matching nodes
+    TSTree* tree = ts_parser_parse_string(parser, nullptr, sourceCode.c_str(), sourceCode.size());
+
+	TSQueryCursor* cursor = ts_query_cursor_new();
+	ts_query_cursor_exec(cursor, mQuery, ts_tree_root_node(tree));
+
+	// Rest Color
+	// int start=std::max(0,aLineNo - aLineCount);
+	// int end=std::min((int)mLines.size()-1,aLineNo+aLineCount);
+	// for(int row=start;row<=end;row++){
+	// 	for(auto& glyph:mLines[row])
+	// 		glyph.mColorIndex=ColorSchemeIdx::Default;
+	// }
+
 	TSQueryMatch match;
-	while (ts_query_cursor_next_match(mCursor, &match)) {
+	while (ts_query_cursor_next_match(cursor, &match)) {
 		for (unsigned int i = 0; i < match.capture_count; ++i) {
 			TSQueryCapture capture = match.captures[i];
 			TSNode node = capture.node;
@@ -1088,7 +1141,7 @@ void Editor::UpdateSyntaxHighlighting(const std::string &sourceCode)
 		    unsigned int length;
 		    const char *captureName = ts_query_capture_name_for_id(mQuery, capture.index, &length);
 
-		    int startLine = std::max(0, mState.mCursorPosition.mLine-10);
+		    int startLine = std::max(0, aLineNo-aLineCount);
 		    TSPoint startPoint = ts_node_start_point(node);
 		    startPoint.row+=startLine;
 		    TSPoint endPoint = ts_node_end_point(node);
@@ -1096,7 +1149,7 @@ void Editor::UpdateSyntaxHighlighting(const std::string &sourceCode)
 
 		    ColorSchemeIdx colorIndex = GetColorSchemeIndexForNode(captureName);
             // GL_INFO("Range:({},{}) -> ({},{})",startPoint.row,startPoint.column,endPoint.row,endPoint.column);
-		    for (unsigned int row = startPoint.row; row <= endPoint.row; ++row)
+		    for (unsigned int row = startPoint.row; row < mLines.size() && row <= endPoint.row; ++row)
 		    {
 		        for (unsigned int column = (row == startPoint.row ? startPoint.column : 0);
 		             column < mLines[row].size() && (row < endPoint.row || column < endPoint.column); ++column)
@@ -1107,7 +1160,6 @@ void Editor::UpdateSyntaxHighlighting(const std::string &sourceCode)
 		}
 	}
     ts_tree_delete(tree);
-	// ts_parser_delete(mParser);
 }
 
 const Editor::Palette& Editor::GetGruvboxPalette()
@@ -1155,103 +1207,6 @@ ImU32 Editor::GetGlyphColor(const Glyph& aGlyph) const
 {
 	return mPalette[(int)aGlyph.mColorIndex];
 }
-
-void Editor::Colorize(int aFromLine, int aLines)
-{
-	int toLine = aLines == -1 ? (int)mLines.size() : std::min((int)mLines.size(), aFromLine + aLines);
-	mColorRangeMin = std::min(mColorRangeMin, aFromLine);
-	mColorRangeMax = std::max(mColorRangeMax, toLine);
-	mColorRangeMin = std::max(0, mColorRangeMin);
-	mColorRangeMax = std::max(mColorRangeMin, mColorRangeMax);
-	mCheckComments = true;
-}
-
-void Editor::ColorizeRange(int aFromLine, int aToLine)
-{
-	if (mLines.empty() || aFromLine >= aToLine)
-		return;
-
-	std::string buffer;
-	std::cmatch results;
-	std::string id;
-
-	int endLine = std::max(0, std::min((int)mLines.size(), aToLine));
-	for (int i = aFromLine; i < endLine; ++i) {
-		auto& line = mLines[i];
-
-		if (line.empty())
-			continue;
-
-		buffer.resize(line.size());
-		for (size_t j = 0; j < line.size(); ++j) {
-			auto& col = line[j];
-			buffer[j] = col.mChar;
-			col.mColorIndex = ColorSchemeIdx::Default;
-		}
-
-		const char* bufferBegin = &buffer.front();
-		const char* bufferEnd = bufferBegin + buffer.size();
-
-		auto last = bufferEnd;
-
-		for (auto first = bufferBegin; first != last;) {
-			const char* token_begin = nullptr;
-			const char* token_end = nullptr;
-			ColorSchemeIdx token_color = ColorSchemeIdx::Default;
-
-			bool hasTokenizeResult = false;
-
-			// if (mLanguageDefinition.mTokenize != nullptr) {
-			// 	if (mLanguageDefinition.mTokenize(first, last, token_begin, token_end, token_color))
-			// 		hasTokenizeResult = true;
-			// }
-
-			// if (hasTokenizeResult == false) {
-			// 	// todo : remove
-			// 	// printf("using regex for %.*s\n", first + 10 < last ? 10 : int(last - first), first);
-
-			// 	for (auto& p : mRegexList) {
-			// 		if (std::regex_search(first, last, results, p.first, std::regex_constants::match_continuous)) {
-			// 			hasTokenizeResult = true;
-
-			// 			auto& v = *results.begin();
-			// 			token_begin = v.first;
-			// 			token_end = v.second;
-			// 			token_color = p.second;
-			// 			break;
-			// 		}
-			// 	}
-			// }
-
-			if (hasTokenizeResult == false) {
-				first++;
-			} else {
-				const size_t token_length = token_end - token_begin;
-
-				if (token_color == ColorSchemeIdx::Identifier) {
-					id.assign(token_begin, token_end);
-
-					// todo : allmost all language definitions use lower case to specify keywords, so shouldn't this use ::tolower ?
-					if (!mLanguageDefinition.mCaseSensitive)
-						std::transform(id.begin(), id.end(), id.begin(), ::toupper);
-
-					if (mLanguageDefinition.mKeywords.count(id) != 0)
-						token_color = ColorSchemeIdx::Keyword;
-					else if (mLanguageDefinition.mIdentifiers.count(id) != 0)
-						token_color = ColorSchemeIdx::KnownIdentifier;
-					else if (mLanguageDefinition.mPreprocIdentifiers.count(id) != 0)
-						token_color = ColorSchemeIdx::PreprocIdentifier;
-				}
-
-				for (size_t j = 0; j < token_length; ++j) line[(token_begin - bufferBegin) + j].mColorIndex = token_color;
-
-				first = token_end;
-			}
-		}
-	}
-}
-
-
 
 
 int Editor::GetLineMaxColumn(int aLine) const
@@ -1576,36 +1531,23 @@ int Editor::GetCharacterColumn(int aLine, int aIndex) const
 
 
 
-void Editor::ScrollToLineNumber(int lineNo,bool animate){
+void Editor::ScrollToLineNumber(int aLineNo,bool aAnimate){
 
-	lineNo=std::max(1,lineNo);
-	if(lineNo > mLines.size()) lineNo=mLines.size();
+	aLineNo=std::max(0,std::min((int)mLines.size()-1,aLineNo));
 
-	mState.mCursorPosition.mLine=lineNo-1;
+	int lineLength=GetLineMaxColumn(aLineNo);
+	mState.mCursorPosition.mColumn=std::min(mState.mCursorPosition.mColumn,lineLength);
 
-
-	int lineLength=GetCurrentLineMaxColumn();
-	if( lineLength < mState.mCursorPosition.mColumn) 
-		mState.mCursorPosition.mColumn=lineLength;
-
-
-	int totalLines=0;
-	totalLines=lineNo-(int)floor(mMinLineVisible);
-
-	float lineCount=floor((mEditorWindow->Size.y) / mLineHeight)*0.5f;
-	totalLines-=lineCount;
-
-	mScrollAmount=totalLines*mLineHeight;
-
-	if(!animate){
-		ImGui::SetScrollY(ImGui::GetScrollY()+mScrollAmount);
+	if(!aAnimate){
+		ImGui::SetScrollY(aLineNo*mLineHeight);
 		return;
 	}
-
+	assert(aAnimate && "Scroll Animation not implemented!");
+	mScrollAmount=aLineNo*mLineHeight;
 
 	//Handling quick change in nextl
 	if((ImGui::GetTime()-mLastClick)<0.5f){
-		ImGui::SetScrollY(ImGui::GetScrollY()+mScrollAmount);
+		ImGui::SetScrollY(aLineNo*mLineHeight);
 	}else{
 		mInitialScrollY=ImGui::GetScrollY();
 		mScrollAnimation.start();
@@ -1655,7 +1597,7 @@ std::string Editor::GetText(const Coordinates& aStart, const Coordinates& aEnd) 
 
 	for (size_t i = lstart; i < lend; i++) s += mLines[i].size();
 
-	result.reserve(s + s / 8);
+	result.reserve(s + lend-lstart+1);
 
 	while (istart < iend || lstart < lend) {
 		if (lstart >= (int)mLines.size())
@@ -1676,12 +1618,22 @@ std::string Editor::GetText(const Coordinates& aStart, const Coordinates& aEnd) 
 }
 
 
-std::string Editor::GetSelectedText() const { return std::move(GetText(mState.mSelectionStart, mState.mSelectionEnd)); }
+std::string Editor::GetSelectedText() const { 
+	return std::move(GetText(mState.mSelectionStart, mState.mSelectionEnd)); 
+}
 
 void Editor::Copy()
 {
+	OpenGL::ScopedTimer timer("Editor::Copy");
 	if (HasSelection()) {
-		ImGui::SetClipboardText(GetSelectedText().c_str());
+		if(mState.mSelectionStart>mState.mSelectionEnd)
+			std::swap(mState.mSelectionStart,mState.mSelectionEnd);
+
+		std::string text=GetSelectedText();
+		GL_INFO("Selected Text:\n{}",text);
+
+		if(	!text.empty())
+			ImGui::SetClipboardText(text.c_str());
 	} else {
 		if (!mLines.empty()) {
 			std::string str;
@@ -1695,6 +1647,7 @@ void Editor::Copy()
 
 
 void Editor::Paste(){
+	OpenGL::ScopedTimer timer("Editor::Paste");
 	std::string text{ImGui::GetClipboardText()};
 	if(text.size()>0){
 		// UndoRecord uRecord;
@@ -1714,6 +1667,7 @@ void Editor::Paste(){
 		// uRecord.mAddedEnd=mState.mCursorPosition;
 		// uRecord.mAfterState=mState;
 		// mUndoManager.AddUndo(uRecord);
+		DebouncedReparse();
 	}
 }
 
@@ -1722,14 +1676,30 @@ bool Editor::HasSelection() const
 	return mState.mSelectionEnd != mState.mSelectionStart;
 }
 
+void Editor::CloseDebounceThread(){
+	{
+        std::lock_guard<std::mutex> lock(mutex_);
+        terminate_ = true;
+    }
+    cv_.notify_one();
+    if (workerThread_.joinable()) {
+        workerThread_.join();
+    }
+    GL_WARN("Debounce Thread Closed!");
+}
 
 
 void Editor::DeleteSelection() {
 	if(!HasSelection()) return;
-	if(mState.mSelectionStart>mState.mSelectionEnd) std::swap(mState.mSelectionStart,mState.mSelectionEnd);
+	if(mState.mSelectionStart>mState.mSelectionEnd) 
+		std::swap(mState.mSelectionStart,mState.mSelectionEnd);
+
 	DeleteRange(mState.mSelectionStart,mState.mSelectionEnd);
 	mState.mCursorPosition=mState.mSelectionEnd=mState.mSelectionStart;
-	Colorize(mState.mSelectionStart.mLine, 1);
+	GL_INFO("nLines:{}",mLines.size());
+	GL_INFO("CursorPos:({},{})",mState.mCursorPosition.mLine,mState.mCursorPosition.mColumn);
+
+	DebouncedReparse();
 }
 
 
@@ -1784,7 +1754,7 @@ void Editor::InsertText(const char* aValue)
 	totalLines += InsertTextAt(pos, aValue);
 
 	SetCursorPosition(pos);
-	Colorize(start.mLine - 1, totalLines + 2);
+	UpdateSyntaxHighlighting(start.mLine - 1, totalLines + 2);
 }
 
 int Editor::InsertTextAt(Coordinates& aWhere, const char* aValue)
@@ -1886,8 +1856,9 @@ Coordinates Editor::FindWordEnd(const Coordinates& aFrom) const
 }
 
 void Editor::Cut(){
-	// Copy();
-	// Backspace();
+	OpenGL::ScopedTimer timer("Editor::Cut");
+	Copy();
+	Backspace();
 }
 
 void Editor::SaveFile()
@@ -1948,36 +1919,38 @@ void Editor::EnsureCursorVisible()
 	float scrollY = ImGui::GetScrollY();
 
 	auto height = ImGui::GetWindowHeight();
-	auto width = ImGui::GetWindowWidth();
+	auto width = ImGui::GetWindowWidth()-ImGui::GetStyle().ScrollbarSize-mCharacterSize.x*10.0f;
 
-	auto top = 1 + (int)ceil(scrollY / mCharacterSize.y);
-	auto bottom = (int)ceil((scrollY + height) / mCharacterSize.y);
-
-	auto left = (int)ceil(scrollX / mCharacterSize.x);
-	auto right = (int)ceil((scrollX + width) / mCharacterSize.x);
+	auto top = 1 + (int)ceil(scrollY / mLineHeight);
+	auto bottom = (int)ceil((scrollY + height) / mLineHeight);
 
 	auto pos = mState.mCursorPosition;
-	// auto len = TextDistanceToLineStart(pos);
+	auto len = TextDistanceFromLineStart(pos);
 
-	// if (pos.mLine < top)
-	// 	ImGui::SetScrollY(std::max(0.0f, (pos.mLine - 1) * mCharacterSize.y));
-	// if (pos.mLine > bottom - 4)
-	// 	ImGui::SetScrollY(std::max(0.0f, (pos.mLine + 4) * mCharacterSize.y - height));
-	// if (len + mLineBarWidth+mPaddingLeft < left + 4)
-	// 	ImGui::SetScrollX(std::max(0.0f, len + mLineBarWidth+mPaddingLeft - 4));
-	// if (len + mLineBarWidth+mPaddingLeft > right - 4)
-	// 	ImGui::SetScrollX(std::max(0.0f, len + mLineBarWidth+mPaddingLeft + 4 - width));
+	float leftOffset=mLineBarWidth+mPaddingLeft;
+
+	float posX=len;
+
+	if (pos.mLine < top)
+		ImGui::SetScrollY(std::max(0.0f, (pos.mLine - 1.0f) * mLineHeight));
+	if (pos.mLine > bottom - 4)
+		ImGui::SetScrollY(std::max(0.0f, (pos.mLine + 4) * mLineHeight - height));
+
+	if (posX > width+scrollX)
+		ImGui::SetScrollX(std::max(0.0f, posX-width));
+
+	if (posX < scrollX)
+		ImGui::SetScrollX(std::max(0.0f,posX));	
 }
 
 float Editor::TextDistanceFromLineStart(const Coordinates& aFrom) const
 {
 	auto& line = mLines[aFrom.mLine];
 	float distance = 0.0f;
-	float spaceSize = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, " ", nullptr, nullptr).x;
 	int colIndex = GetCharacterIndex(aFrom);
 	for (size_t it = 0u; it < line.size() && it < colIndex;) {
 		if (line[it].mChar == '\t') {
-			distance = (1.0f + std::floor((1.0f + distance) / (float(mTabSize) * spaceSize))) * (float(mTabSize) * spaceSize);
+			distance += mTabSize*mCharacterSize.x;
 			++it;
 		} else {
 			auto d = UTF8CharLength(line[it].mChar);
@@ -1986,12 +1959,16 @@ float Editor::TextDistanceFromLineStart(const Coordinates& aFrom) const
 			for (; i < 6 && d-- > 0 && it < (int)line.size(); i++, it++) tempCString[i] = line[it].mChar;
 
 			tempCString[i] = '\0';
-			distance += ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, tempCString, nullptr, nullptr).x;
+			distance += mCharacterSize.x;
 		}
 	}
 
 	return distance;
 }
+
+
+
+
 
 
 

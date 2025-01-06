@@ -175,6 +175,7 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 
 	mSelectionMode = mode;
 	mState = mCursors[0];
+	EnsureCursorVisible();
 	if (mCursors.size() == 1)
 		mCursors.clear();
 }
@@ -269,6 +270,8 @@ void Editor::MoveRight(bool ctrl, bool shift)
 	mSelectionMode = mode;
 
 	mState = mCursors[0];
+	EnsureCursorVisible();
+
 	if (mCursors.size() == 1)
 		mCursors.clear();
 }
@@ -298,6 +301,7 @@ void Editor::Delete()
 
 	// u.mAfter = mState;
 	// AddUndo(u);
+	EnsureCursorVisible();
 }
 
 char getClosingBracketFor(char x)
@@ -346,7 +350,7 @@ std::string Editor::GetFullText() {
 
     size_t totalSize = 0;
     for (const auto& line : mLines) {
-        totalSize += line.size() + 1;  // +1 for newline
+        totalSize += line.size();  // +1 for newline
     }
     
     bufferContent.clear();
@@ -356,18 +360,18 @@ std::string Editor::GetFullText() {
         for (const auto& glyph : mLines[i]) {
             bufferContent += (char)glyph.mChar;
         }
-        if (i < mLines.size() - 1) {
-            bufferContent += '\n';
-        }
+        bufferContent += '\n';
     }
     return bufferContent;
 }
 
-void Editor::DisplayNearByText(){
+void Editor::DebugDisplayNearByText(){
 
-	std::string buffer=GetNearbyLinesString(1);
+	std::string buffer=GetNearbyLinesString(mState.mCursorPosition.mLine,1);
 
-    TSTree* tree = ts_parser_parse_string(mParser, nullptr, buffer.c_str(), buffer.size());
+    TSParser* parser= ts_parser_new();
+    ts_parser_set_language(parser,tree_sitter_cpp());
+    TSTree* tree = ts_parser_parse_string(parser, nullptr, buffer.c_str(), buffer.size());
 	TSNode node=ts_tree_root_node(tree);
 
 	std::string output;
@@ -380,124 +384,9 @@ void Editor::DisplayNearByText(){
 	ImGui::End();
 }
 
-void Editor::UpdateTree(){
-	OpenGL::ScopedTimer timer("UpdateTree");
-	GL_INFO("start:{} end:{}",mTSInputEdit.start_byte,mTSInputEdit.new_end_byte);
-
-	// TSInputEdit edit;
-    // edit.start_byte = aStartOffset;
-    // edit.old_end_byte = aStartOffset;
-    // edit.new_end_byte = aEndOffset;
-
-    // uint32_t row=mState.mCursorPosition.mLine;
-
-    // edit.start_point={row,aStartOffset};
-    // edit.old_end_point={row,aStartOffset};
-    // edit.new_end_point={row,aEndOffset};
-
-	GL_INFO("\nTSInputEdit:\n\tBytes:{},{},{}\n\tstart({},{}),newEnd({},{})",mTSInputEdit.start_byte,mTSInputEdit.old_end_byte,mTSInputEdit.new_end_byte,mTSInputEdit.start_point.row,mTSInputEdit.start_point.column,mTSInputEdit.new_end_point.row,mTSInputEdit.new_end_point.column);
-
-    // Apply the edit to the existing tree
-    ts_tree_edit(mTree, &mTSInputEdit);
-
-   	std::string fullText=GetFullText(); 
-    // Reparse the updated text to get the new tree
-    TSInput input;
-    input.payload = (void *)&fullText;
-    input.read = ReadCallback;  // Function to provide text for Treesitter
-    input.encoding = TSInputEncodingUTF8;
-
-    if(!mParser || !mTree) return;
-    ts_parser_set_timeout_micros(mParser, 5000);
-    TSTree *new_tree = ts_parser_parse(mParser, mTree, input);
-    if (!new_tree) return;
-
-
-	// Get changed ranges
-    uint32_t range_count;
-    TSRange* changed_ranges = ts_tree_get_changed_ranges(mTree, new_tree, &range_count);
-    GL_INFO("Range Count:{}",range_count);
-
-    // Only update highlighting for changed ranges
-    if (changed_ranges && range_count > 0) {
-        for (uint32_t i = 0; i < range_count; i++) {
-            TSRange range = changed_ranges[i];
-            GL_INFO("Range:({},{}) -> ({},{})",range.start_point.row,range.start_point.column,range.end_point.row,range.end_point.column);
-            ts_query_cursor_set_byte_range(mCursor, range.start_byte, range.end_byte);
-            ts_query_cursor_exec(mCursor, mQuery, ts_tree_root_node(new_tree));
-
-
-            TSQueryMatch match;
-            while (ts_query_cursor_next_match(mCursor, &match)) {
-				for (unsigned int i = 0; i < match.capture_count; ++i) {
-					TSQueryCapture capture = match.captures[i];
-					TSNode node = capture.node;
-
-				    const char *nodeType = ts_node_type(node);
-				    unsigned int length;
-				    const char *captureName = ts_query_capture_name_for_id(mQuery, capture.index, &length);
-
-				    TSPoint startPoint = ts_node_start_point(node);
-				    TSPoint endPoint = ts_node_end_point(node);
-				    endPoint.column--;
-
-				    ColorSchemeIdx colorIndex = GetColorSchemeIndexForNode(captureName);
-
-				    for (unsigned int row = startPoint.row; row <= endPoint.row; ++row)
-				    {
-				        for (unsigned int column = (row == startPoint.row ? startPoint.column : 0);
-				             column < mLines[row].size() && (row < endPoint.row || column <= endPoint.column); ++column)
-				        {
-				            mLines[row][column].mColorIndex = colorIndex;
-				        }
-				    }
-				}
-            }
-        }
-    }
-
-
-    free(changed_ranges);
-    ts_tree_delete(mTree);
-    mTree = new_tree;
-}
 
 uint32_t Editor::GetLineLengthInBytes(int aLineIdx){
 	return mLines[aLineIdx].size();
-}
-
-void Editor::TSInputEditStart(int aLine,int aLineCount){
-	uint32_t lBefore=0;
-	uint32_t startOffset=mLineOffset[aLine];
-
-	int end=aLine+aLineCount-1;
-	for(int i=aLine;i<=end;i++)
-		lBefore+=GetLineLengthInBytes(i);
-
-	uint32_t oldEnd=startOffset+lBefore;
-
-    mTSInputEdit.start_byte = startOffset;
-    mTSInputEdit.old_end_byte = oldEnd;
-
-    uint32_t row=aLine;
-
-    mTSInputEdit.start_point={row,0};
-    mTSInputEdit.old_end_point={row,GetLineLengthInBytes(row)};
-
-}
-void Editor::TSInputEditEnd(int aLine,int aLineCount){
-	uint32_t lAfter=0;
-	uint32_t start=mLineOffset[aLine];
-	int end=aLine+aLineCount-1;
-	for(int i=aLine;i<=end;i++)
-		lAfter+=GetLineLengthInBytes(i);
-
-	uint32_t newEnd=start+lAfter;
-
-    mTSInputEdit.new_end_byte = newEnd;
-
-    uint32_t row=end;
-    mTSInputEdit.new_end_point={row,GetLineLengthInBytes(row)};
 }
 
 
@@ -507,16 +396,6 @@ void Editor::InsertCharacter(char chr){
 
 	char buff[7];
 	int e = ImTextCharToUtf8(buff,7, aChar);
-
-	// int startLine=coord.mLine;
-	// mTSInputEdit.start_byte=GetBufferOffset(mState.mCursorPosition);
-	// mTSInputEdit.old_end_byte=mTSInputEdit.start_byte;
-
-	// uint32_t col=mTSInputEdit.start_byte-mLineOffset[startLine];
-	// mTSInputEdit.start_point={(uint32_t)startLine,col};
-	// mTSInputEdit.old_end_point={(uint32_t)startLine,col};
-	// TSInputEditStart(startLine,1);
-
 	if (e > 0)
 	{
 		buff[e] = '\0';
@@ -539,36 +418,9 @@ void Editor::InsertCharacter(char chr){
 		mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition;
 	}
 
-	// TSInputEditEnd(startLine,1);
-	// mTSInputEdit.new_end_byte=GetBufferOffset(mState.mCursorPosition);
-	// col=mTSInputEdit.new_end_byte-mLineOffset[startLine];
-	// mTSInputEdit.new_end_point={(uint32_t)startLine,col};
-
-	// uint32_t lAfter=GetLineLengthInBytes(mState.mCursorPosition);
-	// int diff=lAfter-lBefore;
-	// uint32_t start=mLineOffset[mState.mCursorPosition.mLine];
-	// uint32_t newEnd=start+lAfter;
-	// uint32_t oldEnd=start+lBefore;
-
-	// TSInputEdit edit;
-    // edit.start_byte = start;
-    // edit.old_end_byte = oldEnd;
-    // edit.new_end_byte = newEnd;
-
-    // uint32_t row=mState.mCursorPosition.mLine;
-
-    // edit.start_point={row,0};
-    // edit.old_end_point={row,lBefore};
-    // edit.new_end_point={row,lAfter};
-    // int diff=mTSInputEdit.new_end_byte-mTSInputEdit.old_end_byte;
-	// UpdateTree();
-
-	// for(int i=mState.mCursorPosition.mLine+1;i<mLineOffset.size();i++){
-	// 	mLineOffset[i]+=diff;
-	// }
-	// EnsureCursorVisible();
-	std::string lineBuffer=GetNearbyLinesString(10);
-	UpdateSyntaxHighlighting(lineBuffer);
+	UpdateSyntaxHighlighting(mState.mCursorPosition.mLine,10);
+	EnsureCursorVisible();
+	DebouncedReparse();
 }
 
 // Function to insert a character at a specific position in a line
@@ -830,9 +682,83 @@ void Editor::InsertCharacter(char chr){
 // 	mUndoManager.AddUndo(uRecord);
 // }
 
+void Editor::MoveTop(bool aShift)
+{
+	auto oldPos = mState.mCursorPosition;
+	SetCursorPosition(Coordinates(0, 0));
+
+	if (mState.mCursorPosition != oldPos)
+	{
+		if (aShift)
+		{
+			mState.mSelectionStart=mState.mCursorPosition;
+			mState.mSelectionEnd=oldPos;
+		}
+		else
+			mState.mSelectionStart = mState.mSelectionEnd = mState.mCursorPosition;
+	}
+	EnsureCursorVisible();
+	// ScrollToLineNumber(mState.mCursorPosition.mLine,false);
+}
+
+void Editor::MoveBottom(bool aShift)
+{
+	auto oldPos = mState.mCursorPosition;
+	SetCursorPosition(Coordinates((int)mLines.size() - 1, 0));
+
+	if (mState.mCursorPosition != oldPos)
+	{
+		if (aShift)
+		{
+			mState.mSelectionEnd=mState.mCursorPosition;
+			mState.mSelectionStart=oldPos;
+		}
+		else
+			mState.mSelectionStart = mState.mSelectionEnd = mState.mCursorPosition;
+	}
+	EnsureCursorVisible();
+	// ScrollToLineNumber(newPos.mLine,false);
+}
+
+void Editor::MoveHome(bool aShift)
+{
+	auto oldPos = mState.mCursorPosition;
+	SetCursorPosition(Coordinates(mState.mCursorPosition.mLine, 0));
+
+	if (mState.mCursorPosition != oldPos)
+	{
+		if (aShift)
+		{
+			mState.mSelectionStart=mState.mCursorPosition;
+			mState.mSelectionEnd=oldPos;
+		}
+		else
+			mState.mSelectionStart = mState.mSelectionEnd = mState.mCursorPosition;
+	}
+	EnsureCursorVisible();
+}
+
+void Editor::MoveEnd(bool aShift)
+{
+	auto oldPos = mState.mCursorPosition;
+	SetCursorPosition(Coordinates(mState.mCursorPosition.mLine, GetLineMaxColumn(oldPos.mLine)));
+
+	if (mState.mCursorPosition != oldPos)
+	{
+		if (aShift)
+		{
+			mState.mSelectionEnd=mState.mCursorPosition;
+			mState.mSelectionStart=oldPos;
+		}
+		else
+			mState.mSelectionStart = mState.mSelectionEnd = mState.mCursorPosition;
+	}
+	EnsureCursorVisible();
+}
 
 void Editor::InsertLineBreak(){
 	GL_INFO("InsertLineBreak");
+	if(HasSelection()) Backspace();
 	Coordinates& coord=mState.mCursorPosition;
 
 
@@ -851,7 +777,7 @@ void Editor::InsertLineBreak(){
 	line.erase(line.begin() + cindex, line.begin() + line.size());
 
 	SetCursorPosition(Coordinates(coord.mLine + 1, GetCharacterColumn(coord.mLine + 1, idx)));
-
+	EnsureCursorVisible();
 }
 
 
@@ -893,7 +819,6 @@ void Editor::DeleteCharacter(EditorState& cursor, int cidx)
 				mLines[mState.mCursorPosition.mLine].erase(start,start+1);
 				// mCurrLineLength = GetLineMaxColumn(lineIndex);
 				mState.mCursorPosition.mColumn -= mTabSize;
-				Colorize(mState.mCursorPosition.mLine, 1);
 				return;
 			}
 			int len=UTF8CharLength(line[cindex].mChar);
@@ -917,8 +842,6 @@ void Editor::DeleteCharacter(EditorState& cursor, int cidx)
 
 		mTextChanged = true;
 
-		EnsureCursorVisible();
-		Colorize(mState.mCursorPosition.mLine, 1);
 	
 	}
 	else
@@ -948,7 +871,8 @@ void Editor::DeleteCharacter(EditorState& cursor, int cidx)
 
 		mTextChanged = true;
 
-		Colorize(pos.mLine, 1);
+		UpdateSyntaxHighlighting(pos.mLine, 1);
+		EnsureCursorVisible();
 	}
 
 }
@@ -956,15 +880,17 @@ void Editor::DeleteCharacter(EditorState& cursor, int cidx)
 
 void Editor::Backspace()
 {
+	OpenGL::ScopedTimer timer("Editor::Backspace");
 	if (mSearchState.isValid())
 		mSearchState.reset();
 
-	UndoRecord uRecord;
-	uRecord.mBeforeState = mState;
+	// UndoRecord uRecord;
+	// uRecord.mBeforeState = mState;
 
 	// Deletion of selection
 	if (HasSelection()) {
 		DeleteSelection();
+		EnsureCursorVisible();
 		return;
 	}
 
@@ -987,6 +913,8 @@ void Editor::Backspace()
 		if (mCursors.size() == 1)
 			mCursors.clear();
 	}
+	EnsureCursorVisible();
+	UpdateSyntaxHighlighting(mState.mCursorPosition.mLine,0);
 }
 
 void Editor::SwapLines(bool up)
@@ -1027,12 +955,13 @@ void Editor::SwapLines(bool up)
 			mLines.erase(mLines.begin() + endLine + 1);
 			mLines.insert(mLines.begin() + startLine, belowLine);
 		}
-		ColorizeRange(startLine-1,endLine-startLine+1);
+		UpdateSyntaxHighlighting(startLine-1,endLine-startLine+1);
 	}
 
 	mState.mSelectionStart.mLine += value;
 	mState.mSelectionEnd.mLine += value;
 	mState.mCursorPosition.mLine += value;
+	EnsureCursorVisible();
 }
 
 
@@ -1154,6 +1083,7 @@ void Editor::DeleteRange(const Coordinates& aStart, const Coordinates& aEnd)
 
 	auto start = GetCharacterIndex(aStart);
 	auto end = GetCharacterIndex(aEnd);
+	GL_INFO("Start:{},End:{}",start,end);
 
 	if (aStart.mLine == aEnd.mLine) {
 		auto& line = mLines[aStart.mLine];

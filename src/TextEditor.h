@@ -6,11 +6,14 @@
 #include "string"
 #include "tree_sitter/api.h"
 #include "vector"
+#include <chrono>
 #include <cstdint>
 #include <map>
+#include <mutex>
 #include <regex>
 #include <stdint.h>
 #include <array>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -205,10 +208,7 @@ public:
 	std::vector<uint32_t> mLineOffset;
 
 	TSInputEdit mTSInputEdit;
-	void DisplayNearByText();
-	void TSInputEditStart(int aLine,int aLineCount);
-	void TSInputEditEnd(int aLine,int aLineCount);
-	void UpdateTree();
+	void DebugDisplayNearByText();
 	std::string GetFullText();
 
 	void ApplySyntaxHighlighting(const std::string &sourceCode);
@@ -218,19 +218,24 @@ public:
 	uint32_t GetBufferOffset(const Coordinates& aCoords);
 	void PrintTree(const TSNode &node, const std::string &source_code,std::string& output, int indent = 0);
 
-	//Backup Option
-	std::string GetNearbyLinesString(int aLineCount=3);
-	void UpdateSyntaxHighlighting(const std::string &sourceCode);
+	std::string GetNearbyLinesString(int aLineNo,int aLineCount=3);
+	void UpdateSyntaxHighlighting(int aLineNo,int aLineCount=3);
+
+
+    std::mutex mutex_;
+    std::condition_variable cv_;
+    bool terminate_ = false;
+    bool needsUpdate_ = false;
+    std::thread workerThread_;
+    std::atomic<bool> debounceFlag_{false};
+	void ReparseEntireTree();
+	void DebouncedReparse();
+	void CloseDebounceThread();
+	void WorkerThread();
 
 private:
-	bool mCheckComments;
-	int mColorRangeMin, mColorRangeMax;
-	typedef std::vector<std::pair<std::regex, PaletteIndex>> RegexList;
 
 	ImU32 GetGlyphColor(const Glyph& aGlyph) const;
-	void Colorize(int aFromLine = 0, int aCount = -1);
-	void ColorizeRange(int aFromLine = 0, int aToLine = 0);
-	void ColorizeInternal();
 	static const Palette& GetGruvboxPalette();
 
 	void SetLanguageDefinition(const LanguageDefinition& aLanguageDef);
@@ -241,7 +246,6 @@ private:
 	Palette mPalette;
 
 	LanguageDefinition mLanguageDefinition;
-	RegexList mRegexList;
 	Animation mScrollAnimation;
 	float mScrollAmount{0.0f};
 	float mInitialScrollY{0.0f};
@@ -431,6 +435,11 @@ public:
 	void Backspace();
 	void InsertLine();
 	void InsertLineBreak();
+
+	void MoveHome(bool aShift =false);
+	void MoveEnd(bool aShift =false);
+	void MoveTop(bool aShift = false);
+	void MoveBottom(bool aShift = false);
 
 	void SnapCursorToNearestTab(EditorState& aEditor);
 	float TextDistanceFromLineStart(const Coordinates& aFrom) const;
