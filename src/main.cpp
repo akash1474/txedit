@@ -34,18 +34,18 @@ int main(int argc, char* argv[])
 	// TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/TabsManager.cpp");
 
 	GL_WARN("BootUp Time: {}ms", timer.ElapsedMillis());
-	const double TARGET_FPS = 60.0;
-	const double TARGET_FRAME_TIME = 1.0 / TARGET_FPS;
+	// const double TARGET_FPS = 60.0;
+	// const double TARGET_FRAME_TIME = 1.0 / TARGET_FPS;
 	while (!glfwWindowShouldClose(Application::GetGLFWwindow())) {
-		auto start = std::chrono::high_resolution_clock::now();
+		// auto start = std::chrono::high_resolution_clock::now();
 		Application::Draw();
 
-		auto end = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> frameTime = end - start;
+		// auto end = std::chrono::high_resolution_clock::now();
+		// std::chrono::duration<double> frameTime = end - start;
 
-		if (frameTime.count() < TARGET_FRAME_TIME) {
-			std::this_thread::sleep_for(std::chrono::duration<double>(TARGET_FRAME_TIME - frameTime.count()));
-		}
+		// if (frameTime.count() < TARGET_FRAME_TIME) {
+		// 	std::this_thread::sleep_for(std::chrono::duration<double>(TARGET_FRAME_TIME - frameTime.count()));
+		// }
 	}
 
 	Application::Destroy();

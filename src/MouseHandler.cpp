@@ -1,3 +1,4 @@
+#include "imgui.h"
 #include "pch.h"
 #include "TextEditor.h"
 
@@ -30,37 +31,26 @@ void Editor::HandleMouseInputs()
 					mState.mCursorPosition.mColumn=mState.mSelectionEnd.mColumn;
 				}
 				mLastClick = -1.0f;
-			}
+}
 
 			// Left mouse button double click
 			else if (doubleClick) {
 
-				if(!ctrl) HandleDoubleClick();
+				if(!ctrl) SelectWordUnderCursor();
 				mLastClick = (float)ImGui::GetTime();
 
 			}
 			else if(click && ctrl){
-				if(mSearchState.isValid())
-					mSearchState.reset();
+				// if(mSearchState.isValid())
+				// 	mSearchState.reset();
 
 				if(mCursors.size()==0) mCursors.push_back(mState);
-				mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition=ScreenPosToCoordinates(ImGui::GetMousePos());
+				SetCursorPosition(ScreenPosToCoordinates(ImGui::GetMousePos()));
 				mCursors.push_back(mState);
 
-
-				mSelectionMode = SelectionMode::Normal;
-
 				//Sorting in ascending order
-				if(mCursors[mCursors.size()-2].mCursorPosition > mCursors.back().mCursorPosition){
-					std::sort(mCursors.begin(), mCursors.end(),[](const auto& left,const auto& right){
-						return left.mCursorPosition < right.mCursorPosition;
-					});
+				SortCursorsFromTopToBottom();
 
-					mState=mCursors[0];
-				}
-
-				for(const auto& el:mCursors)
-					GL_INFO("[R:{}  C:{}]",el.mCursorPosition.mLine,el.mCursorPosition.mColumn);
 
 				GL_WARN("CTRL CLICK");
 			}
@@ -80,7 +70,7 @@ void Editor::HandleMouseInputs()
 				mLastClick = (float)ImGui::GetTime();
 
 
-				// this->CalculateBracketMatch();
+				FindBracketMatch(mState.mCursorPosition);
 			}
 
 			//Mouse Click And Dragging
@@ -99,7 +89,7 @@ void Editor::HandleMouseInputs()
 	}
 }
 
-void Editor::HandleDoubleClick(){
+void Editor::SelectWordUnderCursor(){
 		if (mSelectionMode == SelectionMode::Line) mSelectionMode = SelectionMode::Normal;
 		else
 			mSelectionMode = SelectionMode::Word;
@@ -123,4 +113,17 @@ void Editor::HandleDoubleClick(){
 		mState.mSelectionEnd = Coordinates(mState.mCursorPosition.mLine, end_idx + (tabCount * (mTabSize - 1)));
 
 		mState.mCursorPosition = mState.mSelectionEnd;
+}
+
+void Editor::SortCursorsFromTopToBottom()
+{
+	if(mCursors.size()<2) return;
+	if(mCursors[mCursors.size()-2].mCursorPosition > mCursors.back().mCursorPosition){
+		std::sort(mCursors.begin(), mCursors.end(),[](const auto& left,const auto& right){
+			return left.mCursorPosition < right.mCursorPosition;
+		});
+		mState=mCursors[0];
+	}
+	for(const auto& el:mCursors)
+		GL_INFO("[R:{}  C:{}]",el.mCursorPosition.mLine,el.mCursorPosition.mColumn);
 }

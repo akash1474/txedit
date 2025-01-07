@@ -191,9 +191,10 @@ public:
 		static const LanguageDefinition& Lua();
 	};
 
-	struct BracketCoordinates {
-		std::array<Coordinates, 2> coords;
-		bool hasMatched = false;
+	struct BracketMatch {
+		bool mHasMatch = false;
+		Coordinates mStartBracket;
+		Coordinates mEndBracket;
 	};
 
 	enum class SelectionMode { Normal, Word, Line };
@@ -220,6 +221,8 @@ public:
 
 	std::string GetNearbyLinesString(int aLineNo,int aLineCount=3);
 	void UpdateSyntaxHighlighting(int aLineNo,int aLineCount=3);
+
+	Coordinates GetCoordinatesFromOffset(uint32_t offset);
 
 
     std::mutex mutex_;
@@ -260,8 +263,8 @@ private:
 
 	// Cursor & Selection
 	SelectionMode mSelectionMode{SelectionMode::Normal};
-	BracketCoordinates mBracketsCoordinates;
 	std::vector<EditorState> mCursors;
+	void SortCursorsFromTopToBottom();
 	std::string mFileContents;
 
 public:
@@ -374,7 +377,7 @@ private:
 	void SearchWordInCurrentVisibleBuffer();
 	void HighlightCurrentWordInBuffer() const;
 	void FindAllOccurancesOfWord(std::string word);
-	void HandleDoubleClick();
+	void SelectWordUnderCursor();
 	void Find();
 
 
@@ -384,16 +387,18 @@ private:
 	uint8_t GetTabCountsUptoCursor(const Coordinates& coords) const;
 	size_t GetCharacterIndex(const Coordinates& coords) const;
 
-	void CalculateBracketMatch();
-	std::array<Coordinates, 2> GetMatchingBracketsCoordinates();
+	BracketMatch mBracketMatch;
+
+	bool HasBracketMatch()const{return mBracketMatch.mHasMatch;}
 	Coordinates FindStartBracket(const Coordinates& coords);
 	Coordinates FindEndBracket(const Coordinates& coords);
-	Coordinates FindMatchingBracket(const Coordinates& coords, bool searchForward) const;
+	void FindBracketMatch(const Coordinates& aCoords);
+	void HighlightBracket(const Coordinates& aCoords);
 
 	bool IsCursorVisible();
 	void EnsureCursorVisible();
 
-	void DeleteCharacter(EditorState& cursor, int cidx = -1);
+	void DeleteCharacter(EditorState& cursor,bool aDeletePreviousCharacter);
 	void ResetState();
 	void InitFileExtensions();
 	std::map<std::string, std::string> FileExtensions;
@@ -443,21 +448,14 @@ public:
 
 	void SnapCursorToNearestTab(EditorState& aEditor);
 	float TextDistanceFromLineStart(const Coordinates& aFrom) const;
-
 	void DeleteRange(const Coordinates& aStart, const Coordinates& aEnd);
-	void DeleteSelection();
+	void DeleteSelection(EditorState& aState);
 
 	void RemoveLine(int aIndex);
 	void RemoveLine(int aStart, int aEnd);
 
 	int GetLineMaxColumn(int currLineIndex) const;
 	int GetCurrentLineMaxColumn() const;
-
-	struct Token{
-		
-	};
-
-
 
 	Editor();
 	~Editor();

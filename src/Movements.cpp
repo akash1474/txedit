@@ -91,8 +91,6 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 
 	SelectionMode mode = mSelectionMode;
 	for (auto& cursorState : mCursors) {
-		// if (mLinePosition.y < 0)
-		// 	ImGui::SetScrollY(ImGui::GetScrollY() - mLineHeight);
 
 		if (mSearchState.isValid())
 			mSearchState.reset();
@@ -292,7 +290,7 @@ void Editor::Delete()
 		// u.mRemovedStart = mState.mSelectionStart;
 		// u.mRemovedEnd = mState.mSelectionEnd;
 
-		DeleteSelection();
+		DeleteSelection(mState);
 	}
 	else
 	{
@@ -304,21 +302,7 @@ void Editor::Delete()
 	EnsureCursorVisible();
 }
 
-char getClosingBracketFor(char x)
-{
-	switch (x) {
-		case '(':
-			x = ')';
-			break;
-		case '[':
-			x = ']';
-			break;
-		case '{':
-			x = '}';
-			break;
-	}
-	return x;
-}
+
 
 uint32_t Editor::GetBufferOffset(const Coordinates& aCoords){
 	uint32_t lineOffset=mLineOffset[aCoords.mLine];
@@ -389,6 +373,19 @@ uint32_t Editor::GetLineLengthInBytes(int aLineIdx){
 	return mLines[aLineIdx].size();
 }
 
+bool IsBracket(char aChar){
+	return aChar == '(' || aChar == '{' || aChar == '[';
+}
+
+char GetClosingBracketFor(char x)
+{
+	switch (x) {
+		case '(': x = ')'; break;
+		case '[': x = ']'; break;
+		case '{': x = '}'; break;
+	}
+	return x;
+}
 
 void Editor::InsertCharacter(char chr){
 	uint8_t aChar=chr;
@@ -412,275 +409,31 @@ void Editor::InsertCharacter(char chr){
 
 		for (auto p = buff; *p != '\0'; p++, ++cindex)
 			line.insert(line.begin() + cindex, Glyph(*p, ColorSchemeIdx::Default));
+
 		// u.mAdded = buff;
+
+		if (IsBracket(chr)) {
+			char closingBracket=GetClosingBracketFor(chr);
+            line.insert(line.begin() + cindex, Glyph(closingBracket, ColorSchemeIdx::Default));
+        }
+
+        // if at (line end ) or (next character is not same) -> insert one more chr
+        if((chr=='\'' || chr == '\"') && (cindex==line.size() || (cindex < line.size() && line[cindex].mChar!=chr))){
+            line.insert(line.begin() + cindex, Glyph(chr, ColorSchemeIdx::Default));
+        }
+
 
 		mState.mCursorPosition.mColumn++;
 		mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition;
 	}
 
 	UpdateSyntaxHighlighting(mState.mCursorPosition.mLine,10);
+	FindBracketMatch(mState.mCursorPosition);
 	EnsureCursorVisible();
 	DebouncedReparse();
 }
 
-// Function to insert a character at a specific position in a line
-// void Editor::InsertCharacter(char newChar)
-// {
 
-// 	int ciCurrent = GetCharacterIndex(mState.mCursorPosition);
-// 	GL_INFO("INSERT IDX:{}", ciCurrent);
-// 	int currentLineIndex = mState.mCursorPosition.mLine;
-
-// 	if (mState.mSelectionStart > mState.mSelectionEnd)
-// 		std::swap(mState.mSelectionStart, mState.mSelectionEnd);
-
-// 	UndoRecord uRecord;
-// 	uRecord.mBeforeState = mState;
-// 	uRecord.mAddedText = newChar;
-// 	uRecord.mAddedStart = mState.mCursorPosition;
-
-// 	if (mCursors.empty() && currentLineIndex >= 0 && currentLineIndex < mLines.size() && mState.mCursorPosition.mColumn >= 0 &&
-// 	    ciCurrent <= mLines[currentLineIndex].size()) {
-
-// 		bool isBracket = newChar == '(' || newChar == '{' || newChar == '[';
-// 		bool isQuote = newChar == '\"' || newChar == '\'';
-// 		// Fix for tab spaces
-// 		if (isQuote || isBracket) {
-
-// 			// For word and multiline selection
-// 			if (mSelectionMode == SelectionMode::Word) {
-// 				int ciStart = GetCharacterIndex(mState.mSelectionStart);
-// 				int ciEnd = GetCharacterIndex(mState.mSelectionEnd) + 1;
-
-// 				mLines[mState.mSelectionStart.mLine].insert(ciStart, 1, newChar);
-// 				mState.mSelectionStart.mColumn++;
-
-// 				if (isBracket)
-// 					newChar = getClosingBracketFor(newChar);
-
-// 				size_t max = mLines[mState.mSelectionEnd.mLine].size();
-// 				if (ciEnd > max)
-// 					ciEnd = max;
-
-// 				// For MultiLine Selection Fix this
-// 				bool isMultiLineSelection = mState.mSelectionStart.mLine != mState.mSelectionEnd.mLine;
-// 				if (isMultiLineSelection) {
-// 					if (ciEnd != max)
-// 						ciEnd--;
-// 					mState.mCursorPosition.mColumn--;
-// 				}
-
-// 				mLines[mState.mSelectionEnd.mLine].insert(ciEnd, 1, newChar);
-// 				if (!isMultiLineSelection)
-// 					mState.mSelectionEnd.mColumn++;
-// 			} else { // For Noselection
-// 				mLines[currentLineIndex].insert(ciCurrent, 1, newChar);
-// 				if (isBracket)
-// 					newChar = getClosingBracketFor(newChar);
-// 				mLines[currentLineIndex].insert(ciCurrent + 1, 1, newChar);
-// 				uRecord.mAddedText += newChar;
-// 			}
-
-// 		} else {
-
-// 			if ((newChar == ')' || newChar == ']' || newChar == '}') && mLines[currentLineIndex][ciCurrent] == newChar) {
-// 				// Avoiding ')' reentry after '(' pressed aka "()"
-// 			} else {
-// 				if (mSelectionMode == SelectionMode::Word) {
-// 					Backspace();
-// 					mSelectionMode = SelectionMode::Normal;
-// 					ciCurrent = GetCharacterIndex(mState.mCursorPosition);
-// 				}
-// 				mLines[currentLineIndex].insert(ciCurrent, 1, newChar);
-// 			}
-// 		}
-
-// 		mState.mCursorPosition.mColumn++;
-
-// 		uRecord.mAfterState = mState;
-// 		uRecord.mAddedEnd = mState.mCursorPosition;
-// 		// As we need to remove 2 characeters for quotes and brackets
-// 		if (isQuote || isBracket)
-// 			uRecord.mAddedEnd.mColumn++;
-// 		mUndoManager.AddUndo(uRecord);
-// 		return;
-// 	} else if (mCursors.size() > 0) {
-
-
-// 		if (mSelectionMode == SelectionMode::Word)
-// 			Backspace();
-// 		if (mSelectionMode != SelectionMode::Normal)
-// 			mSelectionMode = SelectionMode::Normal;
-
-
-// 		int cidx = 0;
-// 		GL_WARN("INSERT MULTIPLE CURSORS");
-
-
-// 		for (auto& cursor : mCursors) {
-
-// 			if (cursor.mSelectionStart > cursor.mSelectionEnd)
-// 				std::swap(cursor.mSelectionStart, cursor.mSelectionEnd);
-
-// 			int idx = GetCharacterIndex(cursor.mCursorPosition);
-// 			if (cursor.mCursorPosition.mLine >= 0 && cursor.mCursorPosition.mLine < mLines.size() && cursor.mCursorPosition.mColumn >= 0 &&
-// 			    idx <= mLines[cursor.mCursorPosition.mLine].size()) {
-
-// 				int idx = GetCharacterIndex(cursor.mCursorPosition);
-// 				int count = 0;
-// 				int currentLine = cursor.mCursorPosition.mLine;
-// 				GL_INFO("CIDX:{} IDX:{}", cidx, idx);
-// 				if (newChar == '\"' || newChar == '\'' || newChar == '(' || newChar == '{' || newChar == '[') {
-
-// 					char backup = newChar;
-
-
-// 					if (mSelectionMode == SelectionMode::Word) {
-// 						mLines[cursor.mSelectionStart.mLine].insert(GetCharacterIndex(cursor.mSelectionStart), 1, newChar);
-// 						cursor.mSelectionStart.mColumn++;
-// 					} else
-// 						mLines[currentLine].insert(idx, 1, newChar);
-// 					switch (newChar) {
-// 						case '(':
-// 							newChar = ')';
-// 							break;
-// 						case '[':
-// 							newChar = ']';
-// 							break;
-// 						case '{':
-// 							newChar = '}';
-// 							break;
-// 					}
-// 					if (mSelectionMode == SelectionMode::Word) {
-// 						mLines[cursor.mSelectionEnd.mLine].insert(GetCharacterIndex(cursor.mSelectionEnd) + 1, 1, newChar);
-// 						cursor.mSelectionEnd.mColumn++;
-// 					} else
-// 						mLines[currentLine].insert(idx + 1, 1, newChar);
-
-// 					count = 2;
-// 					newChar = backup;
-// 				} else {
-
-// 					if ((newChar == ')' || newChar == ']' || newChar == '}') && mLines[cursor.mCursorPosition.mLine][idx] == newChar) {
-// 						// Avoiding ')' reentry after '(' pressed aka "()"
-// 						count = 0;
-// 					} else {
-// 						// if (mSelectionMode == SelectionMode::Word){
-// 						// 	Backspace();
-// 						// 	mSelectionMode=SelectionMode::Normal;
-// 						// 	idx = GetCharacterIndex(mState.mCursorPosition);
-// 						// }
-// 						mLines[cursor.mCursorPosition.mLine].insert(idx, 1, newChar);
-// 						count = 1;
-// 					}
-// 				}
-
-// 				// Incrementing the mColumn for next cursor on the same line
-// 				for (int i = cidx + 1; count > 0 && i < mCursors.size(); i++) {
-// 					if (mCursors[i].mCursorPosition.mLine == cursor.mCursorPosition.mLine) {
-// 						mCursors[i].mCursorPosition.mColumn += count;
-// 						if (mSelectionMode == SelectionMode::Word) {
-// 							mCursors[i].mSelectionStart.mColumn += count;
-// 							mCursors[i].mSelectionEnd.mColumn += count;
-// 						}
-// 					}
-// 				}
-
-// 				cursor.mCursorPosition.mColumn++;
-// 			}
-// 			cidx++;
-// 		}
-
-// 		mState.mCursorPosition = mCursors[0].mCursorPosition;
-// 	}
-// 	// uRecord.mAfterState=mState;
-// 	// uRecord.mAddedEnd=mState.mCursorPosition;
-// 	// mUndoManager.AddUndo(uRecord);
-// }
-
-// void Editor::InsertLineBreak(EditorState& cursorState, int cursorIdx)
-// {
-// 	UndoRecord uRecord;
-// 	uRecord.mBeforeState = mState;
-// 	uRecord.mAddedText = '\n';
-// 	uRecord.mAddedStart = mState.mCursorPosition;
-
-// 	int idx = GetCharacterIndex(cursorState.mCursorPosition);
-// 	reCalculateBounds = true;
-
-// 	int lineIndex = cursorState.mCursorPosition.mLine;
-
-// 	// CR Between
-// 	if (idx != mLines[lineIndex].size()) {
-// 		std::string substr = mLines[lineIndex].substr(idx);
-// 		mLines[lineIndex].erase(idx);
-
-// 		lineIndex++;
-// 		mLines.insert(mLines.begin() + lineIndex, substr);
-// 	} else {
-// 		lineIndex++;
-// 		mLines.insert(mLines.begin() + lineIndex, std::string(""));
-// 	}
-
-
-// 	int increments = 1;
-// 	// Cursors - On same line
-// 	if (mCursors.size() > 1) {
-// 		for (int j = cursorIdx + 1; j < mCursors.size() && mCursors[j].mCursorPosition.mLine == cursorState.mCursorPosition.mLine; j++) {
-// 			GL_INFO("CR SAMELINE");
-// 			mCursors[j].mCursorPosition.mLine++;
-// 			mCursors[j].mCursorPosition.mColumn -= cursorState.mCursorPosition.mColumn;
-// 			increments++;
-// 		}
-// 	}
-
-// 	cursorState.mCursorPosition.mLine++;
-
-// 	// Cursors - Following lines
-// 	if (mCursors.size() > 1) {
-// 		for (int j = cursorIdx + increments; j < mCursors.size() && mCursors[j].mCursorPosition.mLine >= cursorState.mCursorPosition.mLine;
-// 		     j++) {
-// 			GL_INFO("CR NEXT LINES");
-// 			mCursors[j].mCursorPosition.mLine++;
-// 		}
-// 	}
-
-
-// 	cursorState.mCursorPosition.mLine--;
-
-// 	int prev_line = lineIndex - 1;
-// 	uint8_t tabCounts = GetTabCountsUptoCursor(cursorState.mCursorPosition);
-
-// 	if (mLines[prev_line].size() > 0) {
-// 		std::string begin = "";
-// 		while (begin.size() < tabCounts) begin += '\t';
-// 		// uRecord.mAddedText+=begin;
-// 		// begin.clear();
-// 		bool isOpenParen = false;
-// 		if (mLines[prev_line].back() == '{') {
-// 			isOpenParen = true;
-// 			begin += '\t';
-// 			tabCounts++;
-// 		}
-
-// 		if (isOpenParen && mLines[lineIndex].size() > 0 && mLines[lineIndex].back() == '}') {
-// 			uRecord.mAddedText += begin;
-// 			// uRecord.mAddedText+='\n';
-// 			mLines.insert(mLines.begin() + lineIndex, begin);
-// 			mLines[lineIndex + 1].insert(0, begin.substr(0, begin.size() - 1));
-// 		} else {
-// 			mLines[lineIndex].insert(0, begin.c_str());
-// 		}
-// 	}
-// 	cursorState.mCursorPosition.mLine++;
-// 	cursorState.mCursorPosition.mColumn = tabCounts * mTabSize;
-
-// 	if (cursorIdx == 0)
-// 		mState = cursorState;
-// 	uRecord.mAfterState = mState;
-// 	uRecord.mAddedEnd = mState.mCursorPosition;
-// 	mUndoManager.AddUndo(uRecord);
-// }
 
 void Editor::MoveTop(bool aShift)
 {
@@ -691,14 +444,15 @@ void Editor::MoveTop(bool aShift)
 	{
 		if (aShift)
 		{
-			mState.mSelectionStart=mState.mCursorPosition;
-			mState.mSelectionEnd=oldPos;
+			mState.mSelectionStart=oldPos;
+			mState.mSelectionEnd=mState.mCursorPosition;
+			mSelectionMode=SelectionMode::Normal;
+			mState.mCursorDirectionChanged=true;
 		}
 		else
 			mState.mSelectionStart = mState.mSelectionEnd = mState.mCursorPosition;
 	}
 	EnsureCursorVisible();
-	// ScrollToLineNumber(mState.mCursorPosition.mLine,false);
 }
 
 void Editor::MoveBottom(bool aShift)
@@ -717,7 +471,6 @@ void Editor::MoveBottom(bool aShift)
 			mState.mSelectionStart = mState.mSelectionEnd = mState.mCursorPosition;
 	}
 	EnsureCursorVisible();
-	// ScrollToLineNumber(newPos.mLine,false);
 }
 
 void Editor::MoveHome(bool aShift)
@@ -778,17 +531,17 @@ void Editor::InsertLineBreak(){
 
 	SetCursorPosition(Coordinates(coord.mLine + 1, GetCharacterColumn(coord.mLine + 1, idx)));
 	EnsureCursorVisible();
+	FindBracketMatch(mState.mCursorPosition);
 }
 
 
 // // TODO: Implement the character deletion UndoRecord Storage
-void Editor::DeleteCharacter(EditorState& cursor, int cidx)
+void Editor::DeleteCharacter(EditorState& cursor, bool aDeletePreviousCharacter)
 {
 	auto pos = GetActualCursorCoordinates();
 	SetCursorPosition(pos);
 
-	bool isBackspace=cidx==-1;
-	if(isBackspace)
+	if(aDeletePreviousCharacter)
 	{
 		if (mState.mCursorPosition.mColumn == 0)
 		{
@@ -819,6 +572,7 @@ void Editor::DeleteCharacter(EditorState& cursor, int cidx)
 				mLines[mState.mCursorPosition.mLine].erase(start,start+1);
 				// mCurrLineLength = GetLineMaxColumn(lineIndex);
 				mState.mCursorPosition.mColumn -= mTabSize;
+				FindBracketMatch(mState.mCursorPosition);
 				return;
 			}
 			int len=UTF8CharLength(line[cindex].mChar);
@@ -871,10 +625,11 @@ void Editor::DeleteCharacter(EditorState& cursor, int cidx)
 
 		mTextChanged = true;
 
-		UpdateSyntaxHighlighting(pos.mLine, 1);
-		EnsureCursorVisible();
 	}
 
+	UpdateSyntaxHighlighting(pos.mLine, 1);
+	EnsureCursorVisible();
+	FindBracketMatch(mState.mCursorPosition);
 }
 
 
@@ -889,14 +644,14 @@ void Editor::Backspace()
 
 	// Deletion of selection
 	if (HasSelection()) {
-		DeleteSelection();
+		DeleteSelection(mState);
 		EnsureCursorVisible();
 		return;
 	}
 
 	// Character deletion Inside line
 	if (mCursors.empty()) {
-		DeleteCharacter(mState);
+		DeleteCharacter(mState,true);
 	} else {
 		assert(false && "Backspace(): MultipleCursors Not Supported!");
 		for (int i = 0; i < mCursors.size(); i++) DeleteCharacter(mCursors[i], i);

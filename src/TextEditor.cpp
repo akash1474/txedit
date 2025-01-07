@@ -77,7 +77,7 @@ void Editor::ResetState(){
 	mState.mCursorPosition.mLine=0;
 	mState.mSelectionEnd =mState.mSelectionStart=mState.mCursorPosition;
 	mSelectionMode=SelectionMode::Normal;
-	mBracketsCoordinates.hasMatched=false;
+	mBracketMatch.mHasMatch=false;
 }
 
 
@@ -376,29 +376,10 @@ bool Editor::Draw()
 				}
 			}
 
-		}else if ((selectionStart.mLine+1)==selectionEnd.mLine){ //Rendering selection two lines
-
-			float prevLinePositonY=mLinePosition.y;
-			if(mState.mCursorDirectionChanged){
-				mLinePosition.y = GetLinePosition(selectionEnd).y;
-			}
-
-			ImVec2 start(GetSelectionPosFromCoords(selectionStart), mLinePosition.y-mLineHeight);
-			ImVec2 end(mLinePosition.x+GetLineMaxColumn(selectionStart.mLine)*mCharacterSize.x+mCharacterSize.x, mLinePosition.y);
-
-			mEditorWindow->DrawList->AddRectFilled(start, end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
-
-
-			start={mLinePosition.x, mLinePosition.y};
-			end={GetSelectionPosFromCoords(selectionEnd), mLinePosition.y + mLineHeight};
-
-			mEditorWindow->DrawList->AddRectFilled(start, end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
-
-
-			if(mState.mCursorDirectionChanged){
-				mLinePosition.y = prevLinePositonY;
-			}
-		}else if((selectionEnd.mLine-selectionStart.mLine) > 1){ // Selection multiple lines
+		}
+		else
+		{ 
+			// Selection multiple lines
 			int start=selectionStart.mLine+1;
 			int end=selectionEnd.mLine;
 			int diff=end-start;
@@ -442,27 +423,19 @@ bool Editor::Draw()
 	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
 	int end = std::min(start+lineCount+1,(int)mLines.size());
 
-	// if(start < (int)floor(scrollY / mLineHeight)){
-	// 	ImGui::SetScrollY(start*mLineHeight);
-	// }
 
-	int lineNo = 0;
 	int i_prev=0;
 	mLineBuffer.clear();
 	auto drawList = ImGui::GetWindowDrawList();
 	float spaceSize = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, " ", nullptr, nullptr).x;
 
 	//Rendering Lines and Vertical Indentation Lines
-	while (start != end) {
+	for (int lineNo=start;lineNo < end;lineNo++) {
 
-		ImVec2 linePosition = ImVec2(mEditorPosition.x - scrollX, mEditorPosition.y + (start * mLineHeight) - scrollY);
+		Line& line=mLines[lineNo];
+		ImVec2 linePosition = ImVec2(mEditorPosition.x - scrollX, mEditorPosition.y + (lineNo * mLineHeight) - scrollY);
 		ImVec2 textScreenPos = ImVec2(linePosition.x + mLineBarWidth + mPaddingLeft, linePosition.y + (0.5 * mLineSpacing));
 
-		// Old Rendering
-		// float linePosY = mEditorPosition.y + (lineNo * mLineHeight) +(0.5*mLineSpacing);
-		// mEditorWindow->DrawList->AddText({mLinePosition.x, linePosY}, mGruvboxPalletDark[(size_t)Pallet::Text], mLines[start].c_str());
-
-		Line& line=mLines[start];
 		// Render colorized text
 		auto prevColor = line.empty() ? mPalette[(int)ColorSchemeIdx::Default] : GetGlyphColor(line[0]);
 		ImVec2 bufferOffset;
@@ -500,7 +473,7 @@ bool Editor::Draw()
 		}
 
 
-		if(mLines[start].empty()){
+		if(mLines[lineNo].empty()){
 			int i=i_prev;
 			while(i>-1){
 				ImVec2 indentStart{mLinePosition.x+(i*mTabSize*mCharacterSize.x), linePosition.y};
@@ -509,7 +482,7 @@ bool Editor::Draw()
 			}
 		}else{
 			int i=0;
-			while(mLines[start].size() > i && mLines[start][i].mChar=='\t'){
+			while(mLines[lineNo].size() > i && mLines[lineNo][i].mChar=='\t'){
 				ImVec2 indentStart{mLinePosition.x+(i*mTabSize*mCharacterSize.x), linePosition.y};
 				mEditorWindow->DrawList->AddLine(indentStart, {indentStart.x,indentStart.y+mLineHeight}, mGruvboxPalletDark[(size_t)Pallet::Indentation]);
 				i++;
@@ -519,57 +492,46 @@ bool Editor::Draw()
 
 
 		//Rendering Cursor
-		if (ImGui::IsWindowFocused() && start==mState.mCursorPosition.mLine) {
+		if (ImGui::IsWindowFocused() && lineNo==mState.mCursorPosition.mLine)
+		{
 			float cx = TextDistanceFromLineStart(mState.mCursorPosition);
 
-			ImVec2 cstart(textScreenPos.x + cx - 2.0f, linePosition.y);
-			ImVec2 cend(textScreenPos.x + cx, linePosition.y + mLineHeight);
+			ImVec2 cstart(textScreenPos.x + cx - 1.0f, linePosition.y);
+			ImVec2 cend(textScreenPos.x + cx+1.0f, linePosition.y + mLineHeight);
 			drawList->AddRectFilled(cstart, cend, ImColor(255, 255, 255, 255));
 		}
 
+		//Highlighting Brackets
+		if(HasBracketMatch())
+		{
+			if(mBracketMatch.mStartBracket.mLine==lineNo)
+				HighlightBracket(mBracketMatch.mStartBracket);
 
-		start++;
-		lineNo++;
+			if(mBracketMatch.mEndBracket.mLine==lineNo)
+				HighlightBracket(mBracketMatch.mEndBracket);
+		}
 	}
 
 
 
 
-	// // Cursor
-	// if(mCursors.empty()){
-	// 	float cx = TextDistanceFromLineStart(mState.mCursorPosition);
 
-	// 	ImVec2 cstart(textScreenPos.x + cx - 2.0f, linePosition.y);
-	// 	ImVec2 cend(textScreenPos.x + cx, linePosition.y + mLineHeight);
-	// 	drawList->AddRectFilled(cstart, cend, ImColor(255, 255, 255, 255));
-	// 	// ImVec2 cursorPos=TextDistanceFromLineStart()
-	// 	// ImVec2 cursorPosition(mLinePosition.x - 1.0f + (mState.mCursorPosition.mColumn * mCharacterSize.x), mEditorPosition.y+(mState.mCursorPosition.mLine*mLineHeight)-scrollY);
-	// 	// mEditorWindow->DrawList->AddRectFilled(cursorPosition, {cursorPosition.x + 2.0f, cursorPosition.y + mLineHeight},ImColor(255, 255, 255, 255));
-	// }else{
-	// 	assert(false && "Multiple Cursor Feature not supported");
-	// 	// for(const EditorState& cursor:mCursors){
-	// 	// 	int lineY = (mEditorPosition.y + (cursor.mCursorPosition.mLine-floor(mMinLineVisible)) * mLineHeight);
-	// 	// 	ImVec2 cursorPosition(mLinePosition.x - 1.0f + (cursor.mCursorPosition.mColumn * mCharacterSize.x), lineY);
-	// 	// 	mEditorWindow->DrawList->AddRectFilled(cursorPosition, {cursorPosition.x + 2.0f, cursorPosition.y + mLineHeight},ImColor(255, 255, 255, 255));
-	// 	// }
+	//Cursors
+	// if(mCursors.empty()) mCursors.push_back(mState);
+	// else mCursors.back()=mState;
+	// for(const EditorState& cursor:mCursors){
+	// 	ImVec2 linePos = GetLinePosition(cursor.mCursorPosition);
+	// 	float cx = TextDistanceFromLineStart(cursor.mCursorPosition);
 
+	// 	ImVec2 cstart(linePos.x+mLineBarWidth+mPaddingLeft + cx - 1.0f, linePos.y);
+	// 	ImVec2 cend(linePos.x+mLineBarWidth+mPaddingLeft + cx+1.0f, linePos.y + mLineHeight);
+	// 	mEditorWindow->DrawList->AddRectFilled(cstart,cend,ImColor(255, 255, 255, 255));
 	// }
-
-
-
-
-
-
 
 	bool isTrue=mSearchState.isValid() && mSelectionMode!=SelectionMode::Line;
 	if(isTrue)
 		HighlightCurrentWordInBuffer();
 
-	//Line Number Background
-	mEditorWindow->DrawList->AddRectFilled({mEditorPosition}, {mEditorPosition.x + mLineBarWidth, mEditorSize.y}, mGruvboxPalletDark[(size_t)Pallet::Background]); // LineNo
-	// Highlight Current Lin
-	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x,mEditorPosition.y+(mState.mCursorPosition.mLine*mLineHeight)-scrollY},{mEditorPosition.x+mLineBarWidth, mEditorPosition.y+(mState.mCursorPosition.mLine*mLineHeight)-scrollY + mLineHeight},mGruvboxPalletDark[(size_t)Pallet::Highlight]); // Code
-	mLineHeight = mLineSpacing + mCharacterSize.y;
 
 
 
@@ -586,20 +548,13 @@ bool Editor::Draw()
 	}
 
 
-	//Highlighting Brackets
-	// if(mBracketsCoordinates.hasMatched){
-	// 	for(Coordinates& coord:mBracketsCoordinates.coords){
-	// 		if (coord.mColumn >= mLines[coord.mLine].size()) continue;
-	// 		int column=GetCharacterColumn(coord.mLine,coord.mColumn);
 
-	// 		float linePosY = (mEditorPosition.y  + (coord.mLine-floor(mMinLineVisible)) * mLineHeight);
-	// 		int tabs=GetTabCountsUptoCursor(coord)*(mTabSize-1);
 
-	// 		ImVec2 start{mLinePosition.x+column*mCharacterSize.x,linePosY};
-	// 		mEditorWindow->DrawList->AddRect(start,{start.x+mCharacterSize.x+1,start.y+mLineHeight}, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
-	// 	}
-	// }
-
+	//Line Number Background
+	mEditorWindow->DrawList->AddRectFilled({mEditorPosition}, {mEditorPosition.x + mLineBarWidth, mEditorSize.y}, mGruvboxPalletDark[(size_t)Pallet::Background]); // LineNo
+	// Highlight Current Lin
+	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x,mEditorPosition.y+(mState.mCursorPosition.mLine*mLineHeight)-scrollY},{mEditorPosition.x+mLineBarWidth, mEditorPosition.y+(mState.mCursorPosition.mLine*mLineHeight)-scrollY + mLineHeight},mGruvboxPalletDark[(size_t)Pallet::Highlight]); // Code
+	mLineHeight = mLineSpacing + mCharacterSize.y;
 
 	//Horizonal scroll Shadow
 	if(ImGui::GetScrollX()>0.0f){
@@ -607,20 +562,12 @@ bool Editor::Draw()
 		mEditorWindow->DrawList->AddRectFilledMultiColor(pos_start,{pos_start.x+10.0f,mEditorWindow->Size.y}, ImColor(19,21,21,130),ImColor(19,21,21,0),ImColor(19,21,21,0),ImColor(19,21,21,130));
 	}
 
-	start = std::min((int)mLines.size()-1, (int)floor(scrollY / mLineHeight));
-	lineCount = (mEditorWindow->Size.y) / mLineHeight;
-	end = std::min(start+lineCount+1,(int)mLines.size());
-
 	//Rendering Line Number
-	lineNo = 0;
-	while (start != end) {
-		float linePosY =mEditorPosition.y + (start * mLineHeight) + 0.5f*mLineSpacing - scrollY;
-		float linePosX=mEditorPosition.x + mLineBarPadding + (mLineBarMaxCountWidth-GetNumberWidth(start+1))*mCharacterSize.x;
+	for (int lineNo=start;lineNo<end;lineNo++) {
+		float linePosY =mEditorPosition.y + (lineNo * mLineHeight) + 0.5f*mLineSpacing - scrollY;
+		float linePosX=mEditorPosition.x + mLineBarPadding + (mLineBarMaxCountWidth-GetNumberWidth(lineNo+1))*mCharacterSize.x;
 
-		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (start==mState.mCursorPosition.mLine) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(start + 1).c_str());
-
-		start++;
-		lineNo++;
+		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (lineNo==mState.mCursorPosition.mLine) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(lineNo + 1).c_str());
 	}
 
 
@@ -633,117 +580,137 @@ bool Editor::Draw()
 	return true;
 }
 
-// void Editor::CalculateBracketMatch(){
-// 	const auto pos=GetMatchingBracketsCoordinates();
-// 	if(mBracketsCoordinates.hasMatched) 
-// 		mBracketsCoordinates.coords=pos;
-// }
+void Editor::HighlightBracket(const Coordinates& aCoords){
+	if (aCoords.mColumn >= mLines[aCoords.mLine].size()) 
+		return;
 
+	int column=GetCharacterColumn(aCoords.mLine,aCoords.mColumn);
+	int tabs=GetTabCountsUptoCursor(aCoords)*(mTabSize-1);
+	float linePositionY=GetLinePosition(aCoords).y;
 
-int IsBracket(const char x){
-	if(x=='(' || x=='{' || x=='[') return -1;
-	else if(x==')' || x=='}' || x==']') return 1;
-
-	return 0;
+	ImVec2 start{mLinePosition.x+column*mCharacterSize.x,linePositionY};
+	mEditorWindow->DrawList->AddRect(start,{start.x+mCharacterSize.x+1,start.y+mLineHeight}, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
 }
 
 
-// Coordinates Editor::FindStartBracket(const Coordinates& coords){
-// 	Coordinates coord{INT_MAX,INT_MAX};
+void Editor::FindBracketMatch(const Coordinates& aCoords)
+{
+	OpenGL::ScopedTimer timer("Editor::FindBracketMatch");
+	mBracketMatch.mHasMatch=false;
 
-// 	int cLine=coords.mLine;
-// 	int cColumn=std::max(0,(int)GetCharacterIndex(coords)-1);
+	const Coordinates cStart=FindStartBracket(mState.mCursorPosition);
+	if(cStart.mLine==INT_MAX) 
+		return;
 
-// 	bool isFound=false;
-// 	int ignore=0;
-// 	char x=-1;
+	GL_INFO("BracketMatch Start:[{},{}]",cStart.mLine,cStart.mColumn);
 
-// 	for(;cLine>=0;cLine--)
-// 	{
-// 		const auto& line=mLines[cLine];
-// 		if(line.empty()){
-// 			if(cLine>0 && !mLines[cLine - 1].empty()) 
-// 				cColumn=mLines[cLine - 1].size() - 1;
-// 			else cColumn=0;
-// 			continue;
-// 		}
+	const Coordinates cEnd=FindEndBracket(mState.mCursorPosition);
+	
+	if(cEnd.mLine==INT_MAX) 
+		return;
 
-// 		for(;cColumn>=0;cColumn--){
-// 			if(line[cColumn]==x){ x=-1; continue; }
-// 			if(line[cColumn]=='\'' || line[cColumn]=='"'){
-// 				x=line[cColumn]; 
-// 				continue; 
-// 			}
-// 			if(x!=-1) continue;
+	mBracketMatch.mHasMatch=true;
+	mBracketMatch.mStartBracket=cStart;
+	mBracketMatch.mEndBracket=cEnd;
+	GL_INFO("BracketMatch End:[{},{}]",mBracketMatch.mEndBracket.mLine,mBracketMatch.mEndBracket.mColumn);
+}
 
-// 			switch(line[cColumn]) {
-// 				case ')': ignore++;break;
-// 				case ']': ignore++;break;
-// 				case '}': ignore++;break;
-// 				case '(':{if(!ignore){isFound=true;} if(ignore>0) ignore--; break; }
-// 				case '[':{if(!ignore){isFound=true;} if(ignore>0) ignore--; break; }
-// 				case '{':{if(!ignore){isFound=true;} if(ignore>0) ignore--; break; }
-// 			}
+Coordinates Editor::FindStartBracket(const Coordinates& coords){
+	Coordinates coord{INT_MAX,INT_MAX};
 
-// 			if(isFound)	{
-// 				coord.mLine=cLine;
-// 				coord.mColumn=cColumn;
-// 				return coord;
-// 			}
-// 		}
+	int cLine=coords.mLine;
+	int cColumn=std::max(0,(int)GetCharacterIndex(coords)-1);
 
-// 		if(cLine>0 && !mLines[cLine - 1].empty()) 
-// 			cColumn=mLines[cLine - 1].size() - 1;
-// 		else cColumn=0;
-// 	}
-// 	return coord;
-// }
+	bool isFound=false;
+	int ignore=0;
+	char x=-1;
 
+	for(;cLine>=0;cLine--)
+	{
+		const auto& line=mLines[cLine];
+		if(line.empty()){
+			if(cLine>0 && !mLines[cLine - 1].empty()) 
+				cColumn=mLines[cLine - 1].size() - 1;
+			else cColumn=0;
+			continue;
+		}
 
-// Coordinates Editor::FindEndBracket(const Coordinates& coords){
-// 	Coordinates coord{INT_MAX,INT_MAX};
+		for(;cColumn>=0;cColumn--){
+			if(line[cColumn].mChar==x){ x=-1; continue; }
+			if(line[cColumn].mChar=='\'' || line[cColumn].mChar=='"'){
+				x=line[cColumn].mChar; 
+				continue; 
+			}
+			if(x!=-1) continue;
 
-// 	int cLine=coords.mLine;
-// 	int cColumn=(int)GetCharacterIndex(coords);
+			switch(line[cColumn].mChar) {
+				case ')': ignore++;break;
+				case ']': ignore++;break;
+				case '}': ignore++;break;
+				case '(':{if(!ignore){isFound=true;} if(ignore>0) ignore--; break; }
+				case '[':{if(!ignore){isFound=true;} if(ignore>0) ignore--; break; }
+				case '{':{if(!ignore){isFound=true;} if(ignore>0) ignore--; break; }
+			}
 
-// 	int ignore=0;
-// 	bool isFound=false;
-// 	char stringQuotes=-1;
-// 	for(;cLine < mLines.size();cLine++)
-// 	{
-// 		const auto& line=mLines[cLine];
-// 		if(line.empty()) continue;
+			if(isFound)	{
+				coord.mLine=cLine;
+				coord.mColumn=cColumn;
+				return coord;
+			}
+		}
 
-// 		for(;cColumn < line.size();cColumn++)
-// 		{
-// 			//Ignoring the brackets inside quotes
-// 			if(line[cColumn]==stringQuotes){ stringQuotes=-1; continue; }
-// 			if(line[cColumn]=='\'' || line[cColumn]=='"'){
-// 				stringQuotes=line[cColumn];
-// 				continue; 
-// 			}
-// 			if(stringQuotes!=-1) continue;
+		if(cLine>0 && !mLines[cLine - 1].empty()) 
+			cColumn=mLines[cLine - 1].size() - 1;
+		else cColumn=0;
+	}
+	return coord;
+}
 
 
-// 			switch(line[cColumn]){
-// 				case '(': ignore++; break;
-// 				case '[': ignore++; break;
-// 				case '{': ignore++; break;
-// 				case ')':{if(!ignore) isFound=true; if(ignore>0) ignore--; break; }
-// 				case ']':{if(!ignore) isFound=true; if(ignore>0) ignore--; break; }
-// 				case '}':{if(!ignore) isFound=true; if(ignore>0) ignore--; break; }
-// 			}
+Coordinates Editor::FindEndBracket(const Coordinates& coords){
+	Coordinates coord{INT_MAX,INT_MAX};
 
-// 			if(isFound){
-// 				coord.mLine=cLine;
-// 				coord.mColumn=cColumn;
-// 				return coord;
-// 			}
-// 		}
-// 		cColumn=0;
-// 	}
-// 	return coord;
-// }
+	int cLine=coords.mLine;
+	int cColumn=(int)GetCharacterIndex(coords);
+
+	int ignore=0;
+	bool isFound=false;
+	char stringQuotes=-1;
+	for(;cLine < mLines.size();cLine++)
+	{
+		const auto& line=mLines[cLine];
+		if(line.empty()) continue;
+
+		for(;cColumn < line.size();cColumn++)
+		{
+			//Ignoring the brackets inside quotes
+			if(line[cColumn].mChar==stringQuotes){ stringQuotes=-1; continue; }
+			if(line[cColumn].mChar=='\'' || line[cColumn].mChar=='"'){
+				stringQuotes=line[cColumn].mChar;
+				continue; 
+			}
+			if(stringQuotes!=-1) continue;
+
+
+			switch(line[cColumn].mChar){
+				case '(': ignore++; break;
+				case '[': ignore++; break;
+				case '{': ignore++; break;
+				case ')':{if(!ignore) isFound=true; if(ignore>0) ignore--; break; }
+				case ']':{if(!ignore) isFound=true; if(ignore>0) ignore--; break; }
+				case '}':{if(!ignore) isFound=true; if(ignore>0) ignore--; break; }
+			}
+
+			if(isFound){
+				coord.mLine=cLine;
+				coord.mColumn=cColumn;
+				return coord;
+			}
+		}
+		cColumn=0;
+	}
+	return coord;
+}
 
 // Function to set PaletteIndex based on Tree-sitter node type
 Editor::ColorSchemeIdx Editor::GetColorSchemeIndexForNode(const std::string &type)
@@ -1656,7 +1623,7 @@ void Editor::Paste(){
 			// uRecord.mRemovedText=GetSelectedText();
 			// uRecord.mRemovedStart=mState.mSelectionStart;
 			// uRecord.mRemovedEnd=mState.mSelectionEnd;
-			DeleteSelection();
+			DeleteSelection(mState);
 		}
 
 		// uRecord.mAddedText=text;
@@ -1689,15 +1656,15 @@ void Editor::CloseDebounceThread(){
 }
 
 
-void Editor::DeleteSelection() {
+void Editor::DeleteSelection(EditorState& aState) {
 	if(!HasSelection()) return;
-	if(mState.mSelectionStart>mState.mSelectionEnd) 
-		std::swap(mState.mSelectionStart,mState.mSelectionEnd);
+	if(aState.mSelectionStart>aState.mSelectionEnd) 
+		std::swap(aState.mSelectionStart,aState.mSelectionEnd);
 
-	DeleteRange(mState.mSelectionStart,mState.mSelectionEnd);
-	mState.mCursorPosition=mState.mSelectionEnd=mState.mSelectionStart;
+	DeleteRange(aState.mSelectionStart,aState.mSelectionEnd);
+	aState.mCursorPosition=aState.mSelectionEnd=aState.mSelectionStart;
 	GL_INFO("nLines:{}",mLines.size());
-	GL_INFO("CursorPos:({},{})",mState.mCursorPosition.mLine,mState.mCursorPosition.mColumn);
+	GL_INFO("CursorPos:({},{})",aState.mCursorPosition.mLine,aState.mCursorPosition.mColumn);
 
 	DebouncedReparse();
 }
@@ -1726,9 +1693,9 @@ void Editor::RemoveLine(int aIndex)
 void Editor::SetCursorPosition(const Coordinates& aPosition)
 {
 	if (mState.mCursorPosition != aPosition) {
-		mState.mCursorPosition = aPosition;
+		mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition = aPosition;
 		// mCursorPositionChanged = true;
-		// EnsureCursorVisible();
+		EnsureCursorVisible();
 	}
 }
 
@@ -1904,6 +1871,27 @@ void Editor::Find(){
 void Editor::DisableSelection(){
 	mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition;
 	mSelectionMode=SelectionMode::Normal;
+}
+
+
+Coordinates Editor::GetCoordinatesFromOffset(uint32_t aOffset) {
+    uint32_t currentOffset = 0;
+    uint32_t row = 0;
+    
+    for (const auto& line : mLines) {
+        uint32_t lineLength = line.size() + 1; // +1 for newline
+        if (currentOffset + lineLength > aOffset) {
+            // Found the line containing ouraOffset 
+            uint32_t column = aOffset - currentOffset;
+            int i=0;
+            while(i<line.size() && line[i++].mChar=='\t') column+=(mTabSize-1);
+            return {(int)row, (int)column};
+        }
+        currentOffset += lineLength;
+        row++;
+    }
+    
+    return {(int)row, 0};
 }
 
 

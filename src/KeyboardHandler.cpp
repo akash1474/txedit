@@ -55,14 +55,14 @@ void Editor::HandleKeyboardInputs()
 			MoveLeft(ctrl, shift);
 		else if (!alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_RightArrow)))
 			MoveRight(ctrl, shift);
-		// else if (!alt && ctrl && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_D))) {
+		else if (!alt && ctrl && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_D))) {
 
 			// bool condition = (mSelectionMode == SelectionMode::Word) && mSearchState.mFoundPositions.empty();
 
 			// if (mSelectionMode == SelectionMode::Normal || condition) {
 
 			// 	if (mSelectionMode != SelectionMode::Word)
-			// 		HandleDoubleClick();
+			// 		SelectWordUnderCursor();
 			// 	if (mState.mSelectionStart == mState.mSelectionEnd)
 			// 		return;
 
@@ -102,7 +102,8 @@ void Editor::HandleKeyboardInputs()
 			// 	if (mSearchState.mIdx == mSearchState.mFoundPositions.size())
 			// 		mSearchState.mIdx = 0;
 			// }
-		// } else if (!alt && !ctrl && !shift && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+		}
+		// else if (!alt && !ctrl && !shift && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
 		// 	if (mSelectionMode != SelectionMode::Normal)
 		// 		mSelectionMode = SelectionMode::Normal;
 		// 	if (mCursors.size())
@@ -159,7 +160,5 @@ void Editor::HandleKeyboardInputs()
 			io.InputQueueCharacters.resize(0);
 		}
 
-		// if (anyKeyPressed && !ctrl)
-		// 	mBracketsCoordinates.coords = GetMatchingBracketsCoordinates();
 	}
 }
