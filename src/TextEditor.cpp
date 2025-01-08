@@ -1,3 +1,4 @@
+#include "DataTypes.h"
 #include "pch.h"
 #include "Coordinates.h"
 #include "Timer.h"
@@ -65,6 +66,8 @@ Editor::Editor()
 	SetLanguageDefinition(LanguageDefinition::CPlusPlus());
 	mLines.push_back(Line());
 	workerThread_ = std::thread(&Editor::WorkerThread, this);
+	Cursor aCursor;
+	mState.mCursors.push_back(aCursor);
 }
 Editor::~Editor() {
 	CloseDebounceThread();
@@ -72,10 +75,11 @@ Editor::~Editor() {
 
 void Editor::ResetState(){
 	mSearchState.reset();
-	mCursors.clear();
-	mState.mCursorPosition.mColumn=0;
-	mState.mCursorPosition.mLine=0;
-	mState.mSelectionEnd =mState.mSelectionStart=mState.mCursorPosition;
+	//TODO:
+	// mCursors.clear();
+	// mState.mCursorPosition.mColumn=0;
+	// mState.mCursorPosition.mLine=0;
+	// mState.mSelectionEnd =mState.mSelectionStart=mState.mCursorPosition;
 	mSelectionMode=SelectionMode::Normal;
 	mBracketMatch.mHasMatch=false;
 }
@@ -339,40 +343,33 @@ bool Editor::Draw()
 	auto scrollX = ImGui::GetScrollX();
 	auto scrollY = ImGui::GetScrollY();
 
-	mMinLineVisible = (int)floor(scrollY / mLineHeight);
-	mLinePosition.y = GetLinePosition(mState.mCursorPosition).y;
+
+	Cursor& aCursor=GetCurrentCursor();
+	mLinePosition.y = GetLinePosition(aCursor.mCursorPosition).y;
 	mLinePosition.x = mEditorPosition.x + mLineBarWidth + mPaddingLeft-ImGui::GetScrollX();
 
 
+	int start = std::min((int)mLines.size()-1,(int)floor(scrollY / mLineHeight));
+	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
+	int end = std::min(start+lineCount+1,(int)mLines.size());
 
 	//Highlight Selections
-	if (HasSelection()) {
-		Coordinates selectionStart=mState.mSelectionStart;
-		Coordinates selectionEnd=mState.mSelectionEnd;
+	if (HasSelection(aCursor)) {
+		Coordinates selectionStart=aCursor.mSelectionStart;
+		Coordinates selectionEnd=aCursor.mSelectionEnd;
 
 		if(selectionStart > selectionEnd)
 			std::swap(selectionStart,selectionEnd);
 
 		if(selectionStart.mLine==selectionEnd.mLine){
 
-			if(mCursors.empty()){
-				ImVec2 start(GetSelectionPosFromCoords(selectionStart), mLinePosition.y);
-				ImVec2 end(GetSelectionPosFromCoords(selectionEnd), mLinePosition.y + mLineHeight);
+			for(const auto& aCursor:mState.mCursors){
+				if(aCursor.mSelectionStart.mLine>=start && aCursor.mSelectionStart.mLine < end){
+					int posY=GetLinePosition(aCursor.mCursorPosition).y;
+					ImVec2 start(GetSelectionPosFromCoords(aCursor.mSelectionStart), posY);
+					ImVec2 end(GetSelectionPosFromCoords(aCursor.mSelectionEnd), posY + mLineHeight);
 
-				mEditorWindow->DrawList->AddRectFilled(start, end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
-			}
-			else{
-				int start = std::min(int(mMinLineVisible),(int)mLines.size());
-				int lineCount = (mEditorWindow->Size.y) / mLineHeight;
-				int end = std::min(start + lineCount + 1,(int)mLines.size());
-				for(const auto& cursor:mCursors){
-					if(cursor.mSelectionStart.mLine>=start && cursor.mSelectionStart.mLine < end){
-						int posY=GetLinePosition(cursor.mCursorPosition).y;
-						ImVec2 start(GetSelectionPosFromCoords(cursor.mSelectionStart), posY);
-						ImVec2 end(GetSelectionPosFromCoords(cursor.mSelectionEnd), posY + mLineHeight);
-
-						mEditorWindow->DrawList->AddRectFilled(start, end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
-					}
+					mEditorWindow->DrawList->AddRectFilled(start, end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
 				}
 			}
 
@@ -386,7 +383,7 @@ bool Editor::Draw()
 
 
 			float prevLinePositonY=mLinePosition.y;
-			if(mState.mCursorDirectionChanged){
+			if(aCursor.mCursorDirectionChanged){
 				mLinePosition.y = GetLinePosition(selectionEnd).y;
 			}
 
@@ -412,16 +409,13 @@ bool Editor::Draw()
 
 			mEditorWindow->DrawList->AddRectFilled(p_start, p_end, mGruvboxPalletDark[(size_t)Pallet::Highlight]);
 
-			if(mState.mCursorDirectionChanged){
+			if(aCursor.mCursorDirectionChanged){
 				mLinePosition.y = prevLinePositonY;
 			}
 		}
 	}
 
 
-	int start = std::min((int)mLines.size()-1,(int)floor(scrollY / mLineHeight));
-	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
-	int end = std::min(start+lineCount+1,(int)mLines.size());
 
 
 	int i_prev=0;
@@ -492,14 +486,14 @@ bool Editor::Draw()
 
 
 		//Rendering Cursor
-		if (ImGui::IsWindowFocused() && lineNo==mState.mCursorPosition.mLine)
-		{
-			float cx = TextDistanceFromLineStart(mState.mCursorPosition);
+		// if (ImGui::IsWindowFocused() && lineNo==aCursor.mCursorPosition.mLine)
+		// {
+		// 	float cx = TextDistanceFromLineStart(aCursor.mCursorPosition);
 
-			ImVec2 cstart(textScreenPos.x + cx - 1.0f, linePosition.y);
-			ImVec2 cend(textScreenPos.x + cx+1.0f, linePosition.y + mLineHeight);
-			drawList->AddRectFilled(cstart, cend, ImColor(255, 255, 255, 255));
-		}
+		// 	ImVec2 cstart(textScreenPos.x + cx - 1.0f, linePosition.y);
+		// 	ImVec2 cend(textScreenPos.x + cx+1.0f, linePosition.y + mLineHeight);
+		// 	drawList->AddRectFilled(cstart, cend, ImColor(255, 255, 255, 255));
+		// }
 
 		//Highlighting Brackets
 		if(HasBracketMatch())
@@ -517,16 +511,15 @@ bool Editor::Draw()
 
 
 	//Cursors
-	// if(mCursors.empty()) mCursors.push_back(mState);
-	// else mCursors.back()=mState;
-	// for(const EditorState& cursor:mCursors){
-	// 	ImVec2 linePos = GetLinePosition(cursor.mCursorPosition);
-	// 	float cx = TextDistanceFromLineStart(cursor.mCursorPosition);
 
-	// 	ImVec2 cstart(linePos.x+mLineBarWidth+mPaddingLeft + cx - 1.0f, linePos.y);
-	// 	ImVec2 cend(linePos.x+mLineBarWidth+mPaddingLeft + cx+1.0f, linePos.y + mLineHeight);
-	// 	mEditorWindow->DrawList->AddRectFilled(cstart,cend,ImColor(255, 255, 255, 255));
-	// }
+	for(const Cursor& cursor:mState.mCursors){
+		ImVec2 linePos = GetLinePosition(cursor.mCursorPosition);
+		float cx = TextDistanceFromLineStart(cursor.mCursorPosition);
+
+		ImVec2 cstart(linePos.x+mLineBarWidth+mPaddingLeft + cx - 1.0f, linePos.y);
+		ImVec2 cend(linePos.x+mLineBarWidth+mPaddingLeft + cx+1.0f, linePos.y + mLineHeight);
+		mEditorWindow->DrawList->AddRectFilled(cstart,cend,ImColor(255, 255, 255, 255));
+	}
 
 	bool isTrue=mSearchState.isValid() && mSelectionMode!=SelectionMode::Line;
 	if(isTrue)
@@ -539,7 +532,7 @@ bool Editor::Draw()
 	if(isTrue){
 		bool isNormalMode=mSelectionMode==SelectionMode::Normal;
 		for(const auto& coord:mSearchState.mFoundPositions){
-			float linePosY = mEditorPosition.y+(mState.mCursorPosition.mLine*mLineHeight)-scrollY;
+			float linePosY = mEditorPosition.y+(aCursor.mCursorPosition.mLine*mLineHeight)-scrollY;
 			ImVec2 start{mEditorPosition.x,linePosY};
 			ImVec2 end{mEditorPosition.x+4.0f,linePosY+(isNormalMode ? 0 : mLineHeight)};
 
@@ -553,7 +546,7 @@ bool Editor::Draw()
 	//Line Number Background
 	mEditorWindow->DrawList->AddRectFilled({mEditorPosition}, {mEditorPosition.x + mLineBarWidth, mEditorSize.y}, mGruvboxPalletDark[(size_t)Pallet::Background]); // LineNo
 	// Highlight Current Lin
-	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x,mEditorPosition.y+(mState.mCursorPosition.mLine*mLineHeight)-scrollY},{mEditorPosition.x+mLineBarWidth, mEditorPosition.y+(mState.mCursorPosition.mLine*mLineHeight)-scrollY + mLineHeight},mGruvboxPalletDark[(size_t)Pallet::Highlight]); // Code
+	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x,mEditorPosition.y+(aCursor.mCursorPosition.mLine*mLineHeight)-scrollY},{mEditorPosition.x+mLineBarWidth, mEditorPosition.y+(aCursor.mCursorPosition.mLine*mLineHeight)-scrollY + mLineHeight},mGruvboxPalletDark[(size_t)Pallet::Highlight]); // Code
 	mLineHeight = mLineSpacing + mCharacterSize.y;
 
 	//Horizonal scroll Shadow
@@ -567,7 +560,7 @@ bool Editor::Draw()
 		float linePosY =mEditorPosition.y + (lineNo * mLineHeight) + 0.5f*mLineSpacing - scrollY;
 		float linePosX=mEditorPosition.x + mLineBarPadding + (mLineBarMaxCountWidth-GetNumberWidth(lineNo+1))*mCharacterSize.x;
 
-		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (lineNo==mState.mCursorPosition.mLine) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(lineNo + 1).c_str());
+		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (lineNo==aCursor.mCursorPosition.mLine) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(lineNo + 1).c_str());
 	}
 
 
@@ -598,13 +591,13 @@ void Editor::FindBracketMatch(const Coordinates& aCoords)
 	OpenGL::ScopedTimer timer("Editor::FindBracketMatch");
 	mBracketMatch.mHasMatch=false;
 
-	const Coordinates cStart=FindStartBracket(mState.mCursorPosition);
+	const Coordinates cStart=FindStartBracket(aCoords);
 	if(cStart.mLine==INT_MAX) 
 		return;
 
 	GL_INFO("BracketMatch Start:[{},{}]",cStart.mLine,cStart.mColumn);
 
-	const Coordinates cEnd=FindEndBracket(mState.mCursorPosition);
+	const Coordinates cEnd=FindEndBracket(aCoords);
 	
 	if(cEnd.mLine==INT_MAX) 
 		return;
@@ -1185,7 +1178,7 @@ int Editor::GetLineMaxColumn(int aLine) const
 	for (unsigned i = 0; i < line.size();) {
 		auto c = line[i].mChar;
 		if (c == '\t')
-			col = (col / mTabSize) * mTabSize + mTabSize;
+			col += mTabSize;
 		else
 			col++;
 		i += UTF8CharLength(c);
@@ -1193,7 +1186,11 @@ int Editor::GetLineMaxColumn(int aLine) const
 	return col;
 }
 
-int Editor::GetCurrentLineMaxColumn() const { return GetLineMaxColumn(mState.mCursorPosition.mLine); }
+int Editor::GetCurrentLineMaxColumn() 
+{ 
+	Cursor& aCursor=GetCurrentCursor();
+	return GetLineMaxColumn(aCursor.mCursorPosition.mLine); 
+}
 
 
 uint8_t Editor::GetTabCountsUptoCursor(const Coordinates& coords)const
@@ -1215,14 +1212,14 @@ uint8_t Editor::GetTabCountsUptoCursor(const Coordinates& coords)const
 }
 
 
-size_t Editor::GetCharacterIndex(const Coordinates& aCoordinates) const
+size_t Editor::GetCharacterIndex(const Coordinates& aCoords) const
 {
-	if (aCoordinates.mLine >= mLines.size())
+	if (aCoords.mLine >= mLines.size())
 		return -1;
-	auto& line = mLines[aCoordinates.mLine];
+	auto& line = mLines[aCoords.mLine];
 	int c = 0;
 	int i = 0;
-	for (; i < line.size() && c < aCoordinates.mColumn;)
+	for (; i < line.size() && c < aCoords.mColumn;)
 	{
 		if (line[i].mChar == '\t')
 			c += mTabSize;
@@ -1246,20 +1243,10 @@ void Editor::UpdateBounds()
 	reCalculateBounds = false;
 }
 
-bool Editor::IsCursorVisible(){
-	int min=int(floor(mMinLineVisible));
-	int count=(int)floor(mEditorWindow->Size.y/mLineHeight);
-
-	if(mState.mCursorPosition.mLine < min) return false;
-	if(mState.mCursorPosition.mLine > (min+count)) return false;
-
-	return true;
-}
-
 
 float Editor::GetSelectionPosFromCoords(const Coordinates& coords)const{
 	float offset{0.0f};
-	if(coords==mState.mSelectionStart) offset=-1.0f;
+	if(coords==mState.mCursors[mState.mCurrentCursorIdx].mSelectionStart) offset=-1.0f;
 	return mLinePosition.x - offset + (coords.mColumn * mCharacterSize.x);
 }
 
@@ -1269,23 +1256,24 @@ void Editor::HighlightCurrentWordInBuffer() const {
 	int minLine=int(mMinLineVisible);
 	int count=int(mEditorWindow->Size.y/mLineHeight);
 
-	for(const Coordinates& coord:mSearchState.mFoundPositions){
-		if(coord.mLine==mState.mSelectionStart.mLine && coord.mColumn==mState.mSelectionStart.mColumn) continue;
-		if(mSearchState.mIsGlobal && (coord.mLine < minLine || coord.mLine > minLine+count)) break;
 
-		float offset=(mSelectionMode==SelectionMode::Normal) ? (mLineHeight+1.0f-0.5f*mLineSpacing) : 1.0f;
-		float linePosY = (mEditorPosition.y  + (coord.mLine-floor(mMinLineVisible)) * mLineHeight)+offset;
+	// for(const Coordinates& coord:mSearchState.mFoundPositions){
+	// 	if(coord.mLine==mState.mSelectionStart.mLine && coord.mColumn==mState.mSelectionStart.mColumn) continue;
+	// 	if(mSearchState.mIsGlobal && (coord.mLine < minLine || coord.mLine > minLine+count)) break;
 
-		ImVec2 start{mLinePosition.x+coord.mColumn*mCharacterSize.x-!isNormalMode,linePosY};
-		ImVec2 end{start.x+mSearchState.mWord.size()*mCharacterSize.x+(!isNormalMode*2),linePosY+(isNormalMode ? 0 : mLineHeight)};
-		ImDrawList* drawlist=ImGui::GetCurrentWindow()->DrawList;
+	// 	float offset=(mSelectionMode==SelectionMode::Normal) ? (mLineHeight+1.0f-0.5f*mLineSpacing) : 1.0f;
+	// 	float linePosY = (mEditorPosition.y  + (coord.mLine-floor(mMinLineVisible)) * mLineHeight)+offset;
 
-		if(isNormalMode)
-			drawlist->AddLine(start,end, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
-		else
-			drawlist->AddRect(start,end, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
+	// 	ImVec2 start{mLinePosition.x+coord.mColumn*mCharacterSize.x-!isNormalMode,linePosY};
+	// 	ImVec2 end{start.x+mSearchState.mWord.size()*mCharacterSize.x+(!isNormalMode*2),linePosY+(isNormalMode ? 0 : mLineHeight)};
+	// 	ImDrawList* drawlist=ImGui::GetCurrentWindow()->DrawList;
 
-	}
+	// 	if(isNormalMode)
+	// 		drawlist->AddLine(start,end, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
+	// 	else
+	// 		drawlist->AddRect(start,end, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
+
+	// }
 }
 
 // FIX: Needs a find function to search for a substring in buffer
@@ -1346,20 +1334,20 @@ std::string Editor::GetWordAt(const Coordinates& aCoords) const
 
 void Editor::SearchWordInCurrentVisibleBuffer(){
 
-	OpenGL::ScopedTimer timer("WordSearch");
-	mSearchState.reset();
+	// OpenGL::ScopedTimer timer("WordSearch");
+	// mSearchState.reset();
 
 
-	int start = std::min(int(mMinLineVisible),(int)mLines.size()-1);
-	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
-	int end = std::min(start + lineCount + 1,(int)mLines.size()-1);
+	// int start = std::min(int(mMinLineVisible),(int)mLines.size()-1);
+	// int lineCount = (mEditorWindow->Size.y) / mLineHeight;
+	// int end = std::min(start + lineCount + 1,(int)mLines.size()-1);
 
-	const std::string currentWord=std::move(GetWordAt(mState.mCursorPosition));
-	if(currentWord.empty())return;
-	mSearchState.mWord=currentWord;
+	// const std::string currentWord=std::move(GetWordAt(mState.mCursorPosition));
+	// if(currentWord.empty())return;
+	// mSearchState.mWord=currentWord;
 
 
-	GL_WARN("Searching: {}",currentWord);
+	// GL_WARN("Searching: {}",currentWord);
 	//Just for testing FindWordStart & FindWordEnd
 	// const auto& scoord=FindWordStart(mState.mCursorPosition);
 	// const auto& ecoord=FindWordEnd(mState.mCursorPosition);
@@ -1498,23 +1486,24 @@ int Editor::GetCharacterColumn(int aLine, int aIndex) const
 
 
 
-void Editor::ScrollToLineNumber(int aLineNo,bool aAnimate){
+void Editor::ScrollToLineNumber(int aToLine,bool aAnimate){
 
-	aLineNo=std::max(0,std::min((int)mLines.size()-1,aLineNo));
+	aToLine=std::max(0,std::min((int)mLines.size()-1,aToLine));
 
-	int lineLength=GetLineMaxColumn(aLineNo);
-	mState.mCursorPosition.mColumn=std::min(mState.mCursorPosition.mColumn,lineLength);
+	int lineLength=GetLineMaxColumn(aToLine);
+	Cursor& aCursor=GetCurrentCursor();
+	aCursor.mCursorPosition.mColumn=std::min(aCursor.mCursorPosition.mColumn,lineLength);
 
 	if(!aAnimate){
-		ImGui::SetScrollY(aLineNo*mLineHeight);
+		ImGui::SetScrollY(aToLine*mLineHeight);
 		return;
 	}
 	assert(aAnimate && "Scroll Animation not implemented!");
-	mScrollAmount=aLineNo*mLineHeight;
+	mScrollAmount=aToLine*mLineHeight;
 
 	//Handling quick change in nextl
 	if((ImGui::GetTime()-mLastClick)<0.5f){
-		ImGui::SetScrollY(aLineNo*mLineHeight);
+		ImGui::SetScrollY(aToLine*mLineHeight);
 	}else{
 		mInitialScrollY=ImGui::GetScrollY();
 		mScrollAnimation.start();
@@ -1586,15 +1575,17 @@ std::string Editor::GetText(const Coordinates& aStart, const Coordinates& aEnd) 
 
 
 std::string Editor::GetSelectedText() const { 
-	return std::move(GetText(mState.mSelectionStart, mState.mSelectionEnd)); 
+	const Cursor& aCursor=mState.mCursors[mState.mCurrentCursorIdx];
+	return std::move(GetText(aCursor.mSelectionStart, aCursor.mSelectionEnd)); 
 }
 
 void Editor::Copy()
 {
 	OpenGL::ScopedTimer timer("Editor::Copy");
-	if (HasSelection()) {
-		if(mState.mSelectionStart>mState.mSelectionEnd)
-			std::swap(mState.mSelectionStart,mState.mSelectionEnd);
+	Cursor& aCursor=GetCurrentCursor();
+	if (HasSelection(aCursor)) {
+		if(aCursor.mSelectionStart>aCursor.mSelectionEnd)
+			std::swap(aCursor.mSelectionStart,aCursor.mSelectionEnd);
 
 		std::string text=GetSelectedText();
 		GL_INFO("Selected Text:\n{}",text);
@@ -1604,7 +1595,7 @@ void Editor::Copy()
 	} else {
 		if (!mLines.empty()) {
 			std::string str;
-			auto& line = mLines[SanitizeCoordinates(mState.mCursorPosition).mLine];
+			auto& line = mLines[SanitizeCoordinates(aCursor.mCursorPosition).mLine];
 			for (auto& g : line) str.push_back(g.mChar);
 
 			ImGui::SetClipboardText(str.c_str());
@@ -1618,19 +1609,20 @@ void Editor::Paste(){
 	std::string text{ImGui::GetClipboardText()};
 	if(text.size()>0){
 		// UndoRecord uRecord;
+		Cursor& aCursor=GetCurrentCursor();
 
-		if(HasSelection()){
+		if(HasSelection(aCursor)){
 			// uRecord.mRemovedText=GetSelectedText();
 			// uRecord.mRemovedStart=mState.mSelectionStart;
 			// uRecord.mRemovedEnd=mState.mSelectionEnd;
-			DeleteSelection(mState);
+			DeleteSelection(aCursor);
 		}
 
 		// uRecord.mAddedText=text;
 		// uRecord.mAddedStart=mState.mCursorPosition;
 
-		InsertTextAt(mState.mCursorPosition, text.c_str());
-		mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition;
+		InsertTextAt(aCursor.mCursorPosition, text.c_str());
+		aCursor.mSelectionStart=aCursor.mSelectionEnd=aCursor.mCursorPosition;
 		// uRecord.mAddedEnd=mState.mCursorPosition;
 		// uRecord.mAfterState=mState;
 		// mUndoManager.AddUndo(uRecord);
@@ -1638,9 +1630,9 @@ void Editor::Paste(){
 	}
 }
 
-bool Editor::HasSelection() const
+bool Editor::HasSelection(const Cursor& aCursor) const
 {
-	return mState.mSelectionEnd != mState.mSelectionStart;
+	return aCursor.mSelectionEnd != aCursor.mSelectionStart;
 }
 
 void Editor::CloseDebounceThread(){
@@ -1656,15 +1648,17 @@ void Editor::CloseDebounceThread(){
 }
 
 
-void Editor::DeleteSelection(EditorState& aState) {
-	if(!HasSelection()) return;
-	if(aState.mSelectionStart>aState.mSelectionEnd) 
-		std::swap(aState.mSelectionStart,aState.mSelectionEnd);
+void Editor::DeleteSelection(Cursor& aCursor) {
+	if(!HasSelection(aCursor)) return;
 
-	DeleteRange(aState.mSelectionStart,aState.mSelectionEnd);
-	aState.mCursorPosition=aState.mSelectionEnd=aState.mSelectionStart;
+	if(aCursor.mSelectionStart>aCursor.mSelectionEnd) 
+		std::swap(aCursor.mSelectionStart,aCursor.mSelectionEnd);
+
+	DeleteRange(aCursor.mSelectionStart,aCursor.mSelectionEnd);
+	aCursor.mCursorPosition=aCursor.mSelectionEnd=aCursor.mSelectionStart;
+
 	GL_INFO("nLines:{}",mLines.size());
-	GL_INFO("CursorPos:({},{})",aState.mCursorPosition.mLine,aState.mCursorPosition.mColumn);
+	GL_INFO("CursorPos:({},{})",aCursor.mCursorPosition.mLine,aCursor.mCursorPosition.mColumn);
 
 	DebouncedReparse();
 }
@@ -1692,8 +1686,9 @@ void Editor::RemoveLine(int aIndex)
 
 void Editor::SetCursorPosition(const Coordinates& aPosition)
 {
-	if (mState.mCursorPosition != aPosition) {
-		mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition = aPosition;
+	Cursor& aState=GetCurrentCursor();
+	if (aState.mCursorPosition != aPosition) {
+		aState.mSelectionStart=aState.mSelectionEnd=aState.mCursorPosition = aPosition;
 		// mCursorPositionChanged = true;
 		EnsureCursorVisible();
 	}
@@ -1705,7 +1700,6 @@ Editor::Line& Editor::InsertLine(int aIndex)
 	return result;
 }
 
-Coordinates Editor::GetActualCursorCoordinates() const { return SanitizeCoordinates(mState.mCursorPosition); }
 
 void Editor::InsertText(const std::string& aValue) { InsertText(aValue.c_str()); }
 
@@ -1714,8 +1708,9 @@ void Editor::InsertText(const char* aValue)
 	if (aValue == nullptr)
 		return;
 
-	auto pos = GetActualCursorCoordinates();
-	auto start = std::min(pos, mState.mSelectionStart);
+	Cursor& aCursor=GetCurrentCursor();
+	auto pos = aCursor.mCursorPosition;
+	auto start = std::min(pos, aCursor.mSelectionStart);
 	int totalLines = pos.mLine - start.mLine;
 
 	totalLines += InsertTextAt(pos, aValue);
@@ -1853,8 +1848,9 @@ void Editor::SaveFile()
 
 void Editor::SelectAll(){
 	GL_INFO("SELECT ALL");
-	mState.mSelectionEnd=mState.mCursorPosition=Coordinates(mLines.size()-1,0);
-	mState.mSelectionStart=Coordinates(0,0);
+	Cursor& aCursor=GetCurrentCursor();
+	aCursor.mSelectionEnd=aCursor.mCursorPosition=Coordinates(mLines.size()-1,0);
+	aCursor.mSelectionStart=Coordinates(0,0);
 	mSelectionMode=SelectionMode::Normal;
 }
 
@@ -1869,7 +1865,9 @@ void Editor::Find(){
 
 
 void Editor::DisableSelection(){
-	mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition;
+	for(auto& aCursor:mState.mCursors){
+		aCursor.mSelectionStart=aCursor.mSelectionEnd=aCursor.mCursorPosition;
+	}
 	mSelectionMode=SelectionMode::Normal;
 }
 
@@ -1912,7 +1910,7 @@ void Editor::EnsureCursorVisible()
 	auto top = 1 + (int)ceil(scrollY / mLineHeight);
 	auto bottom = (int)ceil((scrollY + height) / mLineHeight);
 
-	auto pos = mState.mCursorPosition;
+	auto pos = GetCurrentCursor().mCursorPosition;
 	auto len = TextDistanceFromLineStart(pos);
 
 	float leftOffset=mLineBarWidth+mPaddingLeft;

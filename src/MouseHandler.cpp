@@ -1,5 +1,6 @@
-#include "imgui.h"
 #include "pch.h"
+#include "DataTypes.h"
+#include "imgui.h"
 #include "TextEditor.h"
 
 
@@ -25,10 +26,12 @@ void Editor::HandleMouseInputs()
 				if(mSearchState.isValid()) mSearchState.reset();
 				if (!ctrl) {
 					GL_INFO("TRIPLE CLICK");
+					auto& aState=mState.mCursors[mState.mCurrentCursorIdx];
+
 					mSelectionMode=SelectionMode::Line;
-					mState.mSelectionStart.mColumn=0;
-					mState.mSelectionEnd.mColumn=GetCurrentLineMaxColumn();
-					mState.mCursorPosition.mColumn=mState.mSelectionEnd.mColumn;
+					aState.mSelectionStart.mColumn=0;
+					aState.mSelectionEnd.mColumn=GetCurrentLineMaxColumn();
+					aState.mCursorPosition.mColumn=aState.mSelectionEnd.mColumn;
 				}
 				mLastClick = -1.0f;
 }
@@ -36,7 +39,7 @@ void Editor::HandleMouseInputs()
 			// Left mouse button double click
 			else if (doubleClick) {
 
-				if(!ctrl) SelectWordUnderCursor();
+				if(!ctrl) SelectWordUnderCursor(mState.mCursors[mState.mCurrentCursorIdx]);
 				mLastClick = (float)ImGui::GetTime();
 
 			}
@@ -44,9 +47,12 @@ void Editor::HandleMouseInputs()
 				// if(mSearchState.isValid())
 				// 	mSearchState.reset();
 
-				if(mCursors.size()==0) mCursors.push_back(mState);
-				SetCursorPosition(ScreenPosToCoordinates(ImGui::GetMousePos()));
-				mCursors.push_back(mState);
+				// if(mCursors.size()==0) mCursors.push_back(mState);
+				Cursor aState;
+				aState.mCursorPosition=ScreenPosToCoordinates(ImGui::GetMousePos());
+				mState.mCursors.push_back(aState);
+				mState.mCurrentCursorIdx++;
+
 
 				//Sorting in ascending order
 				SortCursorsFromTopToBottom();
@@ -58,19 +64,20 @@ void Editor::HandleMouseInputs()
 			// Left mouse button click
 			else if (click) {
 				GL_INFO("MOUSE CLICK");
-				if(!mCursors.empty()) mCursors.clear();
+				Cursor aState=mState.mCursors[mState.mCurrentCursorIdx];
+				mState.mCursors.clear();
 
-
-				mState.mSelectionStart=mState.mSelectionEnd=mState.mCursorPosition=ScreenPosToCoordinates(ImGui::GetMousePos());
+				aState.mSelectionStart=aState.mSelectionEnd=aState.mCursorPosition=ScreenPosToCoordinates(ImGui::GetMousePos());
 				mSelectionMode = SelectionMode::Normal;
 
-				SearchWordInCurrentVisibleBuffer();
+				// SearchWordInCurrentVisibleBuffer();
 
-				mState.mCursorDirectionChanged=false;
+				aState.mCursorDirectionChanged=false;
 				mLastClick = (float)ImGui::GetTime();
 
 
-				FindBracketMatch(mState.mCursorPosition);
+				mState.mCursors.push_back(aState);
+				FindBracketMatch(aState.mCursorPosition);
 			}
 
 			//Mouse Click And Dragging
@@ -79,29 +86,38 @@ void Editor::HandleMouseInputs()
 
 				io.WantCaptureMouse = true;
 				if(mSearchState.isValid()) mSearchState.reset();
+				Cursor& aCursor=GetCurrentCursor();
 
-				mState.mCursorPosition=mState.mSelectionEnd=ScreenPosToCoordinates(ImGui::GetMousePos());
+				aCursor.mCursorPosition=aCursor.mSelectionEnd=ScreenPosToCoordinates(ImGui::GetMousePos());
 				mSelectionMode=SelectionMode::Word;
 
-				if (mState.mSelectionStart > mState.mSelectionEnd) mState.mCursorDirectionChanged=true;
+				if (aCursor.mSelectionStart > aCursor.mSelectionEnd) aCursor.mCursorDirectionChanged=true;
 			}
 		}
 	}
 }
 
-void Editor::SelectWordUnderCursor(){
+
+Cursor& Editor::GetCurrentCursor(){
+	if(mState.mCurrentCursorIdx >= mState.mCursors.size()) 
+		mState.mCurrentCursorIdx=mState.mCursors.size()-1;
+
+	return mState.mCursors[mState.mCurrentCursorIdx];
+}
+
+void Editor::SelectWordUnderCursor(Cursor& aCursor){
 		if (mSelectionMode == SelectionMode::Line) mSelectionMode = SelectionMode::Normal;
 		else
 			mSelectionMode = SelectionMode::Word;
 
 	#ifdef GL_DEBUG
-		int idx = GetCharacterIndex(mState.mCursorPosition);
+		int idx = GetCharacterIndex(aCursor.mCursorPosition);
 	#endif
 
 
-		auto [start_idx,end_idx] = GetIndexOfWordAtCursor(mState.mCursorPosition);
+		auto [start_idx,end_idx] = GetIndexOfWordAtCursor(aCursor.mCursorPosition);
 		if(start_idx==end_idx) return;
-		int tabCount=GetTabCountsUptoCursor(mState.mCursorPosition);
+		int tabCount=GetTabCountsUptoCursor(aCursor.mCursorPosition);
 
 
 	#ifdef GL_DEBUG
@@ -109,21 +125,40 @@ void Editor::SelectWordUnderCursor(){
 		GL_INFO("TAB COUNT:{}", tabCount);
 	#endif
 
-		mState.mSelectionStart = Coordinates(mState.mCursorPosition.mLine, start_idx + (tabCount * (mTabSize - 1)));
-		mState.mSelectionEnd = Coordinates(mState.mCursorPosition.mLine, end_idx + (tabCount * (mTabSize - 1)));
+		aCursor.mSelectionStart = Coordinates(aCursor.mCursorPosition.mLine, start_idx + (tabCount * (mTabSize - 1)));
+		aCursor.mSelectionEnd = Coordinates(aCursor.mCursorPosition.mLine, end_idx + (tabCount * (mTabSize - 1)));
 
-		mState.mCursorPosition = mState.mSelectionEnd;
+		aCursor.mCursorPosition = aCursor.mSelectionEnd;
 }
 
 void Editor::SortCursorsFromTopToBottom()
 {
-	if(mCursors.size()<2) return;
-	if(mCursors[mCursors.size()-2].mCursorPosition > mCursors.back().mCursorPosition){
-		std::sort(mCursors.begin(), mCursors.end(),[](const auto& left,const auto& right){
+	if(mState.mCursors.size()<2) return;
+	if(mState.mCursors[mState.mCursors.size()-2].mCursorPosition > mState.mCursors.back().mCursorPosition){
+
+		Cursor aCursor=mState.mCursors[mState.mCurrentCursorIdx];
+
+		std::sort(mState.mCursors.begin(), mState.mCursors.end(),[](const auto& left,const auto& right){
 			return left.mCursorPosition < right.mCursorPosition;
 		});
-		mState=mCursors[0];
+
+		for(int i=0;i<mState.mCursors.size();i++)
+		{
+			if(mState.mCursors[i].mCursorPosition==aCursor.mCursorPosition)
+			{
+				mState.mCurrentCursorIdx=i;
+				break;
+			}
+		}
 	}
-	for(const auto& el:mCursors)
+	for(const auto& el:mState.mCursors)
 		GL_INFO("[R:{}  C:{}]",el.mCursorPosition.mLine,el.mCursorPosition.mColumn);
+}
+
+void Editor::RemoveCursorsWithSameCoordinates(){
+    mState.mCursors.erase(
+		std::unique(mState.mCursors.begin(), mState.mCursors.end(), 
+		[&](const auto& left, const auto& right) { return left.mCursorPosition == right.mCursorPosition; }), 
+		mState.mCursors.end()
+	);
 }

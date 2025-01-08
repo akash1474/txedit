@@ -1,6 +1,5 @@
 #pragma once
 #include "Coordinates.h"
-#include "DataTypes.h"
 #include "imgui_internal.h"
 #include "string"
 #include "vector"
@@ -12,7 +11,6 @@
 #include "ConPTY.h"
 #include "future"
 
-
 class Terminal
 {
 public:
@@ -20,6 +18,13 @@ public:
 	~Terminal();
 
 	void Render();
+
+	struct Cursor{
+		Coordinates mSelectionStart;
+		Coordinates mSelectionEnd;
+		Coordinates mCursorPosition;
+		bool mCursorDirectionChanged=false;
+	};
 
 private:
 	std::mutex mOutputMutex; // To synchronize output access
@@ -53,7 +58,7 @@ private:
 	SelectionMode mSelectionMode{SelectionMode::Normal};
 
 	// Text Renderer
-	EditorState mState;
+	Cursor mState;
 	std::vector<std::string> mLines;
 	ImGuiWindow* mWindow = nullptr;
 	ImVec2 mPosition;

@@ -60,11 +60,11 @@ void StatusBarManager::Render(ImVec2& size,const ImGuiViewport* viewport){
 
 		ImGui::SameLine();
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2.0f);
-		ImGui::Text("Line:%d",mTextEditor->GetEditorState()->mCursorPosition.mLine+1);
+		ImGui::Text("Line:%d",mTextEditor->GetCurrentCursor().mCursorPosition.mLine+1);
 
 		ImGui::SameLine();
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2.0f);
-		ImGui::Text("Column:%d",mTextEditor->GetEditorState()->mCursorPosition.mColumn+1);
+		ImGui::Text("Column:%d",mTextEditor->GetCurrentCursor().mCursorPosition.mColumn+1);
 
 
 		if(mDisplayNotification){

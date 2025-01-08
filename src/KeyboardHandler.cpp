@@ -1,5 +1,5 @@
-#include "imgui.h"
 #include "pch.h"
+#include "imgui.h"
 #include "TextEditor.h"
 
 void Editor::HandleKeyboardInputs()
@@ -144,11 +144,12 @@ void Editor::HandleKeyboardInputs()
 
 			// if (mSearchState.isValid())
 			// 	mSearchState.reset();
+			Cursor& aCursor=GetCurrentCursor();
 
-			if (HasSelection())
+			if (HasSelection(aCursor))
 				Backspace();
 
-			if (HasSelection())
+			if (HasSelection(aCursor))
 				DisableSelection();
 
 			auto c = io.InputQueueCharacters[0];

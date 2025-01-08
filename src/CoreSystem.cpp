@@ -48,6 +48,7 @@ void CoreSystem::RenderDebugInfo()
 	ImGui::Text("%s", utf8);
 	ImGui::Text("Length:%d", ImTextCountCharsFromUtf8(utf8, 0));
 	ImGui::Text("Time:%f", glfwGetTime());
+	ImGui::Text("nCursor:%d", (int)Get().mTextEditor.GetEditorState()->mCursors.size());
 
 	ImWchar buff[100];
 	int count = ImTextStrFromUtf8(buff, 100, utf8, nullptr, 0);
@@ -61,14 +62,14 @@ void CoreSystem::RenderDebugInfo()
 	ImGui::Spacing();
 	ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
 	ImGui::Spacing();
-	ImGui::Text("mCursorPosition: X:%d  Y:%d", Get().mTextEditor.GetEditorState()->mCursorPosition.mColumn,
-	            Get().mTextEditor.GetEditorState()->mCursorPosition.mLine);
-	ImGui::Text("mSelectionStart: X:%d  Y:%d", Get().mTextEditor.GetEditorState()->mSelectionStart.mColumn,
-	            Get().mTextEditor.GetEditorState()->mSelectionStart.mLine);
-	ImGui::Text("mSelectionEnd:   X:%d  Y:%d", Get().mTextEditor.GetEditorState()->mSelectionEnd.mColumn,
-	            Get().mTextEditor.GetEditorState()->mSelectionEnd.mLine);
-	ImGui::Text("mUndoManagerTop:   X:%d  Y:%d", Get().mTextEditor.GetEditorState()->mSelectionEnd.mColumn,
-	            Get().mTextEditor.GetEditorState()->mSelectionEnd.mLine);
+	ImGui::Text("mCursorPosition: X:%d  Y:%d", Get().mTextEditor.GetCurrentCursor().mCursorPosition.mColumn,
+	            Get().mTextEditor.GetCurrentCursor().mCursorPosition.mLine);
+	ImGui::Text("mSelectionStart: X:%d  Y:%d", Get().mTextEditor.GetCurrentCursor().mSelectionStart.mColumn,
+	            Get().mTextEditor.GetCurrentCursor().mSelectionStart.mLine);
+	ImGui::Text("mSelectionEnd:   X:%d  Y:%d", Get().mTextEditor.GetCurrentCursor().mSelectionEnd.mColumn,
+	            Get().mTextEditor.GetCurrentCursor().mSelectionEnd.mLine);
+	ImGui::Text("mUndoManagerTop:   X:%d  Y:%d", Get().mTextEditor.GetCurrentCursor().mSelectionEnd.mColumn,
+	            Get().mTextEditor.GetCurrentCursor().mSelectionEnd.mLine);
 
 	ImGui::Spacing();
 	CoreSystem::GetTextEditor()->GetUndoMananger()->DisplayUndoStack();

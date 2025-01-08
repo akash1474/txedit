@@ -263,12 +263,13 @@ private:
 
 	// Cursor & Selection
 	SelectionMode mSelectionMode{SelectionMode::Normal};
-	std::vector<EditorState> mCursors;
 	void SortCursorsFromTopToBottom();
+	void RemoveCursorsWithSameCoordinates();
 	std::string mFileContents;
 
 public:
 	EditorState mState;
+	Cursor& GetCurrentCursor();
 
 
 private:
@@ -377,7 +378,7 @@ private:
 	void SearchWordInCurrentVisibleBuffer();
 	void HighlightCurrentWordInBuffer() const;
 	void FindAllOccurancesOfWord(std::string word);
-	void SelectWordUnderCursor();
+	void SelectWordUnderCursor(Cursor& mState);
 	void Find();
 
 
@@ -395,10 +396,9 @@ private:
 	void FindBracketMatch(const Coordinates& aCoords);
 	void HighlightBracket(const Coordinates& aCoords);
 
-	bool IsCursorVisible();
 	void EnsureCursorVisible();
 
-	void DeleteCharacter(EditorState& cursor,bool aDeletePreviousCharacter);
+	void DeleteCharacter(Cursor& aCursor,bool aDeletePreviousCharacter);
 	void ResetState();
 	void InitFileExtensions();
 	std::map<std::string, std::string> FileExtensions;
@@ -431,7 +431,7 @@ public:
 	void RecalculateBounds() { this->reCalculateBounds = true; }
 	bool IsReadOnly() const { return mReadOnly; }
 
-	bool HasSelection() const;
+	bool HasSelection(const Cursor& aCursor) const;
 	inline uint8_t GetTabWidth() { return this->mTabSize; }
 
 
@@ -446,16 +446,16 @@ public:
 	void MoveTop(bool aShift = false);
 	void MoveBottom(bool aShift = false);
 
-	void SnapCursorToNearestTab(EditorState& aEditor);
+	void SnapCursorToNearestTab(Cursor& aEditor);
 	float TextDistanceFromLineStart(const Coordinates& aFrom) const;
 	void DeleteRange(const Coordinates& aStart, const Coordinates& aEnd);
-	void DeleteSelection(EditorState& aState);
+	void DeleteSelection(Cursor& aState);
 
 	void RemoveLine(int aIndex);
 	void RemoveLine(int aStart, int aEnd);
 
 	int GetLineMaxColumn(int currLineIndex) const;
-	int GetCurrentLineMaxColumn() const;
+	int GetCurrentLineMaxColumn();
 
 	Editor();
 	~Editor();
