@@ -13,11 +13,6 @@
 #include <unordered_map>
 #include <winnt.h>
 
-// void Editor::SnapCursorToNearestTab(Cursor& aState){
-// 	int tabCounts=GetTabCountsUptoCursor(aState.mCursorPosition);
-// 	aState.mCursorPosition.mColumn=tabCounts*mTabSize;
-// }
-
 void Editor::MoveUp(bool ctrl, bool shift)
 {
 
@@ -66,7 +61,6 @@ void Editor::MoveDown(bool ctrl, bool shift)
 		if(shift && HasSelection(aCursor)){
 			aCursor.mSelectionEnd=aCursor.mCursorPosition;
 		}
-		// SnapCursorToNearestTab(cursorState);
 	}
 
 	EnsureCursorVisible();
@@ -139,6 +133,10 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 
 		// Cursor at line start
 		if (aCursor.mCursorPosition.mColumn == 0 && aCursor.mCursorPosition.mLine > 0) {
+			//Restrict selection for multple cursors to one line
+			if(mState.mCursors.size() > 1 && HasSelection(aCursor))
+				continue;
+
 			aCursor.mCursorPosition.mLine--;
 			aCursor.mCursorPosition.mColumn = GetLineMaxColumn(aCursor.mCursorPosition.mLine);
 
@@ -161,6 +159,8 @@ void Editor::MoveLeft(bool ctrl, bool shift)
 		if (aCursor.mSelectionStart > aCursor.mSelectionEnd)
 			aCursor.mCursorDirectionChanged = true;
 	}
+
+	MergeCursorsIfNeeded();
 
 	mSelectionMode = mode;
 	EnsureCursorVisible();
@@ -236,6 +236,10 @@ void Editor::MoveRight(bool ctrl, bool shift)
 		size_t lineLength = GetLineMaxColumn(aCursor.mCursorPosition.mLine);
 		if (aCursor.mCursorPosition.mColumn == lineLength) {
 
+			//Restrict selection for multple cursors to one line
+			if(mState.mCursors.size() > 1 && HasSelection(aCursor))
+				continue;
+
 			aCursor.mCursorPosition.mColumn = 0;
 			aCursor.mCursorPosition.mLine++;
 
@@ -256,6 +260,7 @@ void Editor::MoveRight(bool ctrl, bool shift)
 	}
 	mSelectionMode = mode;
 
+	MergeCursorsIfNeeded();
 	EnsureCursorVisible();
 }
 
@@ -269,15 +274,28 @@ void Editor::Delete()
 	// UndoRecord u;
 	// u.mBefore = mState;
 
-	for(auto& aCursor:mState.mCursors)
+	for(size_t i=0;i<mState.mCursors.size();i++)
 	{
+		auto& aCursor=mState.mCursors[i];
+
 		if (HasSelection(aCursor))
 		{
-			// u.mRemoved = GetSelectedText();
-			// u.mRemovedStart = mState.mSelectionStart;
-			// u.mRemovedEnd = mState.mSelectionEnd;
+			if(aCursor.mSelectionStart>aCursor.mSelectionEnd) 
+				std::swap(aCursor.mSelectionStart,aCursor.mSelectionEnd);
 
+			int selectionLen=aCursor.mSelectionEnd.mColumn - aCursor.mSelectionStart.mColumn;
 			DeleteSelection(aCursor);
+
+			// Handling Cursors on the same line
+			for(int j=i+1;j<mState.mCursors.size();j++){
+				auto& nextCursor=mState.mCursors[j];
+
+				//when selections on sameline
+				if(nextCursor.mCursorPosition.mLine==aCursor.mCursorPosition.mLine){
+					nextCursor.mSelectionStart.mColumn=std::max(0,nextCursor.mSelectionStart.mColumn-selectionLen);
+					nextCursor.mSelectionEnd.mColumn=std::max(0,nextCursor.mSelectionEnd.mColumn-selectionLen);
+				}
+			}
 		}
 		else
 		{
@@ -285,10 +303,9 @@ void Editor::Delete()
 		}
 	}
 
-	RemoveCursorsWithSameCoordinates();
-
 	// u.mAfter = mState;
 	// AddUndo(u);
+	MergeCursorsIfNeeded();
 	EnsureCursorVisible();
 }
 
@@ -363,7 +380,7 @@ uint32_t Editor::GetLineLengthInBytes(int aLineIdx){
 	return mLines[aLineIdx].size();
 }
 
-bool IsBracket(char aChar){
+bool IsOpeningBracket(char aChar){
 	return aChar == '(' || aChar == '{' || aChar == '[';
 }
 
@@ -379,14 +396,16 @@ char GetClosingBracketFor(char x)
 
 void Editor::InsertCharacter(char chr){
 	uint8_t aChar=chr;
-	Cursor& aCursor=GetCurrentCursor();
-	Coordinates& coord=aCursor.mCursorPosition;
 
 	char buff[7];
 	int e = ImTextCharToUtf8(buff,7, aChar);
-	if (e > 0)
+	if (e <= 0) return;
+
+	buff[e] = '\0';
+
+	for(auto& aCursor:mState.mCursors)
 	{
-		buff[e] = '\0';
+		Coordinates& coord=aCursor.mCursorPosition;
 		auto& line = mLines[coord.mLine];
 		auto cindex = GetCharacterIndex(coord);
 
@@ -403,7 +422,7 @@ void Editor::InsertCharacter(char chr){
 
 		// u.mAdded = buff;
 
-		if (IsBracket(chr)) {
+		if (IsOpeningBracket(chr)) {
 			char closingBracket=GetClosingBracketFor(chr);
             line.insert(line.begin() + cindex, Glyph(closingBracket, ColorSchemeIdx::Default));
         }
@@ -416,10 +435,30 @@ void Editor::InsertCharacter(char chr){
 
 		aCursor.mCursorPosition.mColumn++;
 		aCursor.mSelectionStart=aCursor.mSelectionEnd=aCursor.mCursorPosition;
+
+		bool isNextCursor=false;
+		for(auto& aNextCursor:mState.mCursors){
+			if(aNextCursor.mCursorPosition==aCursor.mCursorPosition)
+				isNextCursor=true;
+			else if(isNextCursor && aNextCursor.mCursorPosition.mLine==aCursor.mCursorPosition.mLine){
+				aNextCursor.mCursorPosition.mColumn++;
+			}
+		}
+
 	}
 
-	UpdateSyntaxHighlighting(aCursor.mCursorPosition.mLine,10);
-	FindBracketMatch(aCursor.mCursorPosition);
+	//TODO: Optimize Highlighting when dealing with multiple cursors
+	Cursor& aCursor=GetCurrentCursor();
+
+	bool hasMultipleCursors=mState.mCursors.size()>1;
+	for(auto& aCursor:mState.mCursors){
+		if(hasMultipleCursors)
+			UpdateSyntaxHighlighting(aCursor.mCursorPosition.mLine,2);
+		else{
+			UpdateSyntaxHighlighting(aCursor.mCursorPosition.mLine,10);
+			FindBracketMatch(aCursor.mCursorPosition);
+		}
+	}
 	EnsureCursorVisible();
 	DebouncedReparse();
 }
@@ -530,7 +569,8 @@ void Editor::InsertLineBreak(){
 
 	auto& cursors=mState.mCursors;
 
-	for(size_t i=0;i<cursors.size();i++){
+	for(int i=cursors.size()-1;i>-1;i--){
+		GL_INFO("Loopeing");
 		Cursor& cursor=cursors[i];
 		Coordinates& coord=cursor.mCursorPosition;
 
@@ -538,24 +578,25 @@ void Editor::InsertLineBreak(){
 		auto& line = mLines[coord.mLine];
 		auto& newLine = mLines[coord.mLine + 1];
 
-		const size_t whitespaceSize = newLine.size();
 		auto cindex = GetCharacterIndex(coord);
 
 		//Add tabs to maintain indentation
-		int tabCounts=GetTabCountsUptoCursor(coord);
-		int idx=tabCounts;
-		while(tabCounts-->0) 
-			newLine.insert(newLine.end(), Glyph('\t',ColorSchemeIdx::Default));
+		for (int i = 0; i < line.size() && isascii(line[i].mChar) && isblank(line[i].mChar); ++i)
+		{
+			newLine.push_back(line[i]);
+		}
 
+		const size_t idx=newLine.size();
 		newLine.insert(newLine.end(), line.begin() + cindex, line.end());
 		line.erase(line.begin() + cindex, line.begin() + line.size());
 
 		cursor.mCursorPosition=Coordinates(coord.mLine + 1, GetCharacterColumn(coord.mLine + 1, idx));
 
-		for(size_t j=i+1;j<cursors.size();j++)
+		for(int j=i+1;j<cursors.size();j++)
 			cursors[j].mCursorPosition.mLine++;
 	}
 
+	MergeCursorsIfNeeded();
 	FindBracketMatch(GetCurrentCursor().mCursorPosition);
 	EnsureCursorVisible();
 }
@@ -694,12 +735,33 @@ void Editor::Backspace()
 
 	Cursor aCurrentCursor=GetCurrentCursor();
 	// Deletion of selection
-	for(auto& aCursor:mState.mCursors)
+	for(size_t i=0;i<mState.mCursors.size();i++)
 	{
-		if (HasSelection(aCursor)) 
+		auto& aCursor=mState.mCursors[i];
+
+		if (HasSelection(aCursor))
+		{
+			if(aCursor.mSelectionStart>aCursor.mSelectionEnd) 
+				std::swap(aCursor.mSelectionStart,aCursor.mSelectionEnd);
+
+			int selectionLen=aCursor.mSelectionEnd.mColumn - aCursor.mSelectionStart.mColumn;
 			DeleteSelection(aCursor);
+
+			// Handling Cursors on the same line
+			for(int j=i+1;j<mState.mCursors.size();j++){
+				auto& nextCursor=mState.mCursors[j];
+
+				//when selections on sameline
+				if(nextCursor.mCursorPosition.mLine==aCursor.mCursorPosition.mLine){
+					nextCursor.mSelectionStart.mColumn=std::max(0,nextCursor.mSelectionStart.mColumn-selectionLen);
+					nextCursor.mSelectionEnd.mColumn=std::max(0,nextCursor.mSelectionEnd.mColumn-selectionLen);
+				}
+			}
+		}
 		else
+		{
 			DeleteCharacter(aCursor,true);
+		}
 	}
 
 	int i=0;
@@ -708,7 +770,7 @@ void Editor::Backspace()
 
 
 	// Removing cursors with same coordinates
-	RemoveCursorsWithSameCoordinates();
+	MergeCursorsIfNeeded();
 
 
 	// updating mState.mCurrentCursorIdx
@@ -720,6 +782,7 @@ void Editor::Backspace()
 	EnsureCursorVisible();
 	UpdateSyntaxHighlighting(aCurrentCursor.mCursorPosition.mLine,0);
 	FindBracketMatch(aCurrentCursor.mCursorPosition);
+	DebouncedReparse();
 }
 
 void Editor::SwapLines(bool up)

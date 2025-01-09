@@ -57,6 +57,24 @@ void Editor::HandleKeyboardInputs()
 			MoveRight(ctrl, shift);
 		else if (!alt && ctrl && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_D))) {
 
+			//First time
+			if(mSelectionMode!=SelectionMode::Word)
+			{
+				auto& aCursor=GetCurrentCursor();
+				SelectWordUnderCursor(aCursor);
+				if(!HasSelection(aCursor))
+					return;
+
+				// mSelectionMode=SelectionMode::Word;
+				// std::string word=GetText(aCursor.mSelectionStart,aCursor.mSelectionEnd);
+				// mSearchState.mWord=word;
+				// FindAllOccurancesOfWord(word);
+			}
+			else
+			{
+				assert(false && "Feature not implemented!");
+			}
+
 			// bool condition = (mSelectionMode == SelectionMode::Word) && mSearchState.mFoundPositions.empty();
 
 			// if (mSelectionMode == SelectionMode::Normal || condition) {
@@ -103,12 +121,21 @@ void Editor::HandleKeyboardInputs()
 			// 		mSearchState.mIdx = 0;
 			// }
 		}
-		// else if (!alt && !ctrl && !shift && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
-		// 	if (mSelectionMode != SelectionMode::Normal)
-		// 		mSelectionMode = SelectionMode::Normal;
-		// 	if (mCursors.size())
-		// 		mCursors.clear();
-		// }
+		else if (!alt && !ctrl && !shift && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+			auto& aCursor=GetCurrentCursor();
+
+			if(HasSelection(aCursor))
+			{
+				DisableSelection();
+				return;
+			}
+
+			if(mState.mCursors.size()>1){
+				mState.mCursors[0]=aCursor;
+				mState.mCursors.erase(mState.mCursors.begin()+1);
+				mState.mCurrentCursorIdx=0;
+			}
+		}
 		// else if (!alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_PageDown)))
 		// 	MoveDown(GetPageSize() - 4, shift);
 		else if (!alt && ctrl && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Home)))

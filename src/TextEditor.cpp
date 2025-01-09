@@ -485,16 +485,6 @@ bool Editor::Draw()
 		}
 
 
-		//Rendering Cursor
-		// if (ImGui::IsWindowFocused() && lineNo==aCursor.mCursorPosition.mLine)
-		// {
-		// 	float cx = TextDistanceFromLineStart(aCursor.mCursorPosition);
-
-		// 	ImVec2 cstart(textScreenPos.x + cx - 1.0f, linePosition.y);
-		// 	ImVec2 cend(textScreenPos.x + cx+1.0f, linePosition.y + mLineHeight);
-		// 	drawList->AddRectFilled(cstart, cend, ImColor(255, 255, 255, 255));
-		// }
-
 		//Highlighting Brackets
 		if(HasBracketMatch())
 		{
@@ -511,7 +501,6 @@ bool Editor::Draw()
 
 
 	//Cursors
-
 	for(const Cursor& cursor:mState.mCursors){
 		ImVec2 linePos = GetLinePosition(cursor.mCursorPosition);
 		float cx = TextDistanceFromLineStart(cursor.mCursorPosition);
@@ -521,18 +510,17 @@ bool Editor::Draw()
 		mEditorWindow->DrawList->AddRectFilled(cstart,cend,ImColor(255, 255, 255, 255));
 	}
 
-	bool isTrue=mSearchState.isValid() && mSelectionMode!=SelectionMode::Line;
-	if(isTrue)
-		HighlightCurrentWordInBuffer();
+	// if(mSearchState.isValid())
+	// 	HighlightCurrentWordInBuffer();
 
 
 
 
 	//Rendering for selected word
-	if(isTrue){
+	if(mSearchState.isValid()){
 		bool isNormalMode=mSelectionMode==SelectionMode::Normal;
 		for(const auto& coord:mSearchState.mFoundPositions){
-			float linePosY = mEditorPosition.y+(aCursor.mCursorPosition.mLine*mLineHeight)-scrollY;
+			float linePosY = GetLinePosition(coord).y;
 			ImVec2 start{mEditorPosition.x,linePosY};
 			ImVec2 end{mEditorPosition.x+4.0f,linePosY+(isNormalMode ? 0 : mLineHeight)};
 
@@ -1251,68 +1239,61 @@ float Editor::GetSelectionPosFromCoords(const Coordinates& coords)const{
 }
 
 
-void Editor::HighlightCurrentWordInBuffer() const {
-	bool isNormalMode=mSelectionMode==SelectionMode::Normal;
-	int minLine=int(mMinLineVisible);
-	int count=int(mEditorWindow->Size.y/mLineHeight);
+void Editor::HighlightCurrentWordInBuffer() {
 
+	int start = std::min((int)mLines.size()-1,(int)floor(ImGui::GetScrollY() / mLineHeight));
+	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
+	int end = std::min(start+lineCount+1,(int)mLines.size());
 
-	// for(const Coordinates& coord:mSearchState.mFoundPositions){
-	// 	if(coord.mLine==mState.mSelectionStart.mLine && coord.mColumn==mState.mSelectionStart.mColumn) continue;
-	// 	if(mSearchState.mIsGlobal && (coord.mLine < minLine || coord.mLine > minLine+count)) break;
+	for(const Coordinates& coord:mSearchState.mFoundPositions){
+		// if(coord.mLine==mState.mSelectionStart.mLine && coord.mColumn==mState.mSelectionStart.mColumn) continue;
 
-	// 	float offset=(mSelectionMode==SelectionMode::Normal) ? (mLineHeight+1.0f-0.5f*mLineSpacing) : 1.0f;
-	// 	float linePosY = (mEditorPosition.y  + (coord.mLine-floor(mMinLineVisible)) * mLineHeight)+offset;
+		if((coord.mLine < start || coord.mLine > end)) continue;
 
-	// 	ImVec2 start{mLinePosition.x+coord.mColumn*mCharacterSize.x-!isNormalMode,linePosY};
-	// 	ImVec2 end{start.x+mSearchState.mWord.size()*mCharacterSize.x+(!isNormalMode*2),linePosY+(isNormalMode ? 0 : mLineHeight)};
-	// 	ImDrawList* drawlist=ImGui::GetCurrentWindow()->DrawList;
+		ImVec2 linePos=GetLinePosition(coord);
+		float offset=(mSelectionMode==SelectionMode::Normal) ? (mLineHeight+1.0f-0.5f*mLineSpacing) : 1.0f;
+		float linePosY = linePos.y + offset;
+		bool isNormalMode=!HasSelection(GetCurrentCursor());
 
-	// 	if(isNormalMode)
-	// 		drawlist->AddLine(start,end, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
-	// 	else
-	// 		drawlist->AddRect(start,end, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
+		ImVec2 start{mLinePosition.x+coord.mColumn*mCharacterSize.x-!isNormalMode,linePosY+mLineHeight};
+		ImVec2 end{start.x+mSearchState.mWord.size()*mCharacterSize.x+(!isNormalMode*2),linePosY+(isNormalMode ? 0 : mLineHeight)};
+		ImDrawList* drawlist=ImGui::GetCurrentWindow()->DrawList;
 
-	// }
+		if(isNormalMode)
+			drawlist->AddLine(start,end, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
+		else
+			drawlist->AddRect(start,end, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
+
+	}
 }
 
 // FIX: Needs a find function to search for a substring in buffer
 void Editor::FindAllOccurancesOfWord(std::string word){
 
+	OpenGL::ScopedTimer timer("Editor::FindAllOccurancesOfWord");
 	mSearchState.mIsGlobal=true;
 	mSearchState.mFoundPositions.clear();
 
-	// int start = std::min(0,(int)mLines.size()-1);
-	// int lineCount = (mEditorWindow->Size.y) / mLineHeight;
-	// int end = mLines.size();
 
-	// while(start<end){
-    //     const Line& line = mLines[start];
-    //     size_t wordIdx = 0;
+	for(size_t i=0;i<mLines.size();i++){
+		auto& line=mLines[i];
+		if(line.empty()) continue;
 
-    //     while ((wordIdx = line.find(word, wordIdx)) != std::string::npos) {
+		size_t searchOffset=0;
+		std::string clText=GetText(Coordinates(i,0),Coordinates(i,GetLineMaxColumn(i)));
+        while ((searchOffset = clText.find(word, searchOffset)) != std::string::npos) {
 
-    //         size_t startIndex = wordIdx;
-    //         size_t endIndex = wordIdx + word.length() - 1;
+            size_t startIndex = searchOffset;
+            size_t endIndex = searchOffset + word.length() - 1;
 
-    //         if(
-    //         	(startIndex>0 && isalnum(line[startIndex-1].mChar)) || 
-    //         	(endIndex < line.size()-2 && isalnum(line[endIndex+1].mChar))
-    //         )
-    //         {
-    //         	wordIdx=endIndex+1;
-    //         	continue;
-    //         }
 
-    //         GL_TRACE("Line {} : Found '{}' at [{},{}] ",start+1,word,startIndex,endIndex);
+            GL_TRACE("Line {} : Found '{}' at [{},{}] ",i+1,word,startIndex,endIndex);
 
-    //         mSearchState.mFoundPositions.push_back({start,GetCharacterColumn(start,startIndex)});
-    //         wordIdx = endIndex + 1;
-    //     }
+            mSearchState.mFoundPositions.emplace_back(i,GetCharacterColumn(i,startIndex));
+            searchOffset = endIndex + 1;
+        }
 
-	// 	start++;
-	// }
-
+	}
 }
 
 std::string Editor::GetWordAt(const Coordinates& aCoords) const
@@ -1660,7 +1641,6 @@ void Editor::DeleteSelection(Cursor& aCursor) {
 	GL_INFO("nLines:{}",mLines.size());
 	GL_INFO("CursorPos:({},{})",aCursor.mCursorPosition.mLine,aCursor.mCursorPosition.mColumn);
 
-	DebouncedReparse();
 }
 
 

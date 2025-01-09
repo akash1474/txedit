@@ -155,10 +155,56 @@ void Editor::SortCursorsFromTopToBottom()
 		GL_INFO("[R:{}  C:{}]",el.mCursorPosition.mLine,el.mCursorPosition.mColumn);
 }
 
-void Editor::RemoveCursorsWithSameCoordinates(){
-    mState.mCursors.erase(
-		std::unique(mState.mCursors.begin(), mState.mCursors.end(), 
-		[&](const auto& left, const auto& right) { return left.mCursorPosition == right.mCursorPosition; }), 
-		mState.mCursors.end()
-	);
+void Editor::MergeCursorsIfNeeded(){
+    // mState.mCursors.erase(
+	// 	std::unique(mState.mCursors.begin(), mState.mCursors.end(), 
+	// 	[&](const auto& left, const auto& right) { return left.mCursorPosition == right.mCursorPosition; }), 
+	// 	mState.mCursors.end()
+	// );
+
+	// requires the cursors to be sorted from top to bottom
+	std::unordered_set<int> cursorsToDelete;
+
+	if (HasSelection(GetCurrentCursor()))
+	{
+		// merge cursors if they overlap
+		for (int c = mState.mCurrentCursorIdx; c > 0; c--)// iterate backwards through pairs
+		{
+			int pc = c - 1; // pc for previous cursor
+
+			bool pcContainsC = mState.mCursors[pc].mSelectionEnd >= mState.mCursors[c].mSelectionEnd;
+			bool pcContainsStartOfC = mState.mCursors[pc].mSelectionEnd > mState.mCursors[c].mSelectionStart;
+
+			if (pcContainsC)
+			{
+				cursorsToDelete.insert(c);
+			}
+			else if (pcContainsStartOfC)
+			{
+				Coordinates pcStart = mState.mCursors[pc].mSelectionStart;
+				Coordinates cEnd = mState.mCursors[c].mSelectionEnd;
+				mState.mCursors[pc].mSelectionEnd = cEnd;
+				mState.mCursors[pc].mCursorPosition = cEnd;
+				cursorsToDelete.insert(c);
+			}
+		}
+	}
+	else
+	{
+		// merge cursors if they are at the same position
+		for (int c = mState.mCurrentCursorIdx; c > 0; c--)// iterate backwards through pairs
+		{
+			int pc = c - 1;
+			if (mState.mCursors[pc].mCursorPosition == mState.mCursors[c].mCursorPosition)
+				cursorsToDelete.insert(c);
+		}
+	}
+
+
+	for (int c = mState.mCurrentCursorIdx; c > -1; c--)// iterate backwards through each of them
+	{
+		if (cursorsToDelete.find(c) != cursorsToDelete.end())
+			mState.mCursors.erase(mState.mCursors.begin() + c);
+	}
+	mState.mCurrentCursorIdx -= cursorsToDelete.size();
 }

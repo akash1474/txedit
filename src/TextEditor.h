@@ -264,7 +264,7 @@ private:
 	// Cursor & Selection
 	SelectionMode mSelectionMode{SelectionMode::Normal};
 	void SortCursorsFromTopToBottom();
-	void RemoveCursorsWithSameCoordinates();
+	void MergeCursorsIfNeeded();
 	std::string mFileContents;
 
 public:
@@ -376,9 +376,9 @@ private:
 
 	SearchState mSearchState;
 	void SearchWordInCurrentVisibleBuffer();
-	void HighlightCurrentWordInBuffer() const;
+	void HighlightCurrentWordInBuffer();
 	void FindAllOccurancesOfWord(std::string word);
-	void SelectWordUnderCursor(Cursor& mState);
+	void SelectWordUnderCursor(Cursor& aCursor);
 	void Find();
 
 
@@ -446,10 +446,9 @@ public:
 	void MoveTop(bool aShift = false);
 	void MoveBottom(bool aShift = false);
 
-	void SnapCursorToNearestTab(Cursor& aEditor);
 	float TextDistanceFromLineStart(const Coordinates& aFrom) const;
 	void DeleteRange(const Coordinates& aStart, const Coordinates& aEnd);
-	void DeleteSelection(Cursor& aState);
+	void DeleteSelection(Cursor& aCursor);
 
 	void RemoveLine(int aIndex);
 	void RemoveLine(int aStart, int aEnd);
