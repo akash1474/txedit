@@ -55,72 +55,8 @@ void Editor::HandleKeyboardInputs()
 			MoveLeft(ctrl, shift);
 		else if (!alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_RightArrow)))
 			MoveRight(ctrl, shift);
-		else if (!alt && ctrl && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_D))) {
-
-			//First time
-			if(mSelectionMode!=SelectionMode::Word)
-			{
-				auto& aCursor=GetCurrentCursor();
-				SelectWordUnderCursor(aCursor);
-				if(!HasSelection(aCursor))
-					return;
-
-				// mSelectionMode=SelectionMode::Word;
-				// std::string word=GetText(aCursor.mSelectionStart,aCursor.mSelectionEnd);
-				// mSearchState.mWord=word;
-				// FindAllOccurancesOfWord(word);
-			}
-			else
-			{
-				assert(false && "Feature not implemented!");
-			}
-
-			// bool condition = (mSelectionMode == SelectionMode::Word) && mSearchState.mFoundPositions.empty();
-
-			// if (mSelectionMode == SelectionMode::Normal || condition) {
-
-			// 	if (mSelectionMode != SelectionMode::Word)
-			// 		SelectWordUnderCursor();
-			// 	if (mState.mSelectionStart == mState.mSelectionEnd)
-			// 		return;
-
-			// 	int start_idx = GetCharacterIndex(mState.mSelectionStart);
-			// 	int end_idx = GetCharacterIndex(mState.mSelectionEnd);
-
-			// 	if (start_idx > end_idx)
-			// 		std::swap(start_idx, end_idx);
-
-			// 	mSearchState.reset();
-			// 	mSearchState.mWord = mLines[mState.mCursorPosition.mLine].substr(start_idx, end_idx - start_idx);
-			// 	GL_INFO("Search: {}", mSearchState.mWord);
-
-			// 	FindAllOccurancesOfWord(mSearchState.mWord);
-			// 	mCursors.push_back(mState);
-
-			// 	// Finding Index of Position same as currentLine to get next occurance
-			// 	auto it = std::find_if(mSearchState.mFoundPositions.begin(), mSearchState.mFoundPositions.end(),
-			// 	                       [&](const auto& coord) { return coord.mLine == mState.mCursorPosition.mLine; });
-
-			// 	if (it != mSearchState.mFoundPositions.end())
-			// 		mSearchState.mIdx = std::min((int)mSearchState.mFoundPositions.size() - 1,
-			// 		                             (int)std::distance(mSearchState.mFoundPositions.begin(), it) + 1);
-			// } else {
-			// 	GL_INFO("Finding Next");
-			// 	const Coordinates& coord = mSearchState.mFoundPositions[mSearchState.mIdx];
-			// 	ScrollToLineNumber(coord.mLine + 1);
-
-			// 	mState.mSelectionStart = mState.mSelectionEnd = coord;
-			// 	mState.mSelectionEnd.mColumn = coord.mColumn + mSearchState.mWord.size();
-			// 	GL_INFO("[{}  {} {}]", mState.mSelectionStart.mColumn, mState.mSelectionEnd.mColumn, mSearchState.mWord.size());
-
-			// 	mState.mCursorPosition = mState.mSelectionEnd;
-			// 	mCursors.push_back(mState);
-			// 	mSearchState.mIdx++;
-
-			// 	if (mSearchState.mIdx == mSearchState.mFoundPositions.size())
-			// 		mSearchState.mIdx = 0;
-			// }
-		}
+		else if (!alt && ctrl && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_D)))
+			HandleCtrlD();
 		else if (!alt && !ctrl && !shift && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
 			auto& aCursor=GetCurrentCursor();
 

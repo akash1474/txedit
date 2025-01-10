@@ -337,7 +337,8 @@ bool Editor::Draw()
 
 	if (ImGui::IsWindowFocused() && io.MouseWheel != 0.0f) {
 		GL_INFO("SCROLLX:{} SCROLLY:{}",ImGui::GetScrollX(),ImGui::GetScrollY());
-		if(mSearchState.isValid() && !mSearchState.mIsGlobal)SearchWordInCurrentVisibleBuffer();
+		if(mSearchState.isValid() && !mSearchState.mIsGlobal)
+			FindAllOccurancesOfWordInVisibleBuffer();
 	}
 
 	auto scrollX = ImGui::GetScrollX();
@@ -510,23 +511,7 @@ bool Editor::Draw()
 		mEditorWindow->DrawList->AddRectFilled(cstart,cend,ImColor(255, 255, 255, 255));
 	}
 
-	// if(mSearchState.isValid())
-	// 	HighlightCurrentWordInBuffer();
 
-
-
-
-	//Rendering for selected word
-	if(mSearchState.isValid()){
-		bool isNormalMode=mSelectionMode==SelectionMode::Normal;
-		for(const auto& coord:mSearchState.mFoundPositions){
-			float linePosY = GetLinePosition(coord).y;
-			ImVec2 start{mEditorPosition.x,linePosY};
-			ImVec2 end{mEditorPosition.x+4.0f,linePosY+(isNormalMode ? 0 : mLineHeight)};
-
-			mEditorWindow->DrawList->AddRectFilled(start,end, mGruvboxPalletDark[(size_t)Pallet::Text]);
-		}
-	}
 
 
 
@@ -541,6 +526,25 @@ bool Editor::Draw()
 	if(ImGui::GetScrollX()>0.0f){
 		ImVec2 pos_start{mEditorPosition.x+mLineBarWidth,0.0f};
 		mEditorWindow->DrawList->AddRectFilledMultiColor(pos_start,{pos_start.x+10.0f,mEditorWindow->Size.y}, ImColor(19,21,21,130),ImColor(19,21,21,0),ImColor(19,21,21,0),ImColor(19,21,21,130));
+	}
+
+
+	if(mSearchState.isValid())
+	{
+		HighlightCurrentWordInBuffer();
+
+		//Rendering the indicator at lineNumber containing the match
+		if(HasSelection(GetCurrentCursor()))
+		{
+			for(const auto& coord:mSearchState.mFoundPositions)
+			{
+				float linePosY = GetLinePosition(coord).y;
+				ImVec2 start{mEditorPosition.x,linePosY};
+				ImVec2 end{start.x+4.0f,linePosY+mLineHeight};
+
+				mEditorWindow->DrawList->AddRectFilled(start,end, mGruvboxPalletDark[(size_t)Pallet::Text]);
+			}
+		}
 	}
 
 	//Rendering Line Number
@@ -1244,6 +1248,7 @@ void Editor::HighlightCurrentWordInBuffer() {
 	int start = std::min((int)mLines.size()-1,(int)floor(ImGui::GetScrollY() / mLineHeight));
 	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
 	int end = std::min(start+lineCount+1,(int)mLines.size());
+	bool hasSelection=HasSelection(GetCurrentCursor());
 
 	for(const Coordinates& coord:mSearchState.mFoundPositions){
 		// if(coord.mLine==mState.mSelectionStart.mLine && coord.mColumn==mState.mSelectionStart.mColumn) continue;
@@ -1251,31 +1256,29 @@ void Editor::HighlightCurrentWordInBuffer() {
 		if((coord.mLine < start || coord.mLine > end)) continue;
 
 		ImVec2 linePos=GetLinePosition(coord);
-		float offset=(mSelectionMode==SelectionMode::Normal) ? (mLineHeight+1.0f-0.5f*mLineSpacing) : 1.0f;
+		float offset=hasSelection ?  1.0f : (mLineHeight+1.0f-0.5f*mLineSpacing);
 		float linePosY = linePos.y + offset;
-		bool isNormalMode=!HasSelection(GetCurrentCursor());
+		
 
-		ImVec2 start{mLinePosition.x+coord.mColumn*mCharacterSize.x-!isNormalMode,linePosY+mLineHeight};
-		ImVec2 end{start.x+mSearchState.mWord.size()*mCharacterSize.x+(!isNormalMode*2),linePosY+(isNormalMode ? 0 : mLineHeight)};
+		ImVec2 start{mLinePosition.x+coord.mColumn*mCharacterSize.x-hasSelection,linePosY};
+		ImVec2 end{start.x+mSearchState.mWord.size()*mCharacterSize.x+(hasSelection*2),linePosY+(hasSelection ? mLineHeight : 0.0f)};
 		ImDrawList* drawlist=ImGui::GetCurrentWindow()->DrawList;
 
-		if(isNormalMode)
-			drawlist->AddLine(start,end, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
-		else
+		if(hasSelection)
 			drawlist->AddRect(start,end, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
-
+		else
+			drawlist->AddLine(start,end, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
 	}
 }
 
 // FIX: Needs a find function to search for a substring in buffer
-void Editor::FindAllOccurancesOfWord(std::string word){
+void Editor::FindAllOccurancesOfWord(std::string word,size_t aStartLineIdx,size_t aEndLineIdx){
 
 	OpenGL::ScopedTimer timer("Editor::FindAllOccurancesOfWord");
-	mSearchState.mIsGlobal=true;
 	mSearchState.mFoundPositions.clear();
 
 
-	for(size_t i=0;i<mLines.size();i++){
+	for(size_t i=aStartLineIdx;i<=aEndLineIdx;i++){
 		auto& line=mLines[i];
 		if(line.empty()) continue;
 
@@ -1292,7 +1295,6 @@ void Editor::FindAllOccurancesOfWord(std::string word){
             mSearchState.mFoundPositions.emplace_back(i,GetCharacterColumn(i,startIndex));
             searchOffset = endIndex + 1;
         }
-
 	}
 }
 
@@ -1313,55 +1315,35 @@ std::string Editor::GetWordAt(const Coordinates& aCoords) const
 
 
 
-void Editor::SearchWordInCurrentVisibleBuffer(){
+void Editor::FindAllOccurancesOfWordInVisibleBuffer()
+{
+	auto& aCursor=GetCurrentCursor();
+	//Get character idx
+	auto [start_idx,end_idx] = GetIndexOfWordAtCursor(aCursor.mCursorPosition);
+	if(start_idx==end_idx) return;
 
-	// OpenGL::ScopedTimer timer("WordSearch");
-	// mSearchState.reset();
+	std::string currentWord;
+	for(int i=start_idx;i<end_idx;i++)
+		currentWord+=(char)mLines[aCursor.mCursorPosition.mLine][i].mChar;
+
+	// GL_INFO("text:{} StartIDx:{}  EndIdx:{}",currentWord,start_idx,end_idx);
+
+	if(currentWord.empty() || currentWord.size()<2)return;
+
+	if(mSearchState.mWord==currentWord) return;
+
+	mSearchState.reset();
+	mSearchState.mWord=currentWord;
+	mSearchState.mIsGlobal=false;
 
 
-	// int start = std::min(int(mMinLineVisible),(int)mLines.size()-1);
-	// int lineCount = (mEditorWindow->Size.y) / mLineHeight;
-	// int end = std::min(start + lineCount + 1,(int)mLines.size()-1);
+	GL_WARN("Searching: {}",currentWord);
 
-	// const std::string currentWord=std::move(GetWordAt(mState.mCursorPosition));
-	// if(currentWord.empty())return;
-	// mSearchState.mWord=currentWord;
+	int start = std::min((int)mLines.size()-1,(int)floor(ImGui::GetScrollY() / mLineHeight));
+	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
+	int end = std::min(start+lineCount+1,(int)mLines.size());
 
-
-	// GL_WARN("Searching: {}",currentWord);
-	//Just for testing FindWordStart & FindWordEnd
-	// const auto& scoord=FindWordStart(mState.mCursorPosition);
-	// const auto& ecoord=FindWordEnd(mState.mCursorPosition);
-	// GL_INFO("COORDS:{}-->{}",scoord.mColumn,ecoord.mColumn);
-
-
-	// while(start<=end){
-    //     const std::string& line = mLines[start];
-    //     size_t wordIdx = 0;
-
-    //     while ((wordIdx = line.find(currentWord, wordIdx)) != std::string::npos) {
-
-    //         size_t startIndex = wordIdx;
-    //         size_t endIndex = wordIdx + currentWord.length() - 1;
-
-    //         if(
-    //         	(startIndex>0 && isalnum(line[startIndex-1])) || 
-    //         	(endIndex < line.size()-2 && isalnum(line[endIndex+1]))
-    //         )
-    //         {
-    //         	wordIdx=endIndex+1;
-    //         	continue;
-    //         }
-
-    //         GL_TRACE("Line {} : Found '{}' at [{},{}] ",start+1,currentWord,startIndex,endIndex);
-
-    //         mSearchState.mFoundPositions.push_back({start,GetCharacterColumn(start,startIndex)});
-    //         wordIdx = endIndex + 1;
-    //     }
-
-	// 	start++;
-	// }
-
+	FindAllOccurancesOfWord(currentWord, start, end);
 }
 
 // FIX: Unicode support
@@ -1393,6 +1375,67 @@ std::pair<int,int> Editor::GetIndexOfWordAtCursor(const Coordinates& coords)cons
 	}
 	return {start_idx,end_idx};	
 }
+
+void Editor::HandleCtrlD(){
+	//First time
+	auto& aCursor=GetCurrentCursor();
+	if(mSelectionMode!=SelectionMode::Word)
+	{
+		if(!HasSelection(aCursor))
+			SelectWordUnderCursor(aCursor);
+
+		if(!HasSelection(aCursor))
+			return;
+
+		mSelectionMode=SelectionMode::Word;
+		std::string word=GetText(aCursor.mSelectionStart,aCursor.mSelectionEnd);
+		GL_INFO("WORD:{}",word);
+
+		mSearchState.mWord=word;
+		mSearchState.mIsGlobal=true;
+
+		FindAllOccurancesOfWord(word,0,mLines.size()-1);
+
+		// Finding Index of Position same as currentLine to get next occurance
+		auto it = std::find_if(
+			mSearchState.mFoundPositions.begin(), mSearchState.mFoundPositions.end(),
+		    [&](const auto& coord) { return coord.mLine == aCursor.mCursorPosition.mLine; 
+		});
+
+		if (it != mSearchState.mFoundPositions.end())
+		{
+			const Coordinates& coord=*it;
+
+			mSearchState.mIdx = std::min(
+				(int)mSearchState.mFoundPositions.size() - 1,
+			    (int)std::distance(mSearchState.mFoundPositions.begin(), it) + 1
+			);
+		}
+	}
+	else
+	{
+		if(!mSearchState.isValid()) return;
+		// assert(false && "Feature not implemented!");
+
+		GL_INFO("Finding Next");
+		const Coordinates& coord = mSearchState.mFoundPositions[mSearchState.mIdx];
+		ScrollToLineNumber(coord.mLine,false);
+
+		Cursor nCursor;
+		nCursor.mSelectionStart = nCursor.mSelectionEnd = coord;
+		nCursor.mSelectionEnd.mColumn = coord.mColumn + mSearchState.mWord.size();
+		GL_INFO("[{}  {} {}]", nCursor.mSelectionStart.mColumn, nCursor.mSelectionEnd.mColumn, mSearchState.mWord.size());
+
+		nCursor.mCursorPosition = nCursor.mSelectionEnd;
+		mState.mCursors.push_back(nCursor);
+		mState.mCurrentCursorIdx++;
+		mSearchState.mIdx++;
+
+		if (mSearchState.mIdx == mSearchState.mFoundPositions.size())
+			mSearchState.mIdx = 0;
+	}
+}
+
 
 
 
@@ -1471,9 +1514,13 @@ void Editor::ScrollToLineNumber(int aToLine,bool aAnimate){
 
 	aToLine=std::max(0,std::min((int)mLines.size()-1,aToLine));
 
-	int lineLength=GetLineMaxColumn(aToLine);
-	Cursor& aCursor=GetCurrentCursor();
-	aCursor.mCursorPosition.mColumn=std::min(aCursor.mCursorPosition.mColumn,lineLength);
+	int start = std::min((int)mLines.size()-1,(int)floor(ImGui::GetScrollY() / mLineHeight));
+	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
+	int end = std::min(start+lineCount+1,(int)mLines.size());
+
+	GL_INFO("StartLine:{} EndLine:{}",start,end);
+
+	if(aToLine > start && aToLine < end) return;
 
 	if(!aAnimate){
 		ImGui::SetScrollY(aToLine*mLineHeight);
@@ -1751,12 +1798,18 @@ Coordinates Editor::FindWordStart(const Coordinates& aFrom) const
 		return at;
 
 	// Check if cursor is at space if so move back
-	char c = line[cindex].mChar;
-	if (cindex > 0 && (!isalnum(c) || c != '_')) {
-		c = line[--cindex].mChar;
+	char chr = line[cindex].mChar;
+	if (cindex > 0 && (IsUTFSequence(chr) || (!isalnum(chr) || chr != '_'))) {
+		if(IsUTFSequence(chr)){
+			cindex-=UTF8CharLength(chr);
+			chr=line[cindex].mChar;
+		}
+		else
+			chr = line[--cindex].mChar;
+
 		if (cindex == 0)
 			return at;
-		if (!isalnum(c) && c != '_')
+		if (!isalnum(chr) && chr != '_')
 			return at;
 	}
 

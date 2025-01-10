@@ -265,6 +265,7 @@ private:
 	SelectionMode mSelectionMode{SelectionMode::Normal};
 	void SortCursorsFromTopToBottom();
 	void MergeCursorsIfNeeded();
+	void ClearCursors();
 	std::string mFileContents;
 
 public:
@@ -375,11 +376,13 @@ private:
 	};
 
 	SearchState mSearchState;
-	void SearchWordInCurrentVisibleBuffer();
 	void HighlightCurrentWordInBuffer();
-	void FindAllOccurancesOfWord(std::string word);
+	void FindAllOccurancesOfWord(std::string word,size_t aStartLineIdx,size_t aEndLineIdx);
+	void FindAllOccurancesOfWordInVisibleBuffer();
 	void SelectWordUnderCursor(Cursor& aCursor);
 	void Find();
+
+	void HandleCtrlD();
 
 
 	// Status & UI
@@ -427,6 +430,7 @@ public:
 
 
 	void SetLineSpacing(float value) { this->mLineSpacing = value; }
+	// Only scroll to that line but doesn't update any positions
 	void ScrollToLineNumber(int lineNo, bool animate = true);
 	void RecalculateBounds() { this->reCalculateBounds = true; }
 	bool IsReadOnly() const { return mReadOnly; }

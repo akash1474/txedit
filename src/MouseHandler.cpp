@@ -44,17 +44,15 @@ void Editor::HandleMouseInputs()
 
 			}
 			else if(click && ctrl){
-				// if(mSearchState.isValid())
-				// 	mSearchState.reset();
+				if(mSearchState.isValid())
+					mSearchState.reset();
 
-				// if(mCursors.size()==0) mCursors.push_back(mState);
 				Cursor aState;
 				aState.mCursorPosition=ScreenPosToCoordinates(ImGui::GetMousePos());
 				mState.mCursors.push_back(aState);
 				mState.mCurrentCursorIdx++;
 
 
-				//Sorting in ascending order
 				SortCursorsFromTopToBottom();
 
 
@@ -64,20 +62,23 @@ void Editor::HandleMouseInputs()
 			// Left mouse button click
 			else if (click) {
 				GL_INFO("MOUSE CLICK");
-				Cursor aState=mState.mCursors[mState.mCurrentCursorIdx];
-				mState.mCursors.clear();
+
+				if(mSearchState.isValid())
+					mSearchState.reset();
+				
+				ClearCursors();
+				Cursor& aState=GetCurrentCursor();
 
 				aState.mSelectionStart=aState.mSelectionEnd=aState.mCursorPosition=ScreenPosToCoordinates(ImGui::GetMousePos());
 				mSelectionMode = SelectionMode::Normal;
 
-				// SearchWordInCurrentVisibleBuffer();
 
 				aState.mCursorDirectionChanged=false;
 				mLastClick = (float)ImGui::GetTime();
 
 
-				mState.mCursors.push_back(aState);
 				FindBracketMatch(aState.mCursorPosition);
+				FindAllOccurancesOfWordInVisibleBuffer();
 			}
 
 			//Mouse Click And Dragging
@@ -89,7 +90,7 @@ void Editor::HandleMouseInputs()
 				Cursor& aCursor=GetCurrentCursor();
 
 				aCursor.mCursorPosition=aCursor.mSelectionEnd=ScreenPosToCoordinates(ImGui::GetMousePos());
-				mSelectionMode=SelectionMode::Word;
+				// mSelectionMode=SelectionMode::Word;
 
 				if (aCursor.mSelectionStart > aCursor.mSelectionEnd) aCursor.mCursorDirectionChanged=true;
 			}
@@ -106,29 +107,27 @@ Cursor& Editor::GetCurrentCursor(){
 }
 
 void Editor::SelectWordUnderCursor(Cursor& aCursor){
-		if (mSelectionMode == SelectionMode::Line) mSelectionMode = SelectionMode::Normal;
-		else
-			mSelectionMode = SelectionMode::Word;
+	if (mSelectionMode == SelectionMode::Line) mSelectionMode = SelectionMode::Normal;
+	else
+		mSelectionMode = SelectionMode::Word;
 
-	#ifdef GL_DEBUG
-		int idx = GetCharacterIndex(aCursor.mCursorPosition);
-	#endif
-
-
-		auto [start_idx,end_idx] = GetIndexOfWordAtCursor(aCursor.mCursorPosition);
-		if(start_idx==end_idx) return;
-		int tabCount=GetTabCountsUptoCursor(aCursor.mCursorPosition);
+#ifdef GL_DEBUG
+	int idx = GetCharacterIndex(aCursor.mCursorPosition);
+#endif
 
 
-	#ifdef GL_DEBUG
-		GL_WARN("SELECTION IDX:{} START:{} END:{}", idx, start_idx, end_idx);
-		GL_INFO("TAB COUNT:{}", tabCount);
-	#endif
+	auto [start_idx,end_idx] = GetIndexOfWordAtCursor(aCursor.mCursorPosition);
+	if(start_idx==end_idx) return;
 
-		aCursor.mSelectionStart = Coordinates(aCursor.mCursorPosition.mLine, start_idx + (tabCount * (mTabSize - 1)));
-		aCursor.mSelectionEnd = Coordinates(aCursor.mCursorPosition.mLine, end_idx + (tabCount * (mTabSize - 1)));
 
-		aCursor.mCursorPosition = aCursor.mSelectionEnd;
+#ifdef GL_DEBUG
+	GL_WARN("SELECTION IDX:{} START:{} END:{}", idx, start_idx, end_idx);
+#endif
+
+	aCursor.mSelectionStart = Coordinates(aCursor.mCursorPosition.mLine, GetCharacterColumn(aCursor.mCursorPosition.mLine,start_idx));
+	aCursor.mSelectionEnd = Coordinates(aCursor.mCursorPosition.mLine, GetCharacterColumn(aCursor.mCursorPosition.mLine,end_idx));
+
+	aCursor.mCursorPosition = aCursor.mSelectionEnd;
 }
 
 void Editor::SortCursorsFromTopToBottom()
@@ -156,12 +155,6 @@ void Editor::SortCursorsFromTopToBottom()
 }
 
 void Editor::MergeCursorsIfNeeded(){
-    // mState.mCursors.erase(
-	// 	std::unique(mState.mCursors.begin(), mState.mCursors.end(), 
-	// 	[&](const auto& left, const auto& right) { return left.mCursorPosition == right.mCursorPosition; }), 
-	// 	mState.mCursors.end()
-	// );
-
 	// requires the cursors to be sorted from top to bottom
 	std::unordered_set<int> cursorsToDelete;
 
@@ -207,4 +200,15 @@ void Editor::MergeCursorsIfNeeded(){
 			mState.mCursors.erase(mState.mCursors.begin() + c);
 	}
 	mState.mCurrentCursorIdx -= cursorsToDelete.size();
+}
+
+
+void Editor::ClearCursors(){
+	if(mState.mCursors.size()==1) return; 
+
+	Cursor& aCursor=GetCurrentCursor();
+	mState.mCursors[0]=aCursor;
+	mState.mCurrentCursorIdx=0;
+
+	mState.mCursors.erase(mState.mCursors.begin()+1,mState.mCursors.end());
 }

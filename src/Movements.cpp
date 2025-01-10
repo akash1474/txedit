@@ -266,6 +266,9 @@ void Editor::MoveRight(bool ctrl, bool shift)
 
 void Editor::Delete()
 {
+	if(mSearchState.isValid())
+		mSearchState.reset();
+	
 	assert(!mReadOnly);
 
 	if (mLines.empty())
@@ -395,6 +398,9 @@ char GetClosingBracketFor(char x)
 }
 
 void Editor::InsertCharacter(char chr){
+	if(mSearchState.isValid())
+		mSearchState.reset();
+
 	uint8_t aChar=chr;
 
 	char buff[7];
@@ -727,8 +733,8 @@ void Editor::DeleteCharacter(Cursor& aCursor, bool aDeletePreviousCharacter)
 void Editor::Backspace()
 {
 	OpenGL::ScopedTimer timer("Editor::Backspace");
-	// if (mSearchState.isValid())
-	// 	mSearchState.reset();
+	if (mSearchState.isValid())
+		mSearchState.reset();
 
 	// UndoRecord uRecord;
 	// uRecord.mBeforeState = mState;
