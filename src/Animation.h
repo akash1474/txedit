@@ -12,7 +12,7 @@ class Animation{
 public:
 	bool hasStarted=false;
 
-	Animation(float duration=0.5f):mDuration(duration){}
+	Animation(float duration=0.25f):mDuration(duration){}
 
 	void SetDuration(float dur){ mDuration=dur;}
 

@@ -69,6 +69,11 @@ project "text_editor"
       buildoptions { "/MP","/DEBUG:FULL","/utf-8" } --"/utf-8" - tells compiler to interprete string literals as utf8
       defines {"GL_DEBUG"} 
 
+      -- For Memory Leaks add this flag to defines DETECT_MEMORY_LEAKS_VLD
+      -- links{"vld"}
+      -- libdirs{"C:/Program Files (x86)/Visual Leak Detector/bin/Win64","C:/Program Files (x86)/Visual Leak Detector/lib/Win64"}
+      -- includedirs{"C:/Program Files (x86)/Visual Leak Detector/include"}
+
    filter {"configurations:Release"}
       runtime "Release"
       optimize "On"

@@ -520,9 +520,11 @@ void Terminal::Draw()
 
 
 	// Cursor
-	ImVec2 cursorPosition(mLinePosition.x - 1.0f + (mState.mCursorPosition.mColumn * mCharacterSize.x), mLinePosition.y);
-	mWindow->DrawList->AddRectFilled(cursorPosition, {cursorPosition.x + 2.0f, cursorPosition.y + mLineHeight},
-	                                 ImColor(255, 255, 255, 255));
+	if(ImGui::IsWindowFocused())
+	{
+		ImVec2 cursorPosition(mLinePosition.x - 1.0f + (mState.mCursorPosition.mColumn * mCharacterSize.x), mLinePosition.y);
+		mWindow->DrawList->AddRectFilled(cursorPosition, {cursorPosition.x + 2.0f, cursorPosition.y + mLineHeight}, ImColor(255, 255, 255, 255));
+	}
 
 
 	start = std::min(int(mMinLineVisible), (int)mLines.size());

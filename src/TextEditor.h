@@ -39,7 +39,57 @@ extern "C" {
 
 #endif // TREE_SITTER_CPP_H_
 
+inline static bool IsUTFSequence(char c) {
+    return (c & 0xC0) == 0x80;
+}
 
+// https://en.wikipedia.org/wiki/UTF-8
+// We assume that the char is a standalone character (<128) or a leading byte of an UTF-8 code sequence (non-10xxxxxx code)
+inline static int UTF8CharLength(uint8_t c)
+{
+	if ((c & 0xFE) == 0xFC)
+		return 6;
+	if ((c & 0xFC) == 0xF8)
+		return 5;
+	if ((c & 0xF8) == 0xF0)
+		return 4;
+	else if ((c & 0xF0) == 0xE0)
+		return 3;
+	else if ((c & 0xE0) == 0xC0)
+		return 2;
+	return 1;
+}
+
+inline size_t GetUTF8StringLength(const std::string& str) {
+    size_t length = 0;
+    size_t i = 0;
+
+    while (i < str.size()) {
+        unsigned char c = static_cast<unsigned char>(str[i]);
+
+        size_t char_len = 1;
+        if ((c & 0x80) == 0x00) {
+            char_len = 1;
+        } else if ((c & 0xE0) == 0xC0) {
+            char_len = 2;
+        } else if ((c & 0xF0) == 0xE0) {
+            char_len = 3;
+        } else if ((c & 0xF8) == 0xF0) {
+            char_len = 4;
+        } else {
+            throw std::runtime_error("Invalid UTF-8 sequence encountered.");
+        }
+
+        if (i + char_len > str.size()) {
+            throw std::runtime_error("Incomplete UTF-8 character at the end of the string.");
+        }
+
+        i += char_len;
+        ++length;
+    }
+
+    return length;
+}
 
 
 
@@ -201,10 +251,7 @@ public:
 
 
 	//TreeSitter Experimental
-	TSParser* mParser=nullptr;
-	TSTree* mTree=nullptr;
 	TSQuery* mQuery=nullptr;
-	TSQueryCursor* mCursor=nullptr;
 
 	std::vector<uint32_t> mLineOffset;
 
@@ -220,7 +267,6 @@ public:
 	void PrintTree(const TSNode &node, const std::string &source_code,std::string& output, int indent = 0);
 
 	std::string GetNearbyLinesString(int aLineNo,int aLineCount=3);
-	void UpdateSyntaxHighlighting(int aLineNo,int aLineCount=3);
 
 	Coordinates GetCoordinatesFromOffset(uint32_t offset);
 
@@ -340,7 +386,6 @@ private:
 	Line& InsertLine(int aIndex);
 	void InsertText(const std::string& aValue);
 	void InsertText(const char* aValue);
-	int InsertTextAt(Coordinates& aWhere, const char* aValue);
 
 	Coordinates SanitizeCoordinates(const Coordinates& aValue) const;
 
@@ -350,7 +395,7 @@ private:
 	Coordinates ScreenPosToCoordinates(const ImVec2& aPosition)const;
 	float GetSelectionPosFromCoords(const Coordinates& coords) const;
 
-	std::string GetSelectedText() const;
+	std::string GetSelectedText(const Cursor& aCursor) const;
 	std::string GetText(const Coordinates& aStart, const Coordinates& aEnd) const;
 
 	void DisableSelection();
@@ -362,20 +407,31 @@ private:
 	// Search & Find
 	struct SearchState {
 		std::string mWord;
+		size_t mWordLen;
 		std::vector<Coordinates> mFoundPositions;
 		bool mIsGlobal = false;
 		int mIdx = 0;
-		bool isValid() const { return mWord.length() > 0; }
-		void reset()
+		bool IsValid() const { return mWord.length() > 0; }
+		void SetSearchWord(std::string& word){
+			mWord=word;
+			mWordLen=GetUTF8StringLength(word);
+		}
+		void Reset()
 		{
 			mWord.clear();
 			mFoundPositions.clear();
 			mIsGlobal = false;
 			mIdx = 0;
+			mWordLen=0;
 		}
 	};
-
 	SearchState mSearchState;
+
+	void DisableSearch(){
+		if(mSearchState.IsValid())
+			mSearchState.Reset();
+	}
+
 	void HighlightCurrentWordInBuffer();
 	void FindAllOccurancesOfWord(std::string word,size_t aStartLineIdx,size_t aEndLineIdx);
 	void FindAllOccurancesOfWordInVisibleBuffer();
@@ -388,7 +444,8 @@ private:
 	// Status & UI
 
 
-	uint8_t GetTabCountsUptoCursor(const Coordinates& coords) const;
+	uint8_t GetTabCountsUptoCursor(const Coordinates& aCoords) const;
+	uint8_t GetTabCountsAtLineStart(const Coordinates& aCoords);
 	size_t GetCharacterIndex(const Coordinates& coords) const;
 
 	BracketMatch mBracketMatch;
@@ -399,9 +456,8 @@ private:
 	void FindBracketMatch(const Coordinates& aCoords);
 	void HighlightBracket(const Coordinates& aCoords);
 
-	void EnsureCursorVisible();
 
-	void DeleteCharacter(Cursor& aCursor,bool aDeletePreviousCharacter);
+	void DeleteCharacter(Cursor& aCursor,bool aDeletePreviousCharacter,UndoRecord* uRecord=nullptr);
 	void ResetState();
 	void InitFileExtensions();
 	std::map<std::string, std::string> FileExtensions;
@@ -416,6 +472,10 @@ public:
 
 	EditorState* GetEditorState() { return &mState; }
 	UndoManager* GetUndoMananger() { return &this->mUndoManager; }
+
+	void EnsureCursorVisible();
+	void UpdateSyntaxHighlighting(int aLineNo,int aLineCount=3);
+	int InsertTextAt(Coordinates& aWhere, const char* aValue);
 
 	std::string GetCurrentFilePath() const { return mFilePath; };
 	std::string GetFileType();
@@ -465,27 +525,7 @@ public:
 };
 
 
-inline static bool IsUTFSequence(char c)
-{
-	return (c & 0xC0) == 0x80;
-}
 
-// https://en.wikipedia.org/wiki/UTF-8
-// We assume that the char is a standalone character (<128) or a leading byte of an UTF-8 code sequence (non-10xxxxxx code)
-inline static int UTF8CharLength(uint8_t c)
-{
-	if ((c & 0xFE) == 0xFC)
-		return 6;
-	if ((c & 0xFC) == 0xF8)
-		return 5;
-	if ((c & 0xF8) == 0xF0)
-		return 4;
-	else if ((c & 0xF0) == 0xE0)
-		return 3;
-	else if ((c & 0xE0) == 0xC0)
-		return 2;
-	return 1;
-}
 
 //converts a Unicode code point (c) into its corresponding UTF-8 encoded byte sequence and stores it in a buffer.
 static inline int ImTextCharToUtf8(char* buf, int buf_size, unsigned int c)

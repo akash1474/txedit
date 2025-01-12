@@ -23,7 +23,7 @@ void Editor::HandleMouseInputs()
 
 			//Left mouse button triple click
 			if (tripleClick) {
-				if(mSearchState.isValid()) mSearchState.reset();
+				DisableSearch();
 				if (!ctrl) {
 					GL_INFO("TRIPLE CLICK");
 					auto& aState=mState.mCursors[mState.mCurrentCursorIdx];
@@ -42,10 +42,28 @@ void Editor::HandleMouseInputs()
 				if(!ctrl) SelectWordUnderCursor(mState.mCursors[mState.mCurrentCursorIdx]);
 				mLastClick = (float)ImGui::GetTime();
 
+				mSelectionMode=SelectionMode::Word;
+
+				auto& aCursor=GetCurrentCursor();
+				// Finding Index of Position same as currentLine to get next occurance
+				auto it = std::find_if(
+					mSearchState.mFoundPositions.begin(), mSearchState.mFoundPositions.end(),
+				    [&](const auto& coord) { return coord.mLine == aCursor.mCursorPosition.mLine; 
+				});
+
+				if (it != mSearchState.mFoundPositions.end())
+				{
+					const Coordinates& coord=*it;
+
+					mSearchState.mIdx = std::min(
+						(int)mSearchState.mFoundPositions.size() - 1,
+					    (int)std::distance(mSearchState.mFoundPositions.begin(), it) + 1
+					);
+				}
+
 			}
 			else if(click && ctrl){
-				if(mSearchState.isValid())
-					mSearchState.reset();
+				DisableSearch();
 
 				Cursor aState;
 				aState.mCursorPosition=ScreenPosToCoordinates(ImGui::GetMousePos());
@@ -63,10 +81,9 @@ void Editor::HandleMouseInputs()
 			else if (click) {
 				GL_INFO("MOUSE CLICK");
 
-				if(mSearchState.isValid())
-					mSearchState.reset();
-				
+				DisableSearch();
 				ClearCursors();
+
 				Cursor& aState=GetCurrentCursor();
 
 				aState.mSelectionStart=aState.mSelectionEnd=aState.mCursorPosition=ScreenPosToCoordinates(ImGui::GetMousePos());
@@ -86,7 +103,7 @@ void Editor::HandleMouseInputs()
 				if((ImGui::GetMousePos().y-mEditorPosition.y) <0.0f) return;
 
 				io.WantCaptureMouse = true;
-				if(mSearchState.isValid()) mSearchState.reset();
+				DisableSearch();
 				Cursor& aCursor=GetCurrentCursor();
 
 				aCursor.mCursorPosition=aCursor.mSelectionEnd=ScreenPosToCoordinates(ImGui::GetMousePos());

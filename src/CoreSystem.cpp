@@ -1,6 +1,6 @@
+#include "pch.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
-#include "pch.h"
 #include "CoreSystem.h"
 #include "ImageTexture.h"
 #include "MultiThreading.h"
@@ -42,6 +42,7 @@ void CoreSystem::RenderDebugInfo()
 	static bool show_demo = true;
 	ImGui::ShowDemoWindow(&show_demo);
 
+	ImGui::SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags_RefreshOnFocus);
 	ImGui::Begin("Project");
 	ShowFPS();
 	const char* utf8 = "Mastering » Ñandú.txt";
