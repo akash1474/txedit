@@ -1,3 +1,4 @@
+#include "ImageTexture.h"
 #include "Log.h"
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -7,6 +8,52 @@
 #include "StatusBarManager.h"
 #include "TabsManager.h"
 #include <filesystem>
+#include "MultiThreading.h"
+
+#include <nlohmann/json.hpp>
+#include <fstream>
+
+
+// Load JSON and parse icon data
+std::unordered_map<std::string, IconData> FileNavigation::LoadIconData(const std::string& aJsonPath){
+    OpenGL::ScopedTimer timer("IconData Preparation");
+    std::ifstream file(aJsonPath);
+    nlohmann::json json;
+    file >> json;
+
+    std::unordered_map<std::string, IconData> icons;
+	for (const auto& [key, value] : json.items()) {
+	    IconData data;
+	    if (value.contains("extensions")) {
+	        data.extensions = value["extensions"].get<std::vector<std::string>>();
+	    }
+	    if (value.contains("name")) {
+	        data.name = value["name"];
+	    }
+	    std::string filePath="./assets/icons/"+key+".png";
+	    icons[key] = {data.name,data.extensions};
+	    icons[key].texture.SetPath(filePath);
+	}
+
+    return std::move(icons);
+}
+
+// Match file extensions
+std::pair<const std::string,IconData>* FileNavigation::GetIconForExtension(const std::string& aExtension){
+    // OpenGL::ScopedTimer timer("IconData Search");
+    std::pair<const std::string,IconData>* defaultIcon=nullptr;
+    for (auto& element: mIconDatabase) {
+    	auto& data=element.second;
+    	auto& type=element.first;
+    	if(type=="file_type_default")
+    		defaultIcon=&element;
+        if (std::find(data.extensions.begin(), data.extensions.end(), aExtension) != data.extensions.end()) {
+            return &element;
+        }
+    }
+    return defaultIcon;
+}
+
 
 void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
     static int selected=-1;
@@ -93,6 +140,77 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
     }
 }
 
+bool FileNavigation::CustomSelectable(std::string& aFileName,bool aIsSelected){
+
+	//Loading the file icon
+	// static ImageTexture img1("./assets/icons/file_type_cpp.png");
+	// static bool pushed = false;
+	// if (!pushed) {
+	// 	MultiThreading::ImageLoader::PushImageToQueue(&img1);
+	// 	pushed=true;
+	// }
+	std::string ext=std::filesystem::path(aFileName).extension().generic_string();
+	ext.erase(ext.begin());
+	if(ext.empty()){
+		ext=std::filesystem::path(aFileName).filename().generic_string();
+		ext.erase(ext.begin());
+	}
+
+	std::pair<const std::string,IconData>* icondata=GetIconForExtension(ext);
+	if(!icondata->second.texture.IsLoaded()){
+		GL_INFO(ext);
+		MultiThreading::ImageLoader::PushImageToQueue(&icondata->second.texture);
+	}
+
+
+	//Settingup custom component
+	ImGuiWindow* window=ImGui::GetCurrentWindow();
+	if(window->SkipItems) return false;
+
+	const ImGuiID id=window->GetID(aFileName.c_str());
+	const ImVec2 label_size=ImGui::CalcTextSize(aFileName.c_str());
+
+	// const float parentWorkRectX=window->ParentWorkRect.Max.x-window->ParentWorkRect.Min.x;
+	const ImVec2 itemSize(window->WorkRect.Max.x-window->WorkRect.Min.x,label_size.y+2.0f+(2*ImGui::GetStyle().FramePadding.y));
+	ImVec2 pos=window->DC.CursorPos;
+
+	// pos.y += window->DC.CurrLineTextBaseOffset;
+
+	const ImRect bb(pos,ImVec2(pos.x+itemSize.x,pos.y+itemSize.y));
+	const float height=bb.Max.y-bb.Min.y;
+
+
+	ImGui::ItemSize(bb,0.0f);
+	if(!ImGui::ItemAdd(bb, id)) return false;
+
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held);
+
+
+    ImU32 col;
+    if (aIsSelected && !hovered)
+        col = IM_COL32(50, 50, 50, 255);
+    else
+        col = ImGui::GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? IM_COL32(40, 40, 40, 255) : ImGuiCol_WindowBg);
+
+	ImGui::RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
+
+	pos.x+=7.0f;
+	float img_size=20.0f;
+	ImVec2 img_min(pos.x,pos.y+((height-img_size)*0.5f));
+	ImVec2 img_max(img_min.x+img_size,img_min.y+img_size);
+	if(icondata->second.texture.IsLoaded())
+		window->DrawList->AddImage((void*)(intptr_t)icondata->second.texture.GetTextureId(),img_min,img_max);
+
+	const ImVec2 text_min(pos.x+25.0f,pos.y+ImGui::GetStyle().FramePadding.y);
+    const ImVec2 text_max(text_min.x + label_size.x, text_min.y + label_size.y);
+	ImGui::RenderTextClipped(text_min,text_max,aFileName.c_str(),0,&label_size, ImGui::GetStyle().SelectableTextAlign, &bb);
+
+
+	return pressed;
+}
+
+
 void FileNavigation::RenderFolderItems(std::string path,bool isRoot){
 	if(isRoot){
 		std::string folderName=std::filesystem::path(path).filename().generic_string();
@@ -137,11 +255,20 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot){
 		}
 		else{
 			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,8.0f));
-			ImGui::PushStyleColor(ImGuiCol_Header,ImGui::GetStyle().Colors[ImGuiCol_SliderGrabActive]);
-			ImGui::PushStyleColor(ImGuiCol_HeaderHovered,ImGui::GetStyle().Colors[ImGuiCol_SliderGrab]);
-			ImGui::SetCursorPosX(ImGui::GetCursorPosX()+28.0f);
-			if(ImGui::Selectable(oss.str().c_str(),item.is_explored,ImGuiSelectableFlags_SpanAvailWidth|ImGuiSelectableFlags_SelectOnClick)){
+			// ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,8.0f));
+			// ImGui::PushStyleColor(ImGuiCol_Header,ImGui::GetStyle().Colors[ImGuiCol_SliderGrabActive]);
+			// ImGui::PushStyleColor(ImGuiCol_HeaderHovered,ImGui::GetStyle().Colors[ImGuiCol_SliderGrab]);
+			// ImGui::SetCursorPosX(ImGui::GetCursorPosX()+28.0f);
+			// if(ImGui::Selectable(oss.str().c_str(),item.is_explored,ImGuiSelectableFlags_SpanAvailWidth|ImGuiSelectableFlags_SelectOnClick)){
+			// 	for(Entity& en:entities) en.is_explored=false;
+			// 	item.is_explored=true;
+
+			// 	if(!std::filesystem::exists(item.path))
+			// 		UpdateDirectory(std::filesystem::path(item.path).parent_path().generic_string());
+
+			// 	TabsManager::Get().OpenFile(item.path);
+			// }
+			if(CustomSelectable(item.filename,item.is_explored)){
 				for(Entity& en:entities) en.is_explored=false;
 				item.is_explored=true;
 
@@ -149,11 +276,12 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot){
 					UpdateDirectory(std::filesystem::path(item.path).parent_path().generic_string());
 
 				TabsManager::Get().OpenFile(item.path);
+
 			}
 			ImGui::PopFont();
 			ShowContextMenu(item.path);
-			ImGui::PopStyleVar();
-			ImGui::PopStyleColor(2);
+			// ImGui::PopStyleVar();
+			// ImGui::PopStyleColor(2);
 		}
 		oss.str("");
 	}

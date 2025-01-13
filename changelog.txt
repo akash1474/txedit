@@ -7,7 +7,6 @@ TODO
 » Fix line number cliping for large files
 » Implement a FileBuffer class that handles all the info related to a current state of file buffer and editor
 » Change the font of inputpanel to editor font
-» Full UTF8 support
 
 TASK
 » Add UTF8 support to Terminal
@@ -58,4 +57,4 @@ TASK
 
 1-5th Sept 2024
 + Code Refactoring and reorganization
-+ Implemented UndoManager class and UndoRecord
++ Implemented UndoManager class and UndoRecord                                                            

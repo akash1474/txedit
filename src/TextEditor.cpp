@@ -76,11 +76,13 @@ Editor::~Editor() {
 
 void Editor::ResetState(){
 	DisableSearch();
-	//TODO:
-	// mCursors.clear();
-	// mState.mCursorPosition.mColumn=0;
-	// mState.mCursorPosition.mLine=0;
-	// mState.mSelectionEnd =mState.mSelectionStart=mState.mCursorPosition;
+	mState.mCursors.clear();
+
+	Cursor aCursor;
+	aCursor.mCursorPosition=aCursor.mSelectionStart=aCursor.mSelectionEnd=Coordinates(0,0);
+	mState.mCursors.push_back(aCursor);
+	
+	mState.mCurrentCursorIdx=0;
 	mSelectionMode=SelectionMode::Normal;
 	mBracketMatch.mHasMatch=false;
 }
@@ -1016,7 +1018,10 @@ void Editor::SetBuffer(const std::string& text)
 
 	GL_INFO("FILE INFO --> Lines:{}", mLines.size());
 	// mUndoManager.Clear();
-	ApplySyntaxHighlighting(text);
+	// GL_INFO("Extension:{}",);
+	std::string ext=std::filesystem::path(mFilePath).extension().generic_string();
+	if(ext==".cpp" || ext==".h" || ext==".hpp" || ext==".c")
+		ApplySyntaxHighlighting(text);
 }
 
 

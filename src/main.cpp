@@ -1,5 +1,4 @@
 #include "GLFW/glfw3.h"
-#define _CRTDBG_MAP_ALLOC
 #include "pch.h"
 #include "Log.h"
 #include "Timer.h"
@@ -79,6 +78,12 @@ int main(int argc, char* argv[])
 	double timeDiff;
 	unsigned int counter = 0;
 #endif
+
+	// std::string jsonPath="./assets/icons.json";
+	// std::unordered_map<std::string, IconData> iconData= loadIconData(jsonPath);
+	// std::string extension="cpp";
+	// auto[key,icondata]=getIconForFile(extension, iconData);
+	// GL_INFO("File:{}.png,Name:{}",key,icondata.name);
 	
 	while (!glfwWindowShouldClose(Application::GetGLFWwindow())) {
 	    auto start = std::chrono::high_resolution_clock::now();

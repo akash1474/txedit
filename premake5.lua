@@ -17,6 +17,8 @@ includeDirs["LunaSVG"]="packages/lunasvg/include"
 includeDirs["UUID"]="packages/uuid_v4"
 includeDirs["TreeSitter"]="packages/tree-sitter/lib/include"
 includeDirs["TreeSitterCpp"]="packages/tree-sitter-cpp/src"
+includeDirs["nlohmann"]="packages/nlohmann"
+
 
 -- /MP -- Multithreaded build 
 -- /MT -- Static Linking. Defines _MT 
@@ -49,7 +51,8 @@ project "text_editor"
       "%{includeDirs.SpdLog}",
       "%{includeDirs.UUID}",
       "%{includeDirs.TreeSitter}",
-      "%{includeDirs.TreeSitterCpp}"
+      "%{includeDirs.TreeSitterCpp}",
+      "%{includeDirs.nlohmann}"
    }
 
    files { 

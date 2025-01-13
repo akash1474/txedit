@@ -14,7 +14,6 @@ void ImageTexture::LoadTexture(const char* file_path){
         GL_CRITICAL("ImageTexture Loading Error:{}",stbi_failure_reason());
         return;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 }
 
 void ImageTexture::BindTexture(){
