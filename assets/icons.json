@@ -1,11 +1,70 @@
 {
     "file_type_c": {
-        "extensions": ["c", "h"],
+        "extensions": ["c"],
         "name": "C"
     },
+    "file_type_cppheader":{
+        "extensions": ["h", "h++", "hh", "hpp", "hxx"],
+        "name": "C/C++ (Header)"
+    },
     "file_type_cpp": {
-        "extensions": ["cpp", "cc", "cxx", "hpp", "hxx"],
+        "extensions": ["cpp", "cc", "cxx"],
         "name": "C++"
+    },
+    "file_type_text": {
+        "extensions": ["AUTHORS", "NOTICE", "README", "RELEASE-NOTES","txt"],
+        "name": "Plain Text (Readme)"
+    },
+    "file_type_lua": {
+        "extensions": ["lua"],
+        "name": "Lua"
+    },
+    "file_type_windows": {
+        "extensions": ["bat"],
+        "name": "Batch File"
+    },
+    "file_type_log": {
+        "extensions": ["log" ],
+        "name": "Plain Text (Log)"
+    },
+    "file_type_settings":{
+        "extensions": [
+            "rc",
+            "fmt",
+            "cfg",
+            "ini",
+            "inf",
+            "lng",
+            "pbk",
+            "url",
+            "conf",
+            "config",
+            "Doxyfile"
+        ],
+        "name":"Plain Text (INI)"
+    },
+    "file_type_visualstudio": {
+        "extensions": [
+            ".coverage",
+            "idl",
+            "sln",
+            "csproj",
+            "fsproj",
+            "shproj",
+            "sqlproj",
+            "vbproj",
+            "vcxproj",
+            "vsproj",
+            "props",
+            "resx",
+            "ruleset",
+            "settings",
+            "targets",
+            "wxl",
+            "wxs",
+            "xaml"
+        ],
+        "name": "XML (Visual Studio)"
     },
     "file_type_python": {
         "extensions": ["py", "pyc", "pyo", "pyd"],
@@ -99,9 +158,13 @@
 		"extensions": [
 			"bmp", "emf", "gif", "jp2", "jpeg", "jpg", "png",
 			"pnm", "ppm", "tga", "tif", "tiff", "webp", "xbm",
-			"xpm"
+			"xpm","ico"
 		],
     	"name":"Binary (Image)"
+    },
+    "file_type_svg": {
+        "extensions": ["svg"],
+        "name": "XML (SVG)"
     },
     "file_type_default":{
     	"name":"default"

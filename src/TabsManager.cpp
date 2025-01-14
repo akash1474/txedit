@@ -7,31 +7,47 @@
 #include <cstdint>
 
 
-bool TabsManager::OpenFile(std::string filepath,bool isTemp){
+bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
+{
 
 	static UUIDv4::UUIDGenerator<std::mt19937_64> mUIDGenerator;
 	UUIDv4::UUID uuid = mUIDGenerator.getUUID();
 
-	std::filesystem::path path(filepath);
-	auto it=std::find_if(Get().mTabs.begin(),Get().mTabs.end(),[&](const FileTab& tab){return tab.filepath==filepath;});
-	if(it==Get().mTabs.end()){
-		for(auto&tab:Get().mTabs) tab.isActive=false;
+	std::filesystem::path path(aFilePath);
+	auto it=std::find_if(
+		Get().mTabs.begin(),
+		Get().mTabs.end(),
+		[&](const FileTab& tab)
+		{
+			return tab.filepath==aFilePath;
+		}
+	);
+
+	if(it==Get().mTabs.end())
+	{
+		for(auto&tab:Get().mTabs) 
+			tab.isActive=false;
 
 		//Replace the temp file with curr temp file if a temp file is found
 		auto it=std::find_if(Get().mTabs.begin(),Get().mTabs.end(),[&](const FileTab& tab){return tab.isTemp;});
-		if(it!=Get().mTabs.end()){
-			it->filepath=filepath;
-			it->filename=path.filename().generic_string();
-		}else Get().mTabs.emplace_back(filepath,path.filename().generic_string(),isTemp,true,true,uuid.str());
+		if(it!=Get().mTabs.end())
+		{
+			it->filepath=aFilePath;
+			it->filename=path.filename().generic_u8string();
+		}
+		else 
+			Get().mTabs.emplace_back(aFilePath,path.filename().generic_u8string(),aIsTemp,true,true,uuid.str());
 
 	}else{
-		for(auto&tab:Get().mTabs) tab.isActive=false;
+		for(auto&tab:Get().mTabs) 
+			tab.isActive=false;
+
 		it->isActive=true;
 		it->isTemp=false;
 	}
 
 
-	CoreSystem::Get().GetTextEditor()->LoadFile(filepath.c_str());
+	CoreSystem::Get().GetTextEditor()->LoadFile(aFilePath.c_str());
 
 	return true;
 }
@@ -52,42 +68,65 @@ void TabsManager::Render(ImGuiWindowClass& window_class,int winFlags){
 		// ImGui::SameLine(0.0f,0.0f);
 
 		bool removeTab=false;
-		for(auto it=tabs.begin();it!=tabs.end();){
-			if(RenderTab(it,removeTab) && !it->isActive) {
+		for(auto it=tabs.begin();it!=tabs.end();)
+		{
+			if(RenderTab(it,removeTab) && !it->isActive) 
+			{
 				for(auto&tab:Get().mTabs) tab.isActive=false;
 				it->isActive=true;
 				CoreSystem::Get().GetTextEditor()->LoadFile(it->filepath.c_str());
 			}
-			if(ImGui::IsItemClicked(ImGuiMouseButton_Left) && ImGui::GetIO().MouseDoubleClicked[0]){
+
+			if(ImGui::IsItemClicked(ImGuiMouseButton_Left) && ImGui::GetIO().MouseDoubleClicked[0])
+			{
 				it->isTemp=false;
 				ImGui::GetIO().MouseDoubleClicked[0]=0;
 			}
-			if(ImGui::IsItemHovered() && ImGui::IsItemClicked(ImGuiMouseButton_Right)) ImGui::OpenPopup("##tab_menu");
-			if(removeTab){
+
+			if(ImGui::IsItemHovered() && ImGui::IsItemClicked(ImGuiMouseButton_Right)) 
+				ImGui::OpenPopup("##tab_menu");
+			
+			if(removeTab)
+			{
 				it=tabs.erase(it);
-				if(tabs.empty()) CoreSystem::GetTextEditor()->ClearEditor();
-				else{
+				if(tabs.empty()) 
+					CoreSystem::GetTextEditor()->ClearEditor();
+				else
+				{
 					std::vector<FileTab>::iterator currTab=it;
 					if(currTab==tabs.end()) currTab=it-1;
 					currTab->isActive=true;
 					CoreSystem::GetTextEditor()->LoadFile(currTab->filepath.c_str());
 				}
 				removeTab=false;
-			}else  it++;
+			}
+			else  
+				it++;
+
 			ImGui::SameLine(0.0f,0.0f);
 
 		}
-		static const char* names[] = { "Close Tabs to the Right", "Close UnModified Tabs", "Close UnModified Tabs to Right", "Close Tabs with Deleted Files" };
+		static const char* names[] = { 
+			"Close Tabs to the Right", 
+			"Close UnModified Tabs", 
+			"Close UnModified Tabs to Right", 
+			"Close Tabs with Deleted Files" 
+		};
+
 		bool selected=-1;
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 5.0f));
-		if(ImGui::BeginPopup("##tab_menu")){
-			if(ImGui::Selectable("Close Tab")){
+		if(ImGui::BeginPopup("##tab_menu"))
+		{
+			if(ImGui::Selectable("Close Tab"))
+			{
 				// ImGui::GetHoveredID()
 			}
+
 			ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
             for (int i = 0; i < IM_ARRAYSIZE(names); i++)
                 if (ImGui::Selectable(names[i]))
                     selected = i;
+			
 			ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
 			ImGui::Selectable("New File");
 			ImGui::Selectable("Open File");
@@ -97,7 +136,8 @@ void TabsManager::Render(ImGuiWindowClass& window_class,int winFlags){
 
 
 		
-		if (ImGui::IsWindowHovered() &&  io.MouseWheel != 0.0f) {
+		if (ImGui::IsWindowHovered() &&  io.MouseWheel != 0.0f) 
+		{
 	        // Apply the vertical scroll value to horizontal scroll
 	        ImGui::SetScrollX(ImGui::GetCurrentWindow(), ImGui::GetScrollX() - io.MouseWheel * 25.0f); // Adjust the multiplier as needed
 	        io.MouseWheel = 0.0f; // Reset the vertical scroll value to prevent vertical scrolling
@@ -109,7 +149,8 @@ void TabsManager::Render(ImGuiWindowClass& window_class,int winFlags){
 }
 
 
-bool TabsManager::RenderTab(std::vector<FileTab>::iterator tab,bool& shouldDelete){
+bool TabsManager::RenderTab(std::vector<FileTab>::iterator tab,bool& shouldDelete)
+{
 	ImGuiWindow* window=ImGui::GetCurrentWindow();
 	if(window->SkipItems) return false;
 
@@ -125,7 +166,8 @@ bool TabsManager::RenderTab(std::vector<FileTab>::iterator tab,bool& shouldDelet
 
 
 	ImGui::ItemSize(rect,0.0f);
-	if(!ImGui::ItemAdd(rect, id)){
+	if(!ImGui::ItemAdd(rect, id))
+	{
 		ImGui::PopFont();
 		return false;
 	}
@@ -135,14 +177,16 @@ bool TabsManager::RenderTab(std::vector<FileTab>::iterator tab,bool& shouldDelet
 	ImU32 bgColor=isHovered ? IM_COL32(25, 25,25, 255) : IM_COL32(17, 19,20, 255);
 
 	drawlist->AddRectFilled(rect.Min,rect.Max , tab->isActive ? IM_COL32(29, 32,33, 255) : bgColor ,0.0f);
-	if(!tab->isActive) drawlist->AddLine({rect.Max.x-1,rect.Min.y+2.0f},{rect.Max.x-1,rect.Max.y-2.0f},IM_COL32(70, 70, 70, 255));
+	if(!tab->isActive) 
+		drawlist->AddLine({rect.Max.x-1,rect.Min.y+2.0f},{rect.Max.x-1,rect.Max.y-2.0f},IM_COL32(70, 70, 70, 255));
 
 	const ImVec2 startText{pos.x+10.0f,pos.y+((tabSize.y-fontSize.y)*0.5f)};
 	drawlist->AddText(startText,IM_COL32_WHITE,tab->filename.c_str());
 	ImGui::PopFont();
 	// ImGui::RenderText(startText, tab->filename.c_str());
 
-	if(isHovered && GImGui->HoveredIdTimer > 1.0f){
+	if(isHovered && GImGui->HoveredIdTimer > 1.0f)
+	{
 		// GL_INFO("TEXTSIZE:{}",fontSize.x);
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,{10.0,5.0f});
 		ImGui::BeginTooltip();
@@ -151,14 +195,19 @@ bool TabsManager::RenderTab(std::vector<FileTab>::iterator tab,bool& shouldDelet
 		ImGui::PopStyleVar();
 	}
 
-	if(!tab->isSaved) drawlist->AddCircleFilled({pos.x+tabSize.x-20.0f,pos.y+((tabSize.y-10.0f)*0.5f)+5.0f}, 5.0f, IM_COL32(100,100,100,255));
-	else{
+	if(!tab->isSaved) 
+		drawlist->AddCircleFilled({pos.x+tabSize.x-20.0f,pos.y+((tabSize.y-10.0f)*0.5f)+5.0f}, 5.0f, IM_COL32(100,100,100,255));
+	else
+	{
 		ImVec2 btnPos{pos.x+tabSize.x-22.0f,pos.y+((tabSize.y-10.0f)*0.5f)-2.0f};
 		ImRect btnRect(btnPos,{btnPos.x+14,btnPos.y+14});
 		bool isHovered;
+
 		ImGui::ButtonBehavior(btnRect, id,&isHovered,NULL,0);
 		drawlist->AddText({pos.x+tabSize.x-20.0f,pos.y+((tabSize.y-ImGui::CalcTextSize(ICON_FA_XMARK).y)*0.5f)},isHovered? IM_COL32(255,255,255,255) :IM_COL32(100,100,100,255),ICON_FA_XMARK);
-		if(isHovered && isClicked) shouldDelete=true;
+		
+		if(isHovered && isClicked) 
+			shouldDelete=true;
 	}
 
 

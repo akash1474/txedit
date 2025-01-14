@@ -563,9 +563,9 @@ bool Editor::Draw()
 	HandleKeyboardInputs();
 	HandleMouseInputs();
 
-#ifdef GL_DEBUG
-	DebugDisplayNearByText();
-#endif
+// #ifdef GL_DEBUG
+// 	DebugDisplayNearByText();
+// #endif
 	return true;
 }
 
@@ -2061,6 +2061,7 @@ float Editor::TextDistanceFromLineStart(const Coordinates& aFrom) const
 
 	return distance;
 }
+
 
 
 

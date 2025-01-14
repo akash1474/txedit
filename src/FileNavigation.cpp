@@ -1,8 +1,8 @@
+#include "pch.h"
 #include "ImageTexture.h"
 #include "Log.h"
 #include "imgui.h"
 #include "imgui_internal.h"
-#include "pch.h"
 #include "FileNavigation.h"
 #include "DirectoryHandler.h"
 #include "StatusBarManager.h"
@@ -12,7 +12,25 @@
 
 #include <nlohmann/json.hpp>
 #include <fstream>
+#include <winnt.h>
 
+
+FileNavigation::FileNavigation(){
+	mIconDatabase=LoadIconData("./assets/icons.json");
+	// mDirectoryMonitor.Start();
+};
+
+FileNavigation::~FileNavigation(){ 
+	// mDirectoryMonitor.Stop();
+	mDirectoryData.clear(); 
+}
+
+
+void FileNavigation::AddFolder(std::string aPath)
+{
+		mFolders.push_back(aPath);
+		// mDirectoryMonitor.AddDirectoryToWatchList(StringToWString(aPath));
+}
 
 // Load JSON and parse icon data
 std::unordered_map<std::string, IconData> FileNavigation::LoadIconData(const std::string& aJsonPath){
@@ -42,15 +60,28 @@ std::unordered_map<std::string, IconData> FileNavigation::LoadIconData(const std
 std::pair<const std::string,IconData>* FileNavigation::GetIconForExtension(const std::string& aExtension){
     // OpenGL::ScopedTimer timer("IconData Search");
     std::pair<const std::string,IconData>* defaultIcon=nullptr;
-    for (auto& element: mIconDatabase) {
+
+    for (auto& element: mIconDatabase) 
+    {
     	auto& data=element.second;
     	auto& type=element.first;
+
+    	//storing a ptr so that I can return in case no match found.
     	if(type=="file_type_default")
     		defaultIcon=&element;
-        if (std::find(data.extensions.begin(), data.extensions.end(), aExtension) != data.extensions.end()) {
+
+        if (std::find(data.extensions.begin(), data.extensions.end(), aExtension) != data.extensions.end()) 
+        {
+        	if(!data.texture.IsLoaded())
+				MultiThreading::ImageLoader::PushImageToQueue(&data.texture);
+            
             return &element;
         }
     }
+
+    if(!defaultIcon->second.texture.IsLoaded())
+		MultiThreading::ImageLoader::PushImageToQueue(&defaultIcon->second.texture);
+
     return defaultIcon;
 }
 
@@ -84,7 +115,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
 		                				StatusBarManager::ShowNotification("Created",filePath,StatusBarManager::NotificationType::Success);
 
 		                				std::string dir=std::filesystem::path(filePath).parent_path().generic_string();
-		                				StatusBarManager::GetFileNavigation()->UpdateDirectory(dir);
+		                				StatusBarManager::GetFileNavigation()->ScanDirectory(dir);
 		                			}
 	                			}
                 			},
@@ -114,7 +145,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
     	            		if(std::filesystem::exists(path)&&!std::filesystem::is_directory(path)){
     	            			if(DirectoryHandler::DeleteFile(path)){
     	            				StatusBarManager::ShowNotification("Deleted", path.c_str());
-    	            				StatusBarManager::GetFileNavigation()->UpdateDirectory(std::filesystem::path(path).parent_path().generic_string());
+    	            				StatusBarManager::GetFileNavigation()->ScanDirectory(std::filesystem::path(path).parent_path().generic_string());
     	            			}
     	            			else
     	            				StatusBarManager::ShowNotification("Failed Deletion", path.c_str(),StatusBarManager::NotificationType::Error);
@@ -123,7 +154,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
     	            		if(std::filesystem::exists(path)&&std::filesystem::is_directory(path)){
     	            			// if(DirectoryHandler::DeleteFolder(path)){
     	            				StatusBarManager::ShowNotification("Deleted", path.c_str());
-    	            			// 	StatusBarManager::GetFileNavigation()->UpdateDirectory(std::filesystem::path(path).parent_path().generic_string());
+    	            			// 	StatusBarManager::GetFileNavigation()->ScanDirectory(std::filesystem::path(path).parent_path().generic_string());
     	            			// }
     	            			// else
     	            			// 	StatusBarManager::ShowNotification("Failed Deletion", path.c_str(),StatusBarManager::NotificationType::Error);
@@ -140,27 +171,19 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
     }
 }
 
-bool FileNavigation::CustomSelectable(std::string& aFileName,bool aIsSelected){
+bool FileNavigation::CustomSelectable(std::string& aFileName,bool aIsSelected)
+{
 
-	//Loading the file icon
-	// static ImageTexture img1("./assets/icons/file_type_cpp.png");
-	// static bool pushed = false;
-	// if (!pushed) {
-	// 	MultiThreading::ImageLoader::PushImageToQueue(&img1);
-	// 	pushed=true;
-	// }
 	std::string ext=std::filesystem::path(aFileName).extension().generic_string();
-	ext.erase(ext.begin());
-	if(ext.empty()){
+	if(!ext.empty())
+		ext.erase(ext.begin());
+	else
+	{
 		ext=std::filesystem::path(aFileName).filename().generic_string();
 		ext.erase(ext.begin());
 	}
 
 	std::pair<const std::string,IconData>* icondata=GetIconForExtension(ext);
-	if(!icondata->second.texture.IsLoaded()){
-		GL_INFO(ext);
-		MultiThreading::ImageLoader::PushImageToQueue(&icondata->second.texture);
-	}
 
 
 	//Settingup custom component
@@ -170,11 +193,9 @@ bool FileNavigation::CustomSelectable(std::string& aFileName,bool aIsSelected){
 	const ImGuiID id=window->GetID(aFileName.c_str());
 	const ImVec2 label_size=ImGui::CalcTextSize(aFileName.c_str());
 
-	// const float parentWorkRectX=window->ParentWorkRect.Max.x-window->ParentWorkRect.Min.x;
 	const ImVec2 itemSize(window->WorkRect.Max.x-window->WorkRect.Min.x,label_size.y+2.0f+(2*ImGui::GetStyle().FramePadding.y));
 	ImVec2 pos=window->DC.CursorPos;
 
-	// pos.y += window->DC.CurrLineTextBaseOffset;
 
 	const ImRect bb(pos,ImVec2(pos.x+itemSize.x,pos.y+itemSize.y));
 	const float height=bb.Max.y-bb.Min.y;
@@ -211,77 +232,154 @@ bool FileNavigation::CustomSelectable(std::string& aFileName,bool aIsSelected){
 }
 
 
-void FileNavigation::RenderFolderItems(std::string path,bool isRoot){
-	if(isRoot){
+// void WatchDirectoryAsync(const std::wstring& directory) {
+//     HANDLE hDir = CreateFileW(
+//         directory.c_str(),
+//         FILE_LIST_DIRECTORY,
+//         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+//         nullptr,
+//         OPEN_EXISTING,
+//         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+//         nullptr);
+
+//     if (hDir == INVALID_HANDLE_VALUE) {
+//         std::cerr << "Failed to open directory. Error: " << GetLastError() << "\n";
+//         return;
+//     }
+
+//     char buffer[1024];
+//     OVERLAPPED overlapped = {};
+//     HANDLE hEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+//     overlapped.hEvent = hEvent;
+
+//     while (true) {
+//         ResetEvent(hEvent);
+
+//         DWORD bytesReturned;
+//         if (!ReadDirectoryChangesW(
+//                 hDir,
+//                 buffer,
+//                 sizeof(buffer),
+//                 TRUE, // Monitor the entire directory tree
+//                 FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME,
+//                 &bytesReturned,
+//                 &overlapped,
+//                 nullptr)) {
+//             std::cerr << "Failed to read directory changes. Error: " << GetLastError() << "\n";
+//             break;
+//         }
+
+//         // Wait for the event to be signaled (non-blocking via a timeout)
+//         DWORD waitStatus = WaitForSingleObject(hEvent, 1000); // 1-second timeout
+//         if (waitStatus == WAIT_OBJECT_0) {
+//             FILE_NOTIFY_INFORMATION* info = reinterpret_cast<FILE_NOTIFY_INFORMATION*>(buffer);
+
+//             do {
+//                 std::wstring fileName(info->FileName, info->FileNameLength / sizeof(WCHAR));
+//                 switch (info->Action) {
+//                 case FILE_ACTION_ADDED:
+//                     std::wcout << L"File added: " << fileName << "\n";
+//                     break;
+//                 case FILE_ACTION_REMOVED:
+//                     std::wcout << L"File deleted: " << fileName << "\n";
+//                     break;
+//                 case FILE_ACTION_RENAMED_OLD_NAME:
+//                     std::wcout << L"File renamed (old name): " << fileName << "\n";
+//                     break;
+//                 case FILE_ACTION_RENAMED_NEW_NAME:
+//                     std::wcout << L"File renamed (new name): " << fileName << "\n";
+//                     break;
+//                 }
+
+//                 if (info->NextEntryOffset == 0) {
+//                     break;
+//                 }
+
+//                 info = reinterpret_cast<FILE_NOTIFY_INFORMATION*>(
+//                     reinterpret_cast<BYTE*>(info) + info->NextEntryOffset);
+
+//             } while (true);
+//         } else if (waitStatus == WAIT_TIMEOUT) {
+//             std::wcout << L"No changes detected in the past second.\n";
+//         } else {
+//             std::cerr << "Failed to wait for directory change. Error: " << GetLastError() << "\n";
+//             break;
+//         }
+//     }
+
+//     CloseHandle(hEvent);
+//     CloseHandle(hDir);
+// }
+
+void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
+{
+	if(isRoot)
+	{
 		std::string folderName=std::filesystem::path(path).filename().generic_string();
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,2.0f));
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(4.0f,2.0f));
-		if(ImGui::TreeNodeEx(folderName.c_str(),ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen)){
+
+		if(ImGui::TreeNodeEx(folderName.c_str(),ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen))
+		{
     		RenderFolderItems(path);
     		ImGui::TreePop();
     	}
+
 		ShowContextMenu(path,true);
     	ImGui::PopStyleVar(2);
     	return;
 	}
-	if(mDirectoryData.empty()  || mDirectoryData.find(path)==mDirectoryData.end()){
-		auto& entities=mDirectoryData[path];
-		try{
-			for(const auto& entity:std::filesystem::directory_iterator(path)) entities.push_back({
-				entity.path().filename().generic_string(),
-				entity.path().generic_string(),
-				entity.is_directory(),
-				false
-			});
-		}catch(...){
-			GL_CRITICAL("ERROR:Directory Scan");
-		}
-		std::stable_partition(entities.begin(), entities.end(), [](const auto& entity) { return entity.is_directory; });
+
+	// Folder not present in mDirectoryData
+	if(mDirectoryData.empty()  || mDirectoryData.find(path)==mDirectoryData.end())
+	{
+		ScanDirectory(path);
 	}
+
+
 	auto& entities=mDirectoryData[path];
-	if(entities.empty()) return;
+
+	if(entities.empty()) 
+		return;
+	
 	std::stringstream oss;
-	for(Entity& item:entities){
+
+	for(Entity& item:entities)
+	{
 		const char* icon = item.is_directory ? item.is_explored ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER : ICON_FA_FILE;
 		oss << icon << " " << item.filename.c_str();
-		if(item.is_directory) {
-			if(ImGui::TreeNodeEx(oss.str().c_str(),ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_Selected)){
+		if(item.is_directory) 
+		{
+			if(ImGui::TreeNodeEx(oss.str().c_str(),ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_Selected))
+			{
 				std::stringstream wss;
 				ShowContextMenu(item.path,item.is_directory); //Explored Folder
 				RenderFolderItems(item.path,false);
 				ImGui::TreePop();
 			}
+
 			ShowContextMenu(item.path,item.is_directory); // UnExplored Folder
 		}
-		else{
+		else
+		{
 			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
-			// ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,8.0f));
-			// ImGui::PushStyleColor(ImGuiCol_Header,ImGui::GetStyle().Colors[ImGuiCol_SliderGrabActive]);
-			// ImGui::PushStyleColor(ImGuiCol_HeaderHovered,ImGui::GetStyle().Colors[ImGuiCol_SliderGrab]);
-			// ImGui::SetCursorPosX(ImGui::GetCursorPosX()+28.0f);
-			// if(ImGui::Selectable(oss.str().c_str(),item.is_explored,ImGuiSelectableFlags_SpanAvailWidth|ImGuiSelectableFlags_SelectOnClick)){
-			// 	for(Entity& en:entities) en.is_explored=false;
-			// 	item.is_explored=true;
 
-			// 	if(!std::filesystem::exists(item.path))
-			// 		UpdateDirectory(std::filesystem::path(item.path).parent_path().generic_string());
-
-			// 	TabsManager::Get().OpenFile(item.path);
-			// }
-			if(CustomSelectable(item.filename,item.is_explored)){
-				for(Entity& en:entities) en.is_explored=false;
+			if(CustomSelectable(item.filename,item.is_explored))
+			{
+				for(Entity& en:entities) 
+					en.is_explored=false;
+				
 				item.is_explored=true;
 
 				if(!std::filesystem::exists(item.path))
-					UpdateDirectory(std::filesystem::path(item.path).parent_path().generic_string());
+					ScanDirectory(std::filesystem::path(item.path).parent_path().generic_string());
 
 				TabsManager::Get().OpenFile(item.path);
 
 			}
 			ImGui::PopFont();
 			ShowContextMenu(item.path);
-			// ImGui::PopStyleVar();
-			// ImGui::PopStyleColor(2);
+			
 		}
 		oss.str("");
 	}
@@ -294,29 +392,48 @@ void FileNavigation::Render(){
 	ImGui::SetNextWindowSize(ImVec2{250.0f,-1.0f},ImGuiCond_Once);
 	ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(0.764,0.764,0.764,1.000));
 	ImGui::Begin("Project Directory");
+
     	auto& folders=GetFolders();
     	for(const auto& folder:folders)
+    	{
     		RenderFolderItems(folder,true);
+    	}
+
 	ImGui::End();
 	ImGui::PopStyleColor(2);
 }
 
 
-void FileNavigation::UpdateDirectory(std::string dir){
-	GL_INFO("Updating:{}",dir);
-	if(!mDirectoryData[dir].empty()){
-		auto& entities=mDirectoryData[dir];
-		entities.clear();
-		try{
-			for(const auto& entity:std::filesystem::directory_iterator(dir)) entities.push_back({
-				entity.path().filename().generic_string(),
+void FileNavigation::ScanDirectory(const std::string& aDirectoryPath){
+	GL_INFO("Updating:{}",aDirectoryPath);
+
+	auto& entities=mDirectoryData[aDirectoryPath];
+	entities.clear();
+
+	try
+	{
+		for(const auto& entity:std::filesystem::directory_iterator(aDirectoryPath))
+		{
+			if(!entity.is_directory())
+			{
+				//Ignoring the binary type files that are not viewable in editors
+				std::string ext=entity.path().extension().generic_string();
+				if(ext==".exe" || ext==".obj" || ext==".dll" || ext==".lib" || ext==".so" || ext==".o" || ext==".pdb")
+					continue;
+			}
+
+			entities.push_back({
+				entity.path().filename().generic_u8string(),
 				entity.path().generic_string(),
 				entity.is_directory(),
 				false
 			});
-		}catch(...){
-			GL_CRITICAL("ERROR:Directory Scan");
 		}
-		std::stable_partition(entities.begin(), entities.end(), [](const auto& entity) { return entity.is_directory; });
 	}
+	catch(...)
+	{
+		GL_CRITICAL("ERROR:Directory Scan");
+	}
+
+	std::stable_partition(entities.begin(), entities.end(), [](const auto& entity) { return entity.is_directory; });
 }
