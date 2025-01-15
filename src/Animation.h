@@ -13,9 +13,7 @@ public:
 	bool hasStarted=false;
 
 	Animation(float duration=0.25f):mDuration(duration){}
-
 	void SetDuration(float dur){ mDuration=dur;}
-
 	void start(){ mHasCompleted=false; hasStarted=true;}
 
 	float update(){
@@ -32,3 +30,4 @@ public:
 	}
 
 };
+                                  

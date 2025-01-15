@@ -28,6 +28,10 @@ namespace StatusBarManager{
 	static inline std::string mPlaceholder;
 	static inline bool mShowButton=false;
 	static inline void (*mCallbackFn)(const char* data);
+	static inline void (*mCallbackFnEx)(const char* data1,const char* data2);
+
+	static inline bool mIsCallbackEx=false;
+	static inline char mInputTextBuffer[1024];
 
 
 	void Init(Editor* editorPtr);
@@ -41,5 +45,6 @@ namespace StatusBarManager{
 	void SetCursorCoordinate(const Coordinates& cursorPosition);
 	bool IsInputPanelOpen();
 	void ShowInputPanel(const char* title,void(*callback)(const char*),const char* placeholder=nullptr,bool showButton=false,const char* btnName="Done");
+	void ShowInputPanelEx(const char* title,void(*callback)(const char*,const char*),const char* placeholder=nullptr,bool showButton=false,const char* btnName="Done");
 	void CloseInputPanel();
 };

@@ -7,9 +7,14 @@
 #include <winnt.h>
 
 
-bool DirectoryHandler::CreateFile(std::string filePath){
-	if(std::filesystem::exists(filePath)) return false;
-	if(std::filesystem::is_directory(filePath)) filePath=std::filesystem::path(filePath).parent_path().generic_string();
+bool DirectoryHandler::CreateFile(std::string filePath)
+{
+	if(std::filesystem::exists(filePath)) 
+		return false;
+
+	if(std::filesystem::is_directory(filePath)) 
+		filePath=std::filesystem::path(filePath).parent_path().generic_string();
+	
 	std::ofstream file(filePath);
 	file.close();
 	return true;
@@ -21,12 +26,8 @@ void DirectoryHandler::OpenExplorer(const std::string& path){
 	std::string copy=path;
 	std::replace(copy.begin(), copy.end(), '/', '\\');
 	GL_INFO("OpenExplorer: {}",copy);
-	// if(!std::filesystem::is_directory(copy)){
-	// 	ShellExecute(NULL, L"open", L"explorer.exe", std::filesystem::path(copy).parent_path().wstring().c_str(), NULL, SW_SHOWNORMAL);
-	// 	return;
-	// }
-	// std::wstring wideString = StringToWString(copy);
-	// ShellExecute(NULL, L"open", L"explorer.exe",std::filesystem::path(copy).wstring().c_str(), NULL, SW_SHOWNORMAL);
+	std::wstring wideString = StringToWString(copy);
+	ShellExecuteW(NULL, L"open", L"explorer.exe",std::filesystem::path(copy).wstring().c_str(), NULL, SW_SHOWNORMAL);
 }
 
 
@@ -76,16 +77,25 @@ bool DirectoryHandler::CreateFolder(const std::string& folderPath){
 }
 
 
-bool DirectoryHandler::RenameFolder(const std::string& folderPath,const std::string newName){
+bool DirectoryHandler::RenameFolder(const std::string& oldPath,const std::string newPath){
     try {
-        std::filesystem::path oldFolderPath(folderPath);
-        std::filesystem::path newFolderPath = oldFolderPath.parent_path() / newName;
+        // Check if the folder to rename exists
+        if (!std::filesystem::exists(oldPath)) {
+            std::cerr << "Error: Folder '" << oldPath << "' does not exist.\n";
+            return false;
+        }
 
-        std::filesystem::rename(oldFolderPath, newFolderPath);
+        // Check if a folder with the new name already exists
+        if (std::filesystem::exists(newPath)) {
+            std::cerr << "Error: A folder with the name '" << newPath << "' already exists.\n";
+            return false;
+        }
 
-        return true;
+        // Rename the folder
+        std::filesystem::rename(oldPath, newPath);
+        std::cout << "Folder renamed successfully from '" << oldPath << "' to '" << newPath << "'.\n";
     } catch (const std::filesystem::filesystem_error& e) {
-        // std::cerr << "Error renaming folder: " << e.what() << std::endl;
-        return false;
+        std::cerr << "Error: " << e.what() << "\n";
     }
+    return true;
 }

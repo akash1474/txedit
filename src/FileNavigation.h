@@ -14,6 +14,14 @@ struct IconData {
     ImageTexture texture;
 };
 
+enum class DirectoryEvent{
+	FileModified,
+	FileAdded,
+	FileRemoved,
+	FileRenamedOldName,
+	FileRenamedNewName
+};
+
 
 class FileNavigation{
 	struct Entity{
@@ -36,12 +44,16 @@ class FileNavigation{
 	FileNavigation();
 
 public:
+	FileNavigation(const FileNavigation&)=delete;
+
 	static FileNavigation& Get(){
 		static FileNavigation instance;
 		return instance;
 	}
 
 	~FileNavigation();
+
+	static void Init();
 
 	static void SetTextEditor(Editor* editorPtr){ Get().mTextEditor=editorPtr;}
 	static void Render();
@@ -54,8 +66,8 @@ public:
 	static const bool IsOpen(){return Get().mIsOpen;}
 	static std::vector<std::string>& GetFolders(){ return Get().mFolders;}
 
-
-	std::unordered_map<std::string, IconData> LoadIconData(const std::string& aJsonPath);
-	std::pair<const std::string,IconData>* GetIconForExtension(const std::string& aExtension);
+	static void HandleEvent(DirectoryEvent aEvent,std::wstring& aPayLoad);
+	static void LoadIconData(const std::string& aJsonPath);
+	static std::pair<const std::string,IconData>* GetIconForExtension(const std::string& aExtension);
 
 };

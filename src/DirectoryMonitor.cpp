@@ -4,6 +4,7 @@
 #include <thread>
 #include <winnt.h>
 #include "DirectoryMonitor.h"
+#include "FileNavigation.h"
 
 DirectoryMonitor::DirectoryMonitor(){}
 
@@ -103,22 +104,24 @@ void DirectoryMonitor::MonitorDirectory(HANDLE& hEvent,DirectoryWatch& aDirWatch
         FILE_NOTIFY_INFORMATION* info = reinterpret_cast<FILE_NOTIFY_INFORMATION*>(nBuffer);
 
         do {
-            std::wstring fileName(info->FileName, info->FileNameLength / sizeof(WCHAR));
+            std::wstring modPath(info->FileName, info->FileNameLength / sizeof(WCHAR));
+            std::wstring filePath=aDirWatch.mDirectoryPath+L"/"+std::filesystem::path(modPath).generic_wstring();
+
             switch (info->Action) {
             case FILE_ACTION_MODIFIED:
-                std::wcout << L"File modified: " << fileName << "\n";
+                FileNavigation::HandleEvent(DirectoryEvent::FileModified,filePath);
                 break;
             case FILE_ACTION_ADDED:
-                std::wcout << L"File added: " << fileName << "\n";
+                FileNavigation::HandleEvent(DirectoryEvent::FileAdded,filePath);
                 break;
             case FILE_ACTION_REMOVED:
-                std::wcout << L"File deleted: " << fileName << "\n";
+                FileNavigation::HandleEvent(DirectoryEvent::FileRemoved,filePath);
                 break;
             case FILE_ACTION_RENAMED_OLD_NAME:
-                std::wcout << L"File renamed (old name): " << fileName << "\n";
+                FileNavigation::HandleEvent(DirectoryEvent::FileRenamedOldName,filePath);
                 break;
             case FILE_ACTION_RENAMED_NEW_NAME:
-                std::wcout << L"File renamed (new name): " << fileName << "\n";
+                FileNavigation::HandleEvent(DirectoryEvent::FileRenamedNewName,filePath);
                 break;
             }
 

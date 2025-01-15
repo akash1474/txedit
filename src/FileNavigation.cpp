@@ -15,46 +15,53 @@
 #include <winnt.h>
 
 
-FileNavigation::FileNavigation(){
-	mIconDatabase=LoadIconData("./assets/icons.json");
-	mDirectoryMonitor.Start();
-};
+FileNavigation::FileNavigation(){};
 
 
 FileNavigation::~FileNavigation(){ 
-	mDirectoryMonitor.Stop();
-	mDirectoryData.clear(); 
+	Get().mDirectoryMonitor.Stop();
+	Get().mDirectoryData.clear(); 
 }
 
+void FileNavigation::Init(){
+	LoadIconData("./assets/icons.json");
+	Get().mDirectoryMonitor.Start();
+}
 
 void FileNavigation::AddFolder(std::string aPath)
 {
+	static bool isInit=false;
+	if(!isInit)
+	{
+		Init();
+		isInit=true;
+	}
+
 	Get().mFolders.push_back(aPath);
 	Get().mDirectoryMonitor.AddDirectoryToWatchList(StringToWString(aPath));
 }
 
 // Load JSON and parse icon data
-std::unordered_map<std::string, IconData> FileNavigation::LoadIconData(const std::string& aJsonPath){
+void FileNavigation::LoadIconData(const std::string& aJsonPath){
     OpenGL::ScopedTimer timer("IconData Preparation");
     std::ifstream file(aJsonPath);
     nlohmann::json json;
     file >> json;
 
-    std::unordered_map<std::string, IconData> icons;
-	for (const auto& [key, value] : json.items()) {
-	    IconData data;
-	    if (value.contains("extensions")) {
-	        data.extensions = value["extensions"].get<std::vector<std::string>>();
-	    }
-	    if (value.contains("name")) {
-	        data.name = value["name"];
-	    }
-	    std::string filePath="./assets/icons/"+key+".png";
-	    icons[key] = {data.name,data.extensions};
-	    icons[key].texture.SetPath(filePath);
-	}
+    auto& iconDatabase=Get().mIconDatabase;
+	for (const auto& [key, value] : json.items()) 
+	{
+	    IconData& data=iconDatabase[key];
 
-    return std::move(icons);
+	    if (value.contains("extensions"))
+	        data.extensions = value["extensions"].get<std::vector<std::string>>();
+	    
+	    if (value.contains("name"))
+	        data.name = value["name"];
+
+	    std::string filePath="./assets/icons/"+key+".png";
+	    data.texture.SetPath(filePath);
+	}
 }
 
 // Match file extensions
@@ -102,10 +109,15 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
             if (ImGui::Selectable(options[i])){
             	selected = i;
                 std::string fpath=path;
-            	switch(selected){
-                	case 0:{
+            	switch(selected)
+            	{
+                	case 0:
+                	{
                 		GL_INFO("New File:{}",path);
-                		if(!std::filesystem::is_directory(fpath)) fpath=std::filesystem::path(fpath).parent_path().generic_string();
+                		if(!std::filesystem::is_directory(fpath)) 
+                			fpath=std::filesystem::path(fpath).parent_path().generic_string();
+
+
                 		StatusBarManager::ShowInputPanel(
                 			"Filename:",
                 			[](const char* filePath){
@@ -114,9 +126,6 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
 	                			}else{
 		                			if(DirectoryHandler::CreateFile(filePath)){
 		                				StatusBarManager::ShowNotification("Created",filePath,StatusBarManager::NotificationType::Success);
-
-		                				std::string dir=std::filesystem::path(filePath).parent_path().generic_string();
-		                				FileNavigation::ScanDirectory(dir);
 		                			}
 	                			}
                 			},
@@ -126,6 +135,28 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
                 		break;
                 	case 1:
                 		GL_INFO("Rename");
+                		{
+	                		StatusBarManager::ShowInputPanelEx(
+	                			isFolder ? "FolderName:" : "FileName:",
+	                			[](const char* new_path,const char* old_path)
+	                			{
+	                				GL_INFO(new_path);
+		                			if(std::filesystem::path(new_path).has_extension())
+		                			{
+		                				DirectoryHandler::RenameFile(old_path, new_path);
+		                				StatusBarManager::ShowNotification("Renamed:",new_path,StatusBarManager::NotificationType::Success);
+		                			}
+		                			else
+		                			{
+			                			if(DirectoryHandler::RenameFolder(old_path, new_path))
+			                			{
+			                				StatusBarManager::ShowNotification("Renamed:",new_path,StatusBarManager::NotificationType::Success);
+			                			}
+		                			}
+	                			},
+	                			fpath.c_str()
+	                		);
+                		}
                 		break;
                 	case 2:
 						if(!std::filesystem::is_directory(path))
@@ -139,26 +170,48 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
                 		break;
                 	case 4:
                 		GL_INFO("New Folder");
+                		{
+                			std::string parentDir=std::filesystem::path(fpath).parent_path().generic_string();
+	                		StatusBarManager::ShowInputPanel(
+	                			"FolderName:",
+	                			[](const char* folderPath)
+	                			{
+	                				GL_INFO(folderPath);
+		                			if(std::filesystem::path(folderPath).has_extension())
+		                			{
+		                				StatusBarManager::ShowNotification("Failed",folderPath,StatusBarManager::NotificationType::Error);
+		                			}
+		                			else
+		                			{
+			                			if(DirectoryHandler::CreateFolder(folderPath))
+			                			{
+			                				StatusBarManager::ShowNotification("Created",folderPath,StatusBarManager::NotificationType::Success);
+			                			}
+		                			}
+	                			},
+	                			parentDir.c_str()
+	                		);
+
+                		}
                 		break;
                 	case 5:
                 		GL_INFO("Delete Folder");
-                		if(!isFolder){ //File
+                		if(!isFolder)
+                		{ 
     	            		if(std::filesystem::exists(path)&&!std::filesystem::is_directory(path)){
-    	            			if(DirectoryHandler::DeleteFile(path)){
+    	            			if(DirectoryHandler::DeleteFile(path))
     	            				StatusBarManager::ShowNotification("Deleted", path.c_str());
-    	            				FileNavigation::ScanDirectory(std::filesystem::path(path).parent_path().generic_string());
-    	            			}
     	            			else
     	            				StatusBarManager::ShowNotification("Failed Deletion", path.c_str(),StatusBarManager::NotificationType::Error);
     	            		}
-                		}else{
+                		}
+                		else
+                		{
     	            		if(std::filesystem::exists(path)&&std::filesystem::is_directory(path)){
-    	            			// if(DirectoryHandler::DeleteFolder(path)){
+    	            			if(DirectoryHandler::DeleteFolder(path))
     	            				StatusBarManager::ShowNotification("Deleted", path.c_str());
-    	            			// 	StatusBarManager::GetFileNavigation()->ScanDirectory(std::filesystem::path(path).parent_path().generic_string());
-    	            			// }
-    	            			// else
-    	            			// 	StatusBarManager::ShowNotification("Failed Deletion", path.c_str(),StatusBarManager::NotificationType::Error);
+    	            			else
+    	            				StatusBarManager::ShowNotification("Failed Deletion", path.c_str(),StatusBarManager::NotificationType::Error);
     	            		}
 
                 		}
@@ -357,4 +410,23 @@ void FileNavigation::ScanDirectory(const std::string& aDirectoryPath){
 	}
 
 	std::stable_partition(entities.begin(), entities.end(), [](const auto& entity) { return entity.is_directory; });
+}
+
+
+void FileNavigation::HandleEvent(DirectoryEvent aEvent,std::wstring& aPayLoad){
+
+	GL_WARN("Event:{}, PayLoad:{}",(int)aEvent,ToUTF8(aPayLoad));
+
+	std::string folderPath=std::filesystem::path(aPayLoad).parent_path().generic_u8string();
+
+	switch(aEvent){
+	case DirectoryEvent::FileAdded:
+	case DirectoryEvent::FileRemoved:
+	case DirectoryEvent::FileRenamedOldName:
+	case DirectoryEvent::FileRenamedNewName:
+		ScanDirectory(folderPath);
+		break;
+	case DirectoryEvent::FileModified:
+		break;
+	}
 }
