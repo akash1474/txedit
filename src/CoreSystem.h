@@ -14,7 +14,6 @@ class CoreSystem{
 	const char* mCurrentFile;
 	GLFWwindow* mWindow{0};
 	Editor mTextEditor;
-	FileNavigation mFileNavigation;
 	Terminal mTerminal;
 
 public:
@@ -26,7 +25,6 @@ public:
 	}
 
 	static Editor* GetTextEditor(){return &Get().mTextEditor;}
-	static FileNavigation* GetFileNavigation(){return &Get().mFileNavigation;}
 	static GLFWwindow* GetGLFWwindow(){return Get().mWindow;}
 
 	static void Render();
@@ -44,8 +42,8 @@ public:
 
 private:
 	CoreSystem(){ 
-		mFileNavigation.SetTextEditor(&mTextEditor);
-		StatusBarManager::Init(&mTextEditor,&mFileNavigation);
+		FileNavigation::SetTextEditor(&mTextEditor);
+		StatusBarManager::Init(&mTextEditor);
 	}
 
 };

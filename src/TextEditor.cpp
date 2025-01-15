@@ -89,6 +89,14 @@ void Editor::ResetState(){
 
 
 void Editor::LoadFile(const char* filepath){
+	// if(strlen(filepath)==0){
+	// 	mFileContents="";
+	// 	this->SetBuffer(mFileContents);
+	// 	fileType="Unknown";
+	// 	isFileLoaded=true;
+	// 	reCalculateBounds=true;
+	// 	return;
+	// }
 	if(!std::filesystem::exists(filepath)){
 		StatusBarManager::ShowNotification("Invalid Path",filepath,StatusBarManager::NotificationType::Error);
 		return;
@@ -98,7 +106,8 @@ void Editor::LoadFile(const char* filepath){
 	this->ResetState();
 	size_t size{0};
 	std::ifstream t(filepath);
-	if(t.good()) mFilePath=filepath;
+	if(t.good())
+		mFilePath=filepath;
 	fileType=GetFileType();
 
 	t.seekg(0, std::ios::end);
@@ -116,8 +125,10 @@ void Editor::LoadFile(const char* filepath){
 
 void Editor::ClearEditor(){
 	mFilePath.clear();
+	isFileLoaded=false;
 	fileType.clear();
 	mLines.clear();
+	ResetState();
 }
 
 void Editor::InitFileExtensions(){
@@ -208,9 +219,6 @@ void Editor::Render(){
 	ImGui::Begin("#editor_container",0,winFlags | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoDecoration);
 		ImGui::PopStyleVar();
 
-
-
-
 	    ImGuiID dockspace_id = ImGui::GetID("EditorDockSpace");
 	    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 
@@ -265,6 +273,7 @@ ImVec2 Editor::GetLinePosition(const Coordinates& aCoords){
 
 bool Editor::Draw()
 {
+
 	// OpenGL::ScopedTimer timer("Editor::Draw");
 	if(!isFileLoaded) return false;
 	
@@ -1373,7 +1382,7 @@ void Editor::FindAllOccurancesOfWordInVisibleBuffer()
 
 	int start = std::min((int)mLines.size()-1,(int)floor(ImGui::GetScrollY() / mLineHeight));
 	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
-	int end = std::min(start+lineCount+1,(int)mLines.size());
+	int end = std::min(start+lineCount+1,(int)mLines.size()-1);
 
 	FindAllOccurancesOfWord(currentWord, start, end);
 }

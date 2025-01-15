@@ -17,19 +17,20 @@
 
 FileNavigation::FileNavigation(){
 	mIconDatabase=LoadIconData("./assets/icons.json");
-	// mDirectoryMonitor.Start();
+	mDirectoryMonitor.Start();
 };
 
+
 FileNavigation::~FileNavigation(){ 
-	// mDirectoryMonitor.Stop();
+	mDirectoryMonitor.Stop();
 	mDirectoryData.clear(); 
 }
 
 
 void FileNavigation::AddFolder(std::string aPath)
 {
-		mFolders.push_back(aPath);
-		// mDirectoryMonitor.AddDirectoryToWatchList(StringToWString(aPath));
+	Get().mFolders.push_back(aPath);
+	Get().mDirectoryMonitor.AddDirectoryToWatchList(StringToWString(aPath));
 }
 
 // Load JSON and parse icon data
@@ -61,7 +62,7 @@ std::pair<const std::string,IconData>* FileNavigation::GetIconForExtension(const
     // OpenGL::ScopedTimer timer("IconData Search");
     std::pair<const std::string,IconData>* defaultIcon=nullptr;
 
-    for (auto& element: mIconDatabase) 
+    for (auto& element: Get().mIconDatabase) 
     {
     	auto& data=element.second;
     	auto& type=element.first;
@@ -115,7 +116,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
 		                				StatusBarManager::ShowNotification("Created",filePath,StatusBarManager::NotificationType::Success);
 
 		                				std::string dir=std::filesystem::path(filePath).parent_path().generic_string();
-		                				StatusBarManager::GetFileNavigation()->ScanDirectory(dir);
+		                				FileNavigation::ScanDirectory(dir);
 		                			}
 	                			}
                 			},
@@ -145,7 +146,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
     	            		if(std::filesystem::exists(path)&&!std::filesystem::is_directory(path)){
     	            			if(DirectoryHandler::DeleteFile(path)){
     	            				StatusBarManager::ShowNotification("Deleted", path.c_str());
-    	            				StatusBarManager::GetFileNavigation()->ScanDirectory(std::filesystem::path(path).parent_path().generic_string());
+    	            				FileNavigation::ScanDirectory(std::filesystem::path(path).parent_path().generic_string());
     	            			}
     	            			else
     	            				StatusBarManager::ShowNotification("Failed Deletion", path.c_str(),StatusBarManager::NotificationType::Error);
@@ -183,7 +184,7 @@ bool FileNavigation::CustomSelectable(std::string& aFileName,bool aIsSelected)
 		ext.erase(ext.begin());
 	}
 
-	std::pair<const std::string,IconData>* icondata=GetIconForExtension(ext);
+	std::pair<const std::string,IconData>* icondata=Get().GetIconForExtension(ext);
 
 
 	//Settingup custom component
@@ -231,86 +232,6 @@ bool FileNavigation::CustomSelectable(std::string& aFileName,bool aIsSelected)
 	return pressed;
 }
 
-
-// void WatchDirectoryAsync(const std::wstring& directory) {
-//     HANDLE hDir = CreateFileW(
-//         directory.c_str(),
-//         FILE_LIST_DIRECTORY,
-//         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-//         nullptr,
-//         OPEN_EXISTING,
-//         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
-//         nullptr);
-
-//     if (hDir == INVALID_HANDLE_VALUE) {
-//         std::cerr << "Failed to open directory. Error: " << GetLastError() << "\n";
-//         return;
-//     }
-
-//     char buffer[1024];
-//     OVERLAPPED overlapped = {};
-//     HANDLE hEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
-//     overlapped.hEvent = hEvent;
-
-//     while (true) {
-//         ResetEvent(hEvent);
-
-//         DWORD bytesReturned;
-//         if (!ReadDirectoryChangesW(
-//                 hDir,
-//                 buffer,
-//                 sizeof(buffer),
-//                 TRUE, // Monitor the entire directory tree
-//                 FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME,
-//                 &bytesReturned,
-//                 &overlapped,
-//                 nullptr)) {
-//             std::cerr << "Failed to read directory changes. Error: " << GetLastError() << "\n";
-//             break;
-//         }
-
-//         // Wait for the event to be signaled (non-blocking via a timeout)
-//         DWORD waitStatus = WaitForSingleObject(hEvent, 1000); // 1-second timeout
-//         if (waitStatus == WAIT_OBJECT_0) {
-//             FILE_NOTIFY_INFORMATION* info = reinterpret_cast<FILE_NOTIFY_INFORMATION*>(buffer);
-
-//             do {
-//                 std::wstring fileName(info->FileName, info->FileNameLength / sizeof(WCHAR));
-//                 switch (info->Action) {
-//                 case FILE_ACTION_ADDED:
-//                     std::wcout << L"File added: " << fileName << "\n";
-//                     break;
-//                 case FILE_ACTION_REMOVED:
-//                     std::wcout << L"File deleted: " << fileName << "\n";
-//                     break;
-//                 case FILE_ACTION_RENAMED_OLD_NAME:
-//                     std::wcout << L"File renamed (old name): " << fileName << "\n";
-//                     break;
-//                 case FILE_ACTION_RENAMED_NEW_NAME:
-//                     std::wcout << L"File renamed (new name): " << fileName << "\n";
-//                     break;
-//                 }
-
-//                 if (info->NextEntryOffset == 0) {
-//                     break;
-//                 }
-
-//                 info = reinterpret_cast<FILE_NOTIFY_INFORMATION*>(
-//                     reinterpret_cast<BYTE*>(info) + info->NextEntryOffset);
-
-//             } while (true);
-//         } else if (waitStatus == WAIT_TIMEOUT) {
-//             std::wcout << L"No changes detected in the past second.\n";
-//         } else {
-//             std::cerr << "Failed to wait for directory change. Error: " << GetLastError() << "\n";
-//             break;
-//         }
-//     }
-
-//     CloseHandle(hEvent);
-//     CloseHandle(hDir);
-// }
-
 void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 {
 	if(isRoot)
@@ -331,13 +252,13 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 	}
 
 	// Folder not present in mDirectoryData
-	if(mDirectoryData.empty()  || mDirectoryData.find(path)==mDirectoryData.end())
+	if(Get().mDirectoryData.empty()  || Get().mDirectoryData.find(path)==Get().mDirectoryData.end())
 	{
 		ScanDirectory(path);
 	}
 
 
-	auto& entities=mDirectoryData[path];
+	auto& entities=Get().mDirectoryData[path];
 
 	if(entities.empty()) 
 		return;
@@ -396,7 +317,7 @@ void FileNavigation::Render(){
     	auto& folders=GetFolders();
     	for(const auto& folder:folders)
     	{
-    		RenderFolderItems(folder,true);
+    		Get().RenderFolderItems(folder,true);
     	}
 
 	ImGui::End();
@@ -407,7 +328,7 @@ void FileNavigation::Render(){
 void FileNavigation::ScanDirectory(const std::string& aDirectoryPath){
 	GL_INFO("Updating:{}",aDirectoryPath);
 
-	auto& entities=mDirectoryData[aDirectoryPath];
+	auto& entities=Get().mDirectoryData[aDirectoryPath];
 	entities.clear();
 
 	try

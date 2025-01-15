@@ -13,7 +13,6 @@ namespace StatusBarManager{
 
 
 	static inline Editor* mTextEditor=nullptr;
-	static inline FileNavigation* mFileNavigation=nullptr;
 
 	//Notification
 	static inline Animation mNotificationAnimation;
@@ -31,14 +30,11 @@ namespace StatusBarManager{
 	static inline void (*mCallbackFn)(const char* data);
 
 
-	void Init(Editor* editorPtr,FileNavigation* fileNavigation);
+	void Init(Editor* editorPtr);
 
 
 	void Render(ImVec2& size,const ImGuiViewport* viewport);
 	void RenderInputPanel(ImVec2& size,const ImGuiViewport* viewport);
-
-	FileNavigation* GetFileNavigation();
-
 
 	void ShowNotification(const char* title,const char* info,NotificationType type=NotificationType::Info);
 	void SetFileType(const char* filetype);

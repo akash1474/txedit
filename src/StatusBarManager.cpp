@@ -5,10 +5,9 @@
 #include <stdio.h>
 
 
-void StatusBarManager::Init(Editor* editorPtr,FileNavigation* fileNavigation){ 
+void StatusBarManager::Init(Editor* editorPtr){ 
 	mTextEditor=editorPtr;
 	mNotificationAnimation.SetDuration(2.0f); 
-	mFileNavigation=fileNavigation;
 }
 
 bool StatusBarManager::IsInputPanelOpen(){ return mIsInputPanelOpen;}
@@ -55,7 +54,7 @@ void StatusBarManager::Render(ImVec2& size,const ImGuiViewport* viewport){
 	ImGui::Begin("Status Bar",0,ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize );
 
 		ImGui::PushFont(io.Fonts->Fonts[0]);
-		if(ImGui::Button(ICON_FA_BARS)) mFileNavigation->ToggleSideBar();
+		if(ImGui::Button(ICON_FA_BARS)) FileNavigation::ToggleSideBar();
 		ImGui::PopFont();
 
 		ImGui::SameLine();
@@ -170,8 +169,6 @@ void StatusBarManager::RenderInputPanel(ImVec2& size,const ImGuiViewport* viewpo
 
 }
 
-
-FileNavigation* StatusBarManager::GetFileNavigation(){return mFileNavigation;}
 
 
 void StatusBarManager::ShowNotification(const char* title,const char* info,NotificationType type){

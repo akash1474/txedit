@@ -1,3 +1,4 @@
+#include "FileNavigation.h"
 #include "pch.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
@@ -9,9 +10,6 @@
 #include "resources/MonoLisaRegular.embed"
 #include "resources/JetBrainsMonoNLRegular.embed"
 #include "resources/JetBrainsMonoNLItalic.embed"
-#include <chrono>
-#include <cstring>
-#include <thread>
 #include "Terminal.h"
 
 #ifdef GL_DEBUG
@@ -205,7 +203,7 @@ void CoreSystem::Render()
 			if (ImGui::MenuItem("Open Folder")) {
 				std::string path = SelectFolder();
 				if (!path.empty())
-					Get().mFileNavigation.AddFolder(path.c_str());
+					FileNavigation::AddFolder(path.c_str());
 			}
 
 			ImGui::EndMenu();
@@ -227,8 +225,8 @@ void CoreSystem::Render()
 	RenderDebugInfo();
 #endif
 
-	if (Get().mFileNavigation.IsOpen())
-		Get().mFileNavigation.Render();
+	if (FileNavigation::IsOpen())
+		FileNavigation::Render();
 	Get().mTextEditor.Render();
 	Get().mTerminal.Render();
 	StatusBarManager::Render(size, viewport);

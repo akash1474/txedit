@@ -9,9 +9,16 @@
 
 bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 {
-
 	static UUIDv4::UUIDGenerator<std::mt19937_64> mUIDGenerator;
 	UUIDv4::UUID uuid = mUIDGenerator.getUUID();
+
+	// if(aFilePath.empty())
+	// {
+	// 	Get().mTabs.emplace_back(aFilePath,"Untitled",aIsTemp,true,false,uuid.str());
+	// 	CoreSystem::Get().GetTextEditor()->LoadFile(aFilePath.c_str());
+	// 	return true;
+	// }
+
 
 	std::filesystem::path path(aFilePath);
 	auto it=std::find_if(
@@ -23,6 +30,7 @@ bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 		}
 	);
 
+	//Adding new tab
 	if(it==Get().mTabs.end())
 	{
 		for(auto&tab:Get().mTabs) 
@@ -38,7 +46,9 @@ bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 		else 
 			Get().mTabs.emplace_back(aFilePath,path.filename().generic_u8string(),aIsTemp,true,true,uuid.str());
 
-	}else{
+	}
+	else //Reusing the previous one
+	{
 		for(auto&tab:Get().mTabs) 
 			tab.isActive=false;
 
@@ -89,8 +99,11 @@ void TabsManager::Render(ImGuiWindowClass& window_class,int winFlags){
 			if(removeTab)
 			{
 				it=tabs.erase(it);
-				if(tabs.empty()) 
+				if(tabs.empty())
+				{
 					CoreSystem::GetTextEditor()->ClearEditor();
+					// OpenFile("",true);
+				}
 				else
 				{
 					std::vector<FileTab>::iterator currTab=it;

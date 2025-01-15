@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
 	if (argc > 1)
 		Application::HandleArguments(GetCommandLineW());
 
-	CoreSystem::GetFileNavigation()->AddFolder("D:/Projects/c++/txedit");
+	FileNavigation::AddFolder("D:/Projects/c++/txedit");
 	TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
 	// TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/Application.cpp");
 	// TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/TabsManager.cpp");

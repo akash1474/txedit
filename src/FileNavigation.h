@@ -27,27 +27,32 @@ class FileNavigation{
 	bool mIsOpen=true;
 	std::vector<std::string> mFolders;
 	std::unordered_map<std::string, IconData> mIconDatabase;
-	// DirectoryMonitor mDirectoryMonitor;
+	DirectoryMonitor mDirectoryMonitor;
 
 	std::unordered_map<std::string,std::vector<Entity>> mDirectoryData;
-	void ShowContextMenu(std::string& path,bool isFolder=false);
-	void RenderFolderItems(std::string path,bool isRoot=false);
-
-public:
+	static void ShowContextMenu(std::string& path,bool isFolder=false);
+	static void RenderFolderItems(std::string path,bool isRoot=false);
 
 	FileNavigation();
+
+public:
+	static FileNavigation& Get(){
+		static FileNavigation instance;
+		return instance;
+	}
+
 	~FileNavigation();
 
-	void SetTextEditor(Editor* editorPtr){ this->mTextEditor=editorPtr;}
-	void Render();
+	static void SetTextEditor(Editor* editorPtr){ Get().mTextEditor=editorPtr;}
+	static void Render();
 
-	void ScanDirectory(const std::string& aDirectoryPath);
-	bool CustomSelectable(std::string& aFileName,bool aIsSelected=false);
+	static void ScanDirectory(const std::string& aDirectoryPath);
+	static bool CustomSelectable(std::string& aFileName,bool aIsSelected=false);
 
-	void AddFolder(std::string aPath);
-	void ToggleSideBar(){mIsOpen=!mIsOpen;}
-	const bool IsOpen()const{return mIsOpen;}
-	std::vector<std::string>& GetFolders(){ return mFolders;}
+	static void AddFolder(std::string aPath);
+	static void ToggleSideBar(){Get().mIsOpen=!Get().mIsOpen;}
+	static const bool IsOpen(){return Get().mIsOpen;}
+	static std::vector<std::string>& GetFolders(){ return Get().mFolders;}
 
 
 	std::unordered_map<std::string, IconData> LoadIconData(const std::string& aJsonPath);

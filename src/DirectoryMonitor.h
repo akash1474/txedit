@@ -18,7 +18,7 @@ public:
     void Start();
     void Stop();
     void AddDirectoryToWatchList(const std::wstring& aDirectoryPath);
-    void MonitorDirectory(HANDLE hEvent,DirectoryWatch& aDirWatch,OVERLAPPED overlapped, char* buffer);
+    void MonitorDirectory(HANDLE& hEvent,DirectoryWatch& aDirWatch,OVERLAPPED& overlapped, char* buffer);
 
 private:
     bool mStopMonitoring;

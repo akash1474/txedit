@@ -1,3 +1,4 @@
+#include "FileNavigation.h"
 #include "pch.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
@@ -25,7 +26,7 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 	for (int i = 0; i < count; i++) {
 		if (std::filesystem::is_directory(paths[i])) {
 			GL_INFO("Folder: {}", paths[i]);
-			CoreSystem::GetFileNavigation()->AddFolder(paths[i]);
+			FileNavigation::AddFolder(paths[i]);
 		} else {
 			GL_INFO("File: {}", paths[i]);
 			CoreSystem::GetTextEditor()->LoadFile(paths[i]);
@@ -236,7 +237,7 @@ void Application::HandleArguments(std::wstring commands)
 				core->GetTextEditor()->LoadFile(path.generic_string().c_str());
 			} else if (fs::is_directory(path)) {
 				GL_INFO("FOLDER:{}", path.generic_string());
-				core->GetFileNavigation()->AddFolder(path.generic_string());
+				FileNavigation::AddFolder(path.generic_string());
 			} else {
 				ShowErrorMessage("Invalid File/Folder Selected");
 			}
