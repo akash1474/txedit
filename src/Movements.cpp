@@ -811,9 +811,10 @@ void Editor::Backspace()
 			mState.mCurrentCursorIdx=i;
 
 
+	Cursor& newCursor = GetCurrentCursor();
 	EnsureCursorVisible();
-	UpdateSyntaxHighlighting(aCurrentCursor.mCursorPosition.mLine,0);
-	FindBracketMatch(aCurrentCursor.mCursorPosition);
+	UpdateSyntaxHighlighting(newCursor.mCursorPosition.mLine,0);
+	FindBracketMatch(newCursor.mCursorPosition);
 	DebouncedReparse();
 }
 

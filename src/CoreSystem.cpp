@@ -12,6 +12,9 @@
 #include "resources/JetBrainsMonoNLItalic.embed"
 #include "Terminal.h"
 
+#ifdef min
+	#undef min
+#endif
 #ifdef GL_DEBUG
 
 void ShowFPS()
@@ -146,7 +149,7 @@ void CoreSystem::Render()
 
 	static const ImGuiIO& io = ImGui::GetIO();
 	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
-	static ImGuiWindowFlags window_flags = ImGuiWindowFlags_None | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+	static ImGuiWindowFlags window_flags = ImGuiWindowFlags_None | ImGuiWindowFlags_MenuBar ;
 
 
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -169,26 +172,27 @@ void CoreSystem::Render()
 
 
 	if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
-		ImGuiID dockspace_id = ImGui::GetID("DDockSpace");
-		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+		Get().mDockSpaceId = ImGui::GetID("DDockSpace");
+		ImGui::DockSpace(Get().mDockSpaceId, ImVec2(0.0f, 0.0f), dockspace_flags);
 
 		static bool setupRequired = true;
 		if (setupRequired) {
 			setupRequired = false;
-			ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
-			ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
-			ImGui::DockBuilderSetNodeSize(dockspace_id, size);
+			ImGui::DockBuilderRemoveNode(Get().mDockSpaceId); // clear any previous layout
+			ImGui::DockBuilderAddNode(Get().mDockSpaceId, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+			ImGui::DockBuilderSetNodeSize(Get().mDockSpaceId, size);
 
-			auto dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.3f, nullptr, &dockspace_id);
-			// auto dock_id_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.7f, nullptr, &dockspace_id);
-			ImGui::DockBuilderDockWindow("Project Directory", dock_id_left);
-			ImGui::DockBuilderDockWindow("#editor_container", dockspace_id);
-// ImGui::DockBuilderDockWindow("#terminal", dockspace_id);
+			Get().mLeftDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Left, 0.3f, nullptr, &Get().mDockSpaceId);
+			Get().mRightDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Right, 0.7f, nullptr, &Get().mDockSpaceId);
+			auto dock_id_left_bottom = ImGui::DockBuilderSplitNode(Get().mLeftDockSpaceId, ImGuiDir_Down, 0.3f, nullptr, &Get().mLeftDockSpaceId);
+			ImGui::DockBuilderDockWindow("Project Directory", Get().mLeftDockSpaceId);
+			// ImGui::DockBuilderDockWindow("#editor_container", Get().mRightDockSpaceId);
+			ImGui::DockBuilderDockWindow("Terminal", dock_id_left_bottom);
 #ifdef GL_DEBUG
-			ImGui::DockBuilderDockWindow("Dear ImGui Demo", dock_id_left);
-			ImGui::DockBuilderDockWindow("Project", dock_id_left);
+			ImGui::DockBuilderDockWindow("Dear ImGui Demo", Get().mLeftDockSpaceId);
+			ImGui::DockBuilderDockWindow("Project", Get().mLeftDockSpaceId);
 #endif
-			ImGui::DockBuilderFinish(dockspace_id);
+			ImGui::DockBuilderFinish(Get().mDockSpaceId);
 		}
 	}
 
@@ -227,7 +231,7 @@ void CoreSystem::Render()
 
 	if (FileNavigation::IsOpen())
 		FileNavigation::Render();
-	Get().mTextEditor.Render();
+	Get().mTextEditor.Render(Get().mDockSpaceId);
 	Get().mTerminal.Render();
 	StatusBarManager::Render(size, viewport);
 }

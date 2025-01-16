@@ -92,7 +92,7 @@ inline void SetStyleColorDarkness()
 
     ImGuiStyle& style = ImGui::GetStyle();
     style.WindowPadding = ImVec2(8.00f, 8.00f);
-    style.FramePadding = ImVec2(5.00f, 2.00f);
+    style.FramePadding = ImVec2(5.00f, 5.00f);
     style.CellPadding = ImVec2(6.00f, 6.00f);
     style.ItemSpacing = ImVec2(6.00f, 6.00f);
     style.ItemInnerSpacing = ImVec2(6.00f, 6.00f);
@@ -112,7 +112,7 @@ inline void SetStyleColorDarkness()
     style.ScrollbarRounding = 2;
     style.GrabRounding = 2;
     style.LogSliderDeadzone = 2;
-    style.TabRounding = 2;
+    style.TabRounding = 0;
 }
 
 

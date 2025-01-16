@@ -363,8 +363,11 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 void FileNavigation::Render(){
 	// static float s_width=250.0f;
 	ImGui::PushStyleColor(ImGuiCol_WindowBg,ImVec4(0.067f,0.075f,0.078f,1.000f));
+	ImGui::PushStyleColor(ImGuiCol_Header,ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
+	ImGui::PushStyleColor(ImGuiCol_HeaderHovered,ImGui::GetStyle().Colors[ImGuiCol_SeparatorHovered]);
 	ImGui::SetNextWindowSize(ImVec2{250.0f,-1.0f},ImGuiCond_Once);
 	ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(0.764,0.764,0.764,1.000));
+	ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0.0f);
 	ImGui::Begin("Project Directory");
 
     	auto& folders=GetFolders();
@@ -374,7 +377,8 @@ void FileNavigation::Render(){
     	}
 
 	ImGui::End();
-	ImGui::PopStyleColor(2);
+	ImGui::PopStyleColor(4);
+	ImGui::PopStyleVar();
 }
 
 

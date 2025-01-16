@@ -15,8 +15,14 @@ class CoreSystem{
 	GLFWwindow* mWindow{0};
 	Editor mTextEditor;
 	Terminal mTerminal;
+	ImGuiID mLeftDockSpaceId=-1;
+	ImGuiID mRightDockSpaceId=-1;
+	ImGuiID mDockSpaceId=-1;
 
 public:
+	static ImGuiID GetMainDockSpaceID(){ return Get().mDockSpaceId;}
+	static ImGuiID GetLeftMainDockSpaceID(){ return Get().mLeftDockSpaceId;}
+	static ImGuiID GetRightMainDockSpaceID(){ return Get().mRightDockSpaceId;}
 	CoreSystem(const CoreSystem&)=delete;
 
 	static CoreSystem& Get(){
@@ -47,3 +53,4 @@ private:
 	}
 
 };
+

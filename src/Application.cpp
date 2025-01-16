@@ -93,16 +93,18 @@ bool Application::InitImGui()
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
-	// ImGui::GetStyle().ScaleAllSizes(0.5f);
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	// io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 
 #ifndef GL_DEBUG
-	const std::string app_dir = GetUserDirectory("txedit");
-	io.IniFilename = app_dir.c_str();
+	// const std::string app_dir = GetUserDirectory("txedit");
+	// io.IniFilename = app_dir.c_str();
 	io.LogFilename = nullptr;
+	io.IniFilename=nullptr;
 #endif
 
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	ImGuiStyle& style = ImGui::GetStyle();
 	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
 		style.WindowRounding = 0.0f;
@@ -127,6 +129,7 @@ bool Application::InitImGui()
 
 	glfwSwapInterval(0); // Gives maximum FPS
 	SetStyleColorDarkness();
+
 	return true;
 }
 

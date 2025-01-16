@@ -200,7 +200,7 @@ std::string Editor::GetFileType(){
 
 
 
-void Editor::Render(){
+void Editor::Render(ImGuiID aDockspaceID){
 	ImGuiStyle& style=ImGui::GetStyle();
 	float width=style.ScrollbarSize;
 	style.ScrollbarSize=20.0f;
@@ -208,60 +208,62 @@ void Editor::Render(){
 
 
 	//Hiding Tab Bar
-	ImGuiWindowClass window_class;
-	window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_NoDockingOverMe;
-	static int winFlags=ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus;
-	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingOverMe;
+	// ImGuiWindowClass window_class;
+	// window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_NoDockingOverMe;
+	// static int winFlags=ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus;
+	// static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingOverMe;
 
-	ImGui::SetNextWindowClass(&window_class);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	// ImGui::SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags_TryToAvoidRefresh);
-	ImGui::Begin("#editor_container",0,winFlags | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoDecoration);
-		ImGui::PopStyleVar();
+	// ImGui::SetNextWindowClass(&window_class);
+	// ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	// // ImGui::SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags_TryToAvoidRefresh);
+	// ImGui::Begin("#editor_container",0,winFlags | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoDecoration);
+	// 	ImGui::PopStyleVar();
 
-	    ImGuiID dockspace_id = ImGui::GetID("EditorDockSpace");
-	    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+	//     ImGuiID dockspace_id = ImGui::GetID("EditorDockSpace");
+	//     ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 
 		static bool isFirst=true;
 		if(isFirst){
 			isFirst=false;
-			ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
-			ImGui::DockBuilderAddNode(dockspace_id,dockspace_flags | ImGuiDockNodeFlags_DockSpace);
-			ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetWindowSize());
+			// ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
+			// ImGui::DockBuilderAddNode(dockspace_id,dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+			// ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetWindowSize());
 
-			auto doc_id_top = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Up, 0.0f, nullptr, &dockspace_id);
-			ImGui::DockBuilderSetNodeSize(doc_id_top, {ImGui::GetWindowWidth(),40.0f});
-			ImGui::DockBuilderDockWindow("#tabs_area", doc_id_top);
-			ImGui::DockBuilderDockWindow("#text_editor", dockspace_id);
+			// auto doc_id_top = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Up, 0.0f, nullptr, &dockspace_id);
+			// ImGui::DockBuilderSetNodeSize(doc_id_top, {ImGui::GetWindowWidth(),40.0f});
+			// ImGui::DockBuilderDockWindow("#tabs_area", doc_id_top);
+			// ImGui::DockBuilderDockWindow("#text_editor", dockspace_id);
 
-			ImGui::DockBuilderFinish(dockspace_id);
+			// ImGui::DockBuilderFinish(dockspace_id);
 		}
 
 
-		TabsManager::Render(window_class,winFlags);
+		// TabsManager::Render(window_class,winFlags);
 
 
 
-		ImGui::SetNextWindowClass(&window_class);
+		// ImGui::SetNextWindowClass(&window_class);
+		ImGui::SetNextWindowDockID(aDockspaceID, ImGuiCond_FirstUseEver);
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-		ImGui::PushStyleColor(ImGuiCol_WindowBg,mGruvboxPalletDark[(size_t)Pallet::Background]);
-		ImGui::SetNextWindowContentSize(ImVec2(ImGui::GetContentRegionMax().x + 1500.0f, 0));
-		ImGui::Begin("#text_editor", 0, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_HorizontalScrollbar|winFlags);
+		static bool isOpen=false;
+		ImGui::Begin("TextEditor.cpp##something",&isOpen,ImGuiWindowFlags_None|ImGuiWindowFlags_NoBackground);
 			ImGui::PopStyleVar();
-			ImGui::PopStyleColor();
 			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[(uint8_t)Fonts::MonoLisaRegular]);
-			this->Draw();
 			ImGuiWindow* window = ImGui::GetCurrentWindow();
+
+			this->Draw();
+
 			ImGuiID hover_id = ImGui::GetHoveredID();
 			bool scrollbarHovered = hover_id && (hover_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_X) || hover_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_Y));
-			if(scrollbarHovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+			if(scrollbarHovered) 
+				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 			ImGui::PopFont();
 			style.ScrollbarSize=width;
 		ImGui::End();  // #text_editor
 
 
 
-	ImGui::End();
+	// ImGui::End();
 
 }
 
@@ -269,6 +271,17 @@ ImVec2 Editor::GetLinePosition(const Coordinates& aCoords){
 	return {ImGui::GetWindowPos().x-ImGui::GetScrollX(),ImGui::GetWindowPos().y+(aCoords.mLine*mLineHeight)-ImGui::GetScrollY()};
 }
 
+void Editor::UpdateBounds()
+{
+	GL_WARN("UPDATING BOUNDS");
+	mEditorPosition = mEditorWindow->Pos;
+	GL_INFO("EditorPosition: x:{} y:{}",mEditorPosition.x,mEditorPosition.y);
+
+	mEditorSize = ImVec2(mEditorWindow->ContentRegionRect.Max.x, mLines.size() * (mLineSpacing + mCharacterSize.y) +0.5*mLineSpacing);
+	mEditorBounds = ImRect(mEditorPosition, ImVec2(mEditorPosition.x + mEditorSize.x, mEditorPosition.y + mEditorSize.y));
+
+	reCalculateBounds = false;
+}
 
 
 bool Editor::Draw()
@@ -276,6 +289,12 @@ bool Editor::Draw()
 
 	// OpenGL::ScopedTimer timer("Editor::Draw");
 	if(!isFileLoaded) return false;
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleColor(ImGuiCol_ChildBg,mGruvboxPalletDark[(size_t)Pallet::Background]);
+	float sizeY= mLines.size() * (mLineSpacing + mCharacterSize.y);
+	ImGui::SetNextWindowContentSize(ImVec2(ImGui::GetContentRegionMax().x + 1500.0f, sizeY+250.0f));
+	ImGui::BeginChild("TextEditor", {0,0}, 0,  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_HorizontalScrollbar);
+	ImGui::PopStyleColor();
 	
 	static bool isInit = false;
 	if (!isInit) {
@@ -309,11 +328,6 @@ bool Editor::Draw()
 
 
 	const ImGuiIO& io = ImGui::GetIO();
-	const ImGuiID id = ImGui::GetID("##Editor");
-
-
-	ImGui::ItemSize(mEditorBounds, 0.0f);
-	if (!ImGui::ItemAdd(mEditorBounds, id)) return false;
 
 	// if( ImGui::IsMouseDown(0) && mSelectionMode==SelectionMode::Word && (ImGui::GetMousePos().y>(mEditorPosition.y+mEditorWindow->Size.y))){
 	// 	ImGui::SetScrollY(ImGui::GetScrollY()+mLineHeight);
@@ -330,9 +344,6 @@ bool Editor::Draw()
 	// 		mState.mCursorPosition.mLine--;
 	// 	}
 	// }
-
-	// // BackGrounds
-	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x + mLineBarWidth, mEditorPosition.y}, mEditorBounds.Max,mGruvboxPalletDark[(size_t)Pallet::Background]); // Code
 
 
 
@@ -366,6 +377,7 @@ bool Editor::Draw()
 	int start = std::min((int)mLines.size()-1,(int)floor(scrollY / mLineHeight));
 	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
 	int end = std::min(start+lineCount+1,(int)mLines.size());
+	// GL_INFO("{} -- {}",start,end);
 
 	//Highlight Selections
 	if (HasSelection(aCursor)) {
@@ -538,7 +550,7 @@ bool Editor::Draw()
 	//Horizonal scroll Shadow
 	if(ImGui::GetScrollX()>0.0f){
 		ImVec2 pos_start{mEditorPosition.x+mLineBarWidth,0.0f};
-		mEditorWindow->DrawList->AddRectFilledMultiColor(pos_start,{pos_start.x+10.0f,mEditorWindow->Size.y}, ImColor(19,21,21,130),ImColor(19,21,21,0),ImColor(19,21,21,0),ImColor(19,21,21,130));
+		mEditorWindow->DrawList->AddRectFilledMultiColor(pos_start,{pos_start.x+15.0f,mEditorWindow->Size.y}, ImColor(19,21,21,130),ImColor(19,21,21,0),ImColor(19,21,21,0),ImColor(19,21,21,130));
 	}
 
 
@@ -568,10 +580,14 @@ bool Editor::Draw()
 		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (lineNo==aCursor.mCursorPosition.mLine) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(lineNo + 1).c_str());
 	}
 
+	// ImGui::SetCursorPos(ImVec2(0, 0));
+	// ImGui::Dummy(ImVec2(1000.0f, (mLines.size() + std::min(lineCount, (int)mLines.size())) * mLineHeight));
 
 	HandleKeyboardInputs();
 	HandleMouseInputs();
 
+	ImGui::EndChild();
+	ImGui::PopStyleVar();
 // #ifdef GL_DEBUG
 // 	DebugDisplayNearByText();
 // #endif
@@ -1264,17 +1280,7 @@ size_t Editor::GetCharacterIndex(const Coordinates& aCoords) const
 }
 
 
-void Editor::UpdateBounds()
-{
-	GL_WARN("UPDATING BOUNDS");
-	mEditorPosition = mEditorWindow->Pos;
-	GL_INFO("EditorPosition: x:{} y:{}",mEditorPosition.x,mEditorPosition.y);
 
-	mEditorSize = ImVec2(mEditorWindow->ContentRegionRect.Max.x, mLines.size() * (mLineSpacing + mCharacterSize.y) +0.5*mLineSpacing);
-	mEditorBounds = ImRect(mEditorPosition, ImVec2(mEditorPosition.x + mEditorSize.x, mEditorPosition.y + mEditorSize.y));
-
-	reCalculateBounds = false;
-}
 
 
 float Editor::GetSelectionPosFromCoords(const Coordinates& coords)const{

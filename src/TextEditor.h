@@ -482,7 +482,7 @@ public:
 	void LoadFile(const char* filepath);
 	int GetSelectionMode() const { return (int)mSelectionMode; };
 
-	void Render();
+	void Render(ImGuiID aDockspaceID);
 	bool Draw();
 	void HandleKeyboardInputs();
 	void HandleMouseInputs();
