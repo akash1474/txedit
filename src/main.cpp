@@ -61,9 +61,7 @@ int main(int argc, char* argv[])
 		Application::HandleArguments(GetCommandLineW());
 
 	FileNavigation::AddFolder("D:/Projects/c++/txedit");
-	TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
-	// TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/Application.cpp");
-	// TabsManager::Get().OpenFile("D:/Projects/c++/txedit/src/TabsManager.cpp");
+	TabsManager::OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
 
 	glfwSetWindowFocusCallback(Application::GetGLFWwindow(), WindowFocusCallback);
 	glfwSetWindowIconifyCallback(Application::GetGLFWwindow(), WindowIconifyCallback);

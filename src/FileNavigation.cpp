@@ -24,17 +24,17 @@ FileNavigation::~FileNavigation(){
 }
 
 void FileNavigation::Init(){
+	GL_INFO("FileNavigation::Init");
 	LoadIconData("./assets/icons.json");
 	Get().mDirectoryMonitor.Start();
+	Get().mAreIconsLoaded=true;
 }
 
 void FileNavigation::AddFolder(std::string aPath)
 {
-	static bool isInit=false;
-	if(!isInit)
+	if(!Get().mAreIconsLoaded)
 	{
 		Init();
-		isInit=true;
 	}
 
 	Get().mFolders.push_back(aPath);
@@ -80,7 +80,7 @@ std::pair<const std::string,IconData>* FileNavigation::GetIconForExtension(const
 
         if (std::find(data.extensions.begin(), data.extensions.end(), aExtension) != data.extensions.end()) 
         {
-        	if(!data.texture.IsLoaded())
+			if (!data.texture.IsLoaded())
 				MultiThreading::ImageLoader::PushImageToQueue(&data.texture);
             
             return &element;
@@ -217,7 +217,6 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
                 		}
                 		break;
             	}
-
             }
         }
         ImGui::PopStyleVar();
@@ -348,7 +347,7 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 				if(!std::filesystem::exists(item.path))
 					ScanDirectory(std::filesystem::path(item.path).parent_path().generic_string());
 
-				TabsManager::Get().OpenFile(item.path);
+				TabsManager::OpenFile(item.path);
 
 			}
 			ImGui::PopFont();

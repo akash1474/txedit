@@ -1,8 +1,8 @@
+#pragma once
 #include "vector"
 #include "string"
-#include "uuid_v4.h"
-#include "Log.h"
 #include "imgui.h"
+#include "TextEditor.h"
 
 struct FileTab{
 	std::string filepath;
@@ -10,13 +10,16 @@ struct FileTab{
 	bool isTemp=false;
 	bool isActive=false;
 	bool isSaved=false;
+	bool isOpen=true;
 	std::string id;
+	Editor* editor;
 	FileTab(std::string path,std::string file,bool temp,bool active,bool save,std::string idx)
 		:filepath(path),filename(file),isTemp(temp),isActive(active),isSaved(save),id(idx){}
 };
 
 class TabsManager{
 	std::vector<FileTab> mTabs;
+	ImGuiID mDockSpaceId;
 
 
 public:
@@ -25,10 +28,18 @@ public:
 		return instance;
 	}
 
+	~TabsManager();
+
+	static Editor* GetCurrentActiveTextEditor();
+	static FileTab* GetCurrentActiveTab();
+
+	static void SetNewTabsDockSpaceId(ImGuiID aMainDockSpaceId);
 	static bool OpenFile(std::string filepath,bool isTemp=true);
-	static void Render(ImGuiWindowClass& window_class,int winFlags);
+	//Call when creating a new file
+	static bool OpenNewEmptyFile();
+	static void Render();
 	static bool RenderTab(std::vector<FileTab>::iterator tab,bool& removeTab);
 
 private:
-	TabsManager(){}
+	TabsManager();
 };

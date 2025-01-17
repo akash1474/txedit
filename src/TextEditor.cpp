@@ -1,5 +1,5 @@
-#include "DataTypes.h"
 #include "pch.h"
+#include "DataTypes.h"
 #include "Coordinates.h"
 #include "Timer.h"
 #include "UndoManager.h"
@@ -66,8 +66,12 @@ Editor::Editor()
 	SetLanguageDefinition(LanguageDefinition::CPlusPlus());
 	mLines.push_back(Line());
 	workerThread_ = std::thread(&Editor::WorkerThread, this);
-	Cursor aCursor;
-	mState.mCursors.push_back(aCursor);
+	mState.mCursors.emplace_back(Cursor());
+	for (int i = 0; i < (int)PaletteIndex::Max; ++i) {
+		auto color = ImGui::ColorConvertU32ToFloat4(mPaletteBase[i]);
+		color.w *= 1.0f;
+		mPalette[i] = ImGui::ColorConvertFloat4ToU32(color);
+	}
 }
 Editor::~Editor() {
 	CloseDebounceThread();
@@ -89,14 +93,18 @@ void Editor::ResetState(){
 
 
 void Editor::LoadFile(const char* filepath){
-	// if(strlen(filepath)==0){
-	// 	mFileContents="";
-	// 	this->SetBuffer(mFileContents);
-	// 	fileType="Unknown";
-	// 	isFileLoaded=true;
-	// 	reCalculateBounds=true;
-	// 	return;
-	// }
+
+	//When creating a new file filepath is passed empty()
+	if(strlen(filepath)==0){
+		mFileContents="";
+		this->SetBuffer(mFileContents);
+		fileType="Unknown";
+		isFileLoaded=true;
+		return;
+	}
+
+
+
 	if(!std::filesystem::exists(filepath)){
 		StatusBarManager::ShowNotification("Invalid Path",filepath,StatusBarManager::NotificationType::Error);
 		return;
@@ -117,11 +125,47 @@ void Editor::LoadFile(const char* filepath){
 	t.read(&mFileContents[0], size);
 	this->SetBuffer(mFileContents);
 	isFileLoaded=true;
-	reCalculateBounds=true;
-	// this->InitTreeSitter();
-	// lex.SetData(file_data);
-	// lex.Tokenize();
 }
+
+void Editor::SetBuffer(const std::string& text)
+{
+	GL_INFO("Editor::SetBuffer");
+	mLines.clear();
+	mLines.emplace_back(Line());
+
+	uint32_t offset=-1;
+	for (auto chr : text)
+	{
+		offset++;
+		if (chr == '\r')
+			continue;
+
+		if (chr == '\n'){
+			mLines.emplace_back(Line());
+		}
+		else
+			mLines.back().emplace_back(chr, ColorSchemeIdx::Default);
+	}
+
+	if (mLines.back().size() > 400)
+		mLines.back().clear();
+
+	mTextChanged = true;
+	mScrollToTop = true;
+
+	GL_INFO("FILE INFO --> Lines:{}", mLines.size());
+	// mUndoManager.Clear();
+	// GL_INFO("Extension:{}",);
+	std::string ext=std::filesystem::path(mFilePath).extension().generic_string();
+	if(ext==".cpp" || ext==".h" || ext==".hpp" || ext==".c")
+	{
+		mIsSyntaxHighlightingSupportForFile=true;
+		ApplySyntaxHighlighting(text);
+	}
+	else 
+		mIsSyntaxHighlightingSupportForFile=false;
+}
+
 
 void Editor::ClearEditor(){
 	mFilePath.clear();
@@ -200,89 +244,35 @@ std::string Editor::GetFileType(){
 
 
 
-void Editor::Render(ImGuiID aDockspaceID){
+bool Editor::Render(bool* aIsOpen,std::string& aUUID){
 	ImGuiStyle& style=ImGui::GetStyle();
 	float width=style.ScrollbarSize;
 	style.ScrollbarSize=20.0f;
 
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::Begin(aUUID.c_str(),aIsOpen);
+		ImGui::PopStyleVar();
+		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[(uint8_t)Fonts::MonoLisaRegular]);
 
 
-	//Hiding Tab Bar
-	// ImGuiWindowClass window_class;
-	// window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_NoDockingOverMe;
-	// static int winFlags=ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus;
-	// static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingOverMe;
+		this->Draw();
+		bool isWindowFocused=ImGui::IsWindowFocused();
 
-	// ImGui::SetNextWindowClass(&window_class);
-	// ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	// // ImGui::SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags_TryToAvoidRefresh);
-	// ImGui::Begin("#editor_container",0,winFlags | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoDecoration);
-	// 	ImGui::PopStyleVar();
-
-	//     ImGuiID dockspace_id = ImGui::GetID("EditorDockSpace");
-	//     ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-
-		static bool isFirst=true;
-		if(isFirst){
-			isFirst=false;
-			// ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
-			// ImGui::DockBuilderAddNode(dockspace_id,dockspace_flags | ImGuiDockNodeFlags_DockSpace);
-			// ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetWindowSize());
-
-			// auto doc_id_top = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Up, 0.0f, nullptr, &dockspace_id);
-			// ImGui::DockBuilderSetNodeSize(doc_id_top, {ImGui::GetWindowWidth(),40.0f});
-			// ImGui::DockBuilderDockWindow("#tabs_area", doc_id_top);
-			// ImGui::DockBuilderDockWindow("#text_editor", dockspace_id);
-
-			// ImGui::DockBuilderFinish(dockspace_id);
+		//Executes once when we focus on window
+		if(ImGui::IsWindowDocked() && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)){
+			TabsManager::SetNewTabsDockSpaceId(ImGui::GetWindowDockID());
 		}
 
+		style.ScrollbarSize=width;
+		ImGui::PopFont();
+	ImGui::End();  // #text_editor
 
-		// TabsManager::Render(window_class,winFlags);
-
-
-
-		// ImGui::SetNextWindowClass(&window_class);
-		ImGui::SetNextWindowDockID(aDockspaceID, ImGuiCond_FirstUseEver);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-		static bool isOpen=false;
-		ImGui::Begin("TextEditor.cpp##something",&isOpen,ImGuiWindowFlags_None|ImGuiWindowFlags_NoBackground);
-			ImGui::PopStyleVar();
-			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[(uint8_t)Fonts::MonoLisaRegular]);
-			ImGuiWindow* window = ImGui::GetCurrentWindow();
-
-			this->Draw();
-
-			ImGuiID hover_id = ImGui::GetHoveredID();
-			bool scrollbarHovered = hover_id && (hover_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_X) || hover_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_Y));
-			if(scrollbarHovered) 
-				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-			ImGui::PopFont();
-			style.ScrollbarSize=width;
-		ImGui::End();  // #text_editor
-
-
-
-	// ImGui::End();
-
+	return isWindowFocused;
 }
 
 ImVec2 Editor::GetLinePosition(const Coordinates& aCoords){
 	return {ImGui::GetWindowPos().x-ImGui::GetScrollX(),ImGui::GetWindowPos().y+(aCoords.mLine*mLineHeight)-ImGui::GetScrollY()};
 }
-
-void Editor::UpdateBounds()
-{
-	GL_WARN("UPDATING BOUNDS");
-	mEditorPosition = mEditorWindow->Pos;
-	GL_INFO("EditorPosition: x:{} y:{}",mEditorPosition.x,mEditorPosition.y);
-
-	mEditorSize = ImVec2(mEditorWindow->ContentRegionRect.Max.x, mLines.size() * (mLineSpacing + mCharacterSize.y) +0.5*mLineSpacing);
-	mEditorBounds = ImRect(mEditorPosition, ImVec2(mEditorPosition.x + mEditorSize.x, mEditorPosition.y + mEditorSize.y));
-
-	reCalculateBounds = false;
-}
-
 
 bool Editor::Draw()
 {
@@ -296,36 +286,21 @@ bool Editor::Draw()
 	ImGui::BeginChild("TextEditor", {0,0}, 0,  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_HorizontalScrollbar);
 	ImGui::PopStyleColor();
 	
-	static bool isInit = false;
-	if (!isInit) {
-		mEditorWindow = ImGui::GetCurrentWindow();
-		mEditorPosition = mEditorWindow->Pos;
+	mEditorWindow = ImGui::GetCurrentWindow();
+	mEditorSize = ImVec2(mEditorWindow->ContentRegionRect.Max.x, mLines.size() * (mLineSpacing + mCharacterSize.y));
+	mEditorPosition = mEditorWindow->Pos;
 
-		mCharacterSize = ImVec2(ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "#", nullptr, nullptr));
+	mEditorPosition = mEditorWindow->Pos;
 
-		mLineBarMaxCountWidth=GetNumberWidth(mLines.size());
-		mLineBarWidth=ImGui::CalcTextSize(std::to_string(mLines.size()).c_str()).x + 2 * mLineBarPadding;
+	mCharacterSize = ImVec2(ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "#", nullptr, nullptr));
 
-		mLinePosition = ImVec2({mEditorPosition.x + mLineBarWidth + mPaddingLeft, mEditorPosition.y});
-		mLineHeight = mLineSpacing + mCharacterSize.y;
+	mLineBarMaxCountWidth=GetNumberWidth(mLines.size());
+	mLineBarWidth=ImGui::CalcTextSize(std::to_string(mLines.size()).c_str()).x + 2 * mLineBarPadding;
 
-		mSelectionMode = SelectionMode::Normal;
+	mLinePosition = ImVec2({mEditorPosition.x + mLineBarWidth + mPaddingLeft, mEditorPosition.y});
+	mLineHeight = mLineSpacing + mCharacterSize.y;
 
-		/* Update palette with the current alpha from style */
-		for (int i = 0; i < (int)PaletteIndex::Max; ++i) {
-			auto color = ImGui::ColorConvertU32ToFloat4(mPaletteBase[i]);
-			color.w *= 1.0f;
-			mPalette[i] = ImGui::ColorConvertFloat4ToU32(color);
-		}
-
-		GL_WARN("LINE HEIGHT:{}", mLineHeight);
-		isInit = true;
-	}
-
-
-	if (mEditorPosition.x != mEditorWindow->Pos.x || mEditorPosition.y != mEditorWindow->Pos.y) reCalculateBounds = true;
-	if (reCalculateBounds) UpdateBounds();
-
+	mSelectionMode = SelectionMode::Normal;
 
 	const ImGuiIO& io = ImGui::GetIO();
 
@@ -580,8 +555,10 @@ bool Editor::Draw()
 		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (lineNo==aCursor.mCursorPosition.mLine) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(lineNo + 1).c_str());
 	}
 
-	// ImGui::SetCursorPos(ImVec2(0, 0));
-	// ImGui::Dummy(ImVec2(1000.0f, (mLines.size() + std::min(lineCount, (int)mLines.size())) * mLineHeight));
+	ImGuiID hover_id = ImGui::GetHoveredID();
+	bool scrollbarHovered = hover_id && (hover_id == ImGui::GetWindowScrollbarID(mEditorWindow, ImGuiAxis_X) || hover_id == ImGui::GetWindowScrollbarID(mEditorWindow, ImGuiAxis_Y));
+	if(scrollbarHovered) 
+		ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 
 	HandleKeyboardInputs();
 	HandleMouseInputs();
@@ -799,7 +776,7 @@ void Editor::WorkerThread() {
 // Function to update Glyphs using Tree-sitter
 void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 {
-	if(sourceCode.size() <2 ) return;
+	if(sourceCode.size() <2  || !mIsSyntaxHighlightingSupportForFile) return;
 	OpenGL::ScopedTimer timer("ApplySyntaxHighlighting");
 	// Initialize Tree-sitter parser
     TSParser* parser= ts_parser_new();
@@ -1013,41 +990,6 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 }
 
 
-void Editor::SetBuffer(const std::string& text)
-{
-	GL_INFO("Editor::SetBuffer");
-	mLines.clear();
-	mLines.emplace_back(Line());
-	mLineOffset.push_back(0);
-
-	uint32_t offset=-1;
-	for (auto chr : text)
-	{
-		offset++;
-		if (chr == '\r')
-			continue;
-
-		if (chr == '\n'){
-			mLines.emplace_back(Line());
-			mLineOffset.push_back(offset+1);
-		}
-		else
-			mLines.back().emplace_back(chr, ColorSchemeIdx::Default);
-	}
-
-	if (mLines.back().size() > 400)
-		mLines.back().clear();
-
-	mTextChanged = true;
-	mScrollToTop = true;
-
-	GL_INFO("FILE INFO --> Lines:{}", mLines.size());
-	// mUndoManager.Clear();
-	// GL_INFO("Extension:{}",);
-	std::string ext=std::filesystem::path(mFilePath).extension().generic_string();
-	if(ext==".cpp" || ext==".h" || ext==".hpp" || ext==".c")
-		ApplySyntaxHighlighting(text);
-}
 
 
 void Editor::PrintTree(const TSNode &node, const std::string &source_code,std::string& output, int indent){
@@ -1096,6 +1038,8 @@ std::string Editor::GetNearbyLinesString(int aLineNo,int aLineCount) {
 
 void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
 {
+	if(!mIsSyntaxHighlightingSupportForFile) return;
+
 	OpenGL::ScopedTimer timer("UpdateSyntaxHighlighting");
 	std::string sourceCode=GetNearbyLinesString(aLineNo,aLineCount);
 	if(sourceCode.size() < 2) return;
@@ -1958,14 +1902,34 @@ void Editor::SaveFile()
 		startLine++;
 	}
 
-	std::ofstream file(mFilePath, std::ios::trunc);
-	if (!file.is_open()) {
-		GL_INFO("ERROR SAVING");
+	if(mFilePath.empty())
+	{
+		mFilePath=SaveFileAs(copyStr);
+		this->ResetState();
+		this->LoadFile(mFilePath.c_str());
+		FileTab* currTab=TabsManager::GetCurrentActiveTab();
+		if(currTab)
+		{
+			std::filesystem::path path(mFilePath);
+			currTab->filename=path.filename().string();
+			currTab->filepath=mFilePath;
+			currTab->id=path.filename().string()+"##"+std::to_string((int)currTab);
+		}
 		return;
 	}
+	else
+	{
+		std::ofstream file(mFilePath, std::ios::trunc);
+		if (!file.is_open()) {
+			GL_INFO("ERROR SAVING");
+			return;
+		}
 
-	file << copyStr;
-	file.close();
+		file << copyStr;
+		file.close();
+	}
+
+
 	GL_INFO("Saving...");
 	// this->isFileSaving=true;
 	StatusBarManager::ShowNotification("Saved", mFilePath.c_str(), StatusBarManager::NotificationType::Success);
@@ -2076,6 +2040,7 @@ float Editor::TextDistanceFromLineStart(const Coordinates& aFrom) const
 
 	return distance;
 }
+
 
 
 

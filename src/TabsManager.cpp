@@ -1,26 +1,72 @@
+#include "pch.h"
 #include "FontAwesome6.h"
 #include "imgui.h"
 #include "imgui_internal.h"
-#include "pch.h"
-#include "TabsManager.h"
-#include "CoreSystem.h"
 #include <cstdint>
 
+#include "TextEditor.h"
+#include "FileNavigation.h"
+#include "TabsManager.h"
+// #include "uuid_v4.h"
+
+Editor* TabsManager::GetCurrentActiveTextEditor(){
+	Editor* editor=nullptr;
+	for(auto& tab:Get().mTabs)
+		if(tab.isActive)
+			editor=tab.editor;
+
+	return editor;
+}
+
+FileTab* TabsManager::GetCurrentActiveTab()
+{
+	FileTab* rTab=nullptr;
+	for(auto& tab:Get().mTabs)
+		if(tab.isActive)
+			rTab=&tab;
+
+
+	return rTab;
+}
+
+TabsManager::~TabsManager(){
+	auto& aTabs=mTabs;
+	for(auto& tab:aTabs)
+		free(tab.editor);
+}
+
+TabsManager::TabsManager(){
+	if(!FileNavigation::AreIconsLoaded())
+		FileNavigation::Init();
+}
+
+void TabsManager::SetNewTabsDockSpaceId(ImGuiID aDockSpaceId){
+	Get().mDockSpaceId=aDockSpaceId;
+}
+
+bool TabsManager::OpenNewEmptyFile(){
+	return OpenFile("",true);
+}
 
 bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 {
-	static UUIDv4::UUIDGenerator<std::mt19937_64> mUIDGenerator;
-	UUIDv4::UUID uuid = mUIDGenerator.getUUID();
-
-	// if(aFilePath.empty())
-	// {
-	// 	Get().mTabs.emplace_back(aFilePath,"Untitled",aIsTemp,true,false,uuid.str());
-	// 	CoreSystem::Get().GetTextEditor()->LoadFile(aFilePath.c_str());
-	// 	return true;
-	// }
-
-
+	GL_INFO("Opening File:{}",aFilePath);
+	// static UUIDv4::UUIDGenerator<std::mt19937_64> mUIDGenerator;
+	// UUIDv4::UUID uuid = mUIDGenerator.getUUID();
 	std::filesystem::path path(aFilePath);
+	std::string uuid=path.filename().generic_u8string() + "##" + std::to_string((int)&Get());
+	GL_INFO(uuid);
+
+	if(aFilePath.empty())
+	{
+		Get().mTabs.emplace_back(aFilePath,"Untitled",aIsTemp,true,false,"Untitled##"+std::to_string((int)&Get()));
+		FileTab& aTab=Get().mTabs.back();
+		aTab.editor=new Editor();
+		aTab.editor->LoadFile(aFilePath.c_str());
+		return true;
+	}
+
+
 	auto it=std::find_if(
 		Get().mTabs.begin(),
 		Get().mTabs.end(),
@@ -37,18 +83,25 @@ bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 			tab.isActive=false;
 
 		//Replace the temp file with curr temp file if a temp file is found
-		auto it=std::find_if(Get().mTabs.begin(),Get().mTabs.end(),[&](const FileTab& tab){return tab.isTemp;});
-		if(it!=Get().mTabs.end())
-		{
-			it->filepath=aFilePath;
-			it->filename=path.filename().generic_u8string();
-		}
-		else 
-			Get().mTabs.emplace_back(aFilePath,path.filename().generic_u8string(),aIsTemp,true,true,uuid.str());
+		// auto it=std::find_if(Get().mTabs.begin(),Get().mTabs.end(),[&](const FileTab& tab){return tab.isTemp;});
+		// if(it!=Get().mTabs.end())
+		// {
+		// 	it->filepath=aFilePath;
+		// 	it->filename=path.filename().generic_u8string();
+		// }
+		// else
+		// {
+			GL_INFO("Added:{}",aFilePath);
+			Get().mTabs.emplace_back(aFilePath,path.filename().generic_u8string(),aIsTemp,true,true,uuid);
+			FileTab& aTab=Get().mTabs.back();
+			aTab.editor=new Editor();
+			aTab.editor->LoadFile(aFilePath.c_str());
+		// }
 
 	}
-	else //Reusing the previous one
+	else //Reusing/Reactivating the previous one
 	{
+		GL_INFO("ReActivating:{}",aFilePath);
 		for(auto&tab:Get().mTabs) 
 			tab.isActive=false;
 
@@ -57,108 +110,88 @@ bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 	}
 
 
-	CoreSystem::Get().GetTextEditor()->LoadFile(aFilePath.c_str());
 
 	return true;
 }
 
 
-void TabsManager::Render(ImGuiWindowClass& window_class,int winFlags){
+void TabsManager::Render(){
 	std::vector<FileTab>& tabs=Get().mTabs;
-	ImGui::SetNextWindowClass(&window_class);
-	ImGui::PushStyleColor(ImGuiCol_WindowBg,IM_COL32(17, 19, 20, 255));
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,{0.0f,0.0f});
-	ImGui::Begin("#tabs_area",0,winFlags|ImGuiWindowFlags_NoScrollbar);
-		ImGuiIO& io=ImGui::GetIO();
-		// ImGui::SetCursorPosX(ImGui::GetScrollY());
-		// if(ImGui::Button(ICON_FA_ARROW_LEFT,{0,40.0f})) io.MouseWheel=-1.0f;
-		// ImGui::SameLine(0.0f,0.0f);
-		// ImGui::SetCursorPosX(ImGui::GetScrollY()+20.0f);
-		// if(ImGui::Button(ICON_FA_ARROW_RIGHT,{0,40.0f})) io.MouseWheel=1.0f;
-		// ImGui::SameLine(0.0f,0.0f);
+	bool removeTab=false;
+	for(auto it=tabs.begin();it!=tabs.end();)
+	{
 
-		bool removeTab=false;
-		for(auto it=tabs.begin();it!=tabs.end();)
-		{
-			if(RenderTab(it,removeTab) && !it->isActive) 
-			{
-				for(auto&tab:Get().mTabs) tab.isActive=false;
-				it->isActive=true;
-				CoreSystem::Get().GetTextEditor()->LoadFile(it->filepath.c_str());
-			}
+		ImGui::SetNextWindowDockID(Get().mDockSpaceId, ImGuiCond_FirstUseEver);
 
-			if(ImGui::IsItemClicked(ImGuiMouseButton_Left) && ImGui::GetIO().MouseDoubleClicked[0])
-			{
-				it->isTemp=false;
-				ImGui::GetIO().MouseDoubleClicked[0]=0;
-			}
+		//Rendering the editor and updating the active ptr
+		if(it->editor->Render(&it->isOpen,it->id) && !it->isActive){
+			for(auto&tab:Get().mTabs) 
+				tab.isActive=false;
 
-			if(ImGui::IsItemHovered() && ImGui::IsItemClicked(ImGuiMouseButton_Right)) 
-				ImGui::OpenPopup("##tab_menu");
-			
-			if(removeTab)
-			{
-				it=tabs.erase(it);
-				if(tabs.empty())
-				{
-					CoreSystem::GetTextEditor()->ClearEditor();
-					// OpenFile("",true);
-				}
-				else
-				{
-					std::vector<FileTab>::iterator currTab=it;
-					if(currTab==tabs.end()) currTab=it-1;
-					currTab->isActive=true;
-					CoreSystem::GetTextEditor()->LoadFile(currTab->filepath.c_str());
-				}
-				removeTab=false;
-			}
-			else  
-				it++;
-
-			ImGui::SameLine(0.0f,0.0f);
-
+			it->isActive=true;
 		}
-		static const char* names[] = { 
-			"Close Tabs to the Right", 
-			"Close UnModified Tabs", 
-			"Close UnModified Tabs to Right", 
-			"Close Tabs with Deleted Files" 
-		};
 
-		bool selected=-1;
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 5.0f));
-		if(ImGui::BeginPopup("##tab_menu"))
-		{
-			if(ImGui::Selectable("Close Tab"))
-			{
-				// ImGui::GetHoveredID()
-			}
+		// if(ImGui::IsItemClicked(ImGuiMouseButton_Left) && ImGui::GetIO().MouseDoubleClicked[0])
+		// {
+		// 	it->isTemp=false;
+		// 	ImGui::GetIO().MouseDoubleClicked[0]=0;
+		// }
 
-			ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
-            for (int i = 0; i < IM_ARRAYSIZE(names); i++)
-                if (ImGui::Selectable(names[i]))
-                    selected = i;
-			
-			ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
-			ImGui::Selectable("New File");
-			ImGui::Selectable("Open File");
-			ImGui::EndPopup();
-		}
-		ImGui::PopStyleVar();
-
-
+		// if(ImGui::IsItemHovered() && ImGui::IsItemClicked(ImGuiMouseButton_Right)) 
+		// 	ImGui::OpenPopup("##tab_menu");
 		
-		if (ImGui::IsWindowHovered() &&  io.MouseWheel != 0.0f) 
+		if(!it->isOpen)
 		{
-	        // Apply the vertical scroll value to horizontal scroll
-	        ImGui::SetScrollX(ImGui::GetCurrentWindow(), ImGui::GetScrollX() - io.MouseWheel * 25.0f); // Adjust the multiplier as needed
-	        io.MouseWheel = 0.0f; // Reset the vertical scroll value to prevent vertical scrolling
-	    }
+			bool wasDetetedTabFocused=it->isActive;
+			it=tabs.erase(it);
+			std::vector<FileTab>::iterator currTab=it;
 
-	ImGui::PopStyleColor();
-	ImGui::PopStyleVar();
-	ImGui::End();
+			if(currTab==tabs.end() && currTab!=tabs.begin())
+			{
+				currTab=it-1;
+				currTab->isActive=true;
+			}
+
+
+			if(wasDetetedTabFocused)
+				ImGui::SetNextWindowFocus();
+		}
+		else
+		{
+			it++;
+		}
+
+		// ImGui::SameLine(0.0f,0.0f);
+
+	}
+	// static const char* names[] = { 
+	// 	"Close Tabs to the Right", 
+	// 	"Close UnModified Tabs", 
+	// 	"Close UnModified Tabs to Right", 
+	// 	"Close Tabs with Deleted Files" 
+	// };
+
+	// bool selected=-1;
+	// ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 5.0f));
+	// if(ImGui::BeginPopup("##tab_menu"))
+	// {
+	// 	if(ImGui::Selectable("Close Tab"))
+	// 	{
+	// 		// ImGui::GetHoveredID()
+	// 	}
+
+	// 	ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
+    //     for (int i = 0; i < IM_ARRAYSIZE(names); i++)
+    //         if (ImGui::Selectable(names[i]))
+    //             selected = i;
+		
+	// 	ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
+	// 	ImGui::Selectable("New File");
+	// 	ImGui::Selectable("Open File");
+	// 	ImGui::EndPopup();
+	// }
+	// ImGui::PopStyleVar();
+
 }
 
 

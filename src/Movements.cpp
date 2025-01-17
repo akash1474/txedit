@@ -263,20 +263,6 @@ void Editor::MoveRight(bool ctrl, bool shift)
 
 
 
-
-uint32_t Editor::GetBufferOffset(const Coordinates& aCoords){
-	uint32_t lineOffset=mLineOffset[aCoords.mLine];
-	int col=aCoords.mColumn;
-	for(const Glyph& glyph:mLines[aCoords.mLine]){
-		lineOffset++;
-		if(glyph.mChar=='\t') col-=mTabSize;
-		else col--;
-		if(col<=0) break;
-	}
-
-	return lineOffset;
-}
-
 static const char* ReadCallback(void* payload, uint32_t byte_offset, TSPoint position, uint32_t* bytes_read) {
     std::string* text = static_cast<std::string*>(payload);
     if (!text || byte_offset >= text->size()) {

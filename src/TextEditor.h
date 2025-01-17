@@ -253,9 +253,8 @@ public:
 	//TreeSitter Experimental
 	TSQuery* mQuery=nullptr;
 
-	std::vector<uint32_t> mLineOffset;
-
 	TSInputEdit mTSInputEdit;
+	bool mIsSyntaxHighlightingSupportForFile=false;
 	void DebugDisplayNearByText();
 	std::string GetFullText();
 
@@ -263,7 +262,6 @@ public:
 	ColorSchemeIdx GetColorSchemeIndexForNode(const std::string &type);
 
 	uint32_t GetLineLengthInBytes(int aLineIdx);
-	uint32_t GetBufferOffset(const Coordinates& aCoords);
 	void PrintTree(const TSNode &node, const std::string &source_code,std::string& output, int indent = 0);
 
 	std::string GetNearbyLinesString(int aLineNo,int aLineCount=3);
@@ -345,7 +343,6 @@ private:
 	ImVec2 mCharacterSize;
 	ImVec2 mEditorPosition;
 	ImVec2 mEditorSize;
-	ImRect mEditorBounds;
 	ImVec2 mLinePosition;
 	std::string mFilePath;
 	ImGuiWindow* mEditorWindow{0};
@@ -464,7 +461,6 @@ private:
 
 
 public:
-	bool reCalculateBounds = true;
 	float maxLineWidth{0.0f}; // max horizontal scroll;
 	std::string fileType;
 	void SetBuffer(const std::string& buffer);
@@ -482,17 +478,15 @@ public:
 	void LoadFile(const char* filepath);
 	int GetSelectionMode() const { return (int)mSelectionMode; };
 
-	void Render(ImGuiID aDockspaceID);
+	bool Render(bool* aIsOpen,std::string& aUUID);
 	bool Draw();
 	void HandleKeyboardInputs();
 	void HandleMouseInputs();
-	void UpdateBounds();
 
 
 	void SetLineSpacing(float value) { this->mLineSpacing = value; }
 	// Only scroll to that line but doesn't update any positions
 	void ScrollToLineNumber(int lineNo, bool animate = true);
-	void RecalculateBounds() { this->reCalculateBounds = true; }
 	bool IsReadOnly() const { return mReadOnly; }
 
 	bool HasSelection(const Cursor& aCursor) const;

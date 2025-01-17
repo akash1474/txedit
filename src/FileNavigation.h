@@ -31,8 +31,8 @@ class FileNavigation{
 		bool is_explored=false;
 	};
 
-	Editor* mTextEditor=nullptr;
 	bool mIsOpen=true;
+	bool mAreIconsLoaded=false;
 	std::vector<std::string> mFolders;
 	std::unordered_map<std::string, IconData> mIconDatabase;
 	DirectoryMonitor mDirectoryMonitor;
@@ -55,8 +55,8 @@ public:
 
 	static void Init();
 
-	static void SetTextEditor(Editor* editorPtr){ Get().mTextEditor=editorPtr;}
 	static void Render();
+	static bool AreIconsLoaded(){return Get().mAreIconsLoaded;}
 
 	static void ScanDirectory(const std::string& aDirectoryPath);
 	static bool CustomSelectable(std::string& aFileName,bool aIsSelected=false);

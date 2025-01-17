@@ -1,12 +1,13 @@
 #include "pch.h"
 #include "imgui.h"
-#include "StatusBarManager.h"
 #include <cstdio>
 #include <stdio.h>
 
+#include "StatusBarManager.h"
+#include "TabsManager.h"
 
-void StatusBarManager::Init(Editor* editorPtr){ 
-	mTextEditor=editorPtr;
+
+void StatusBarManager::Init(){ 
 	mNotificationAnimation.SetDuration(2.0f); 
 }
 
@@ -40,10 +41,12 @@ void StatusBarManager::Render(ImVec2& size,const ImGuiViewport* viewport){
 
 	static const ImGuiIO& io=ImGui::GetIO();
 
+	Editor* textEditor=TabsManager::GetCurrentActiveTextEditor();
 
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f); //Popped at end of StatusBar
-	if(mIsInputPanelOpen)
+	if(mIsInputPanelOpen){
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f); //Popped at end of StatusBar
 		RenderInputPanel(size,viewport);
+	}
 
 
 	ImGui::SetNextWindowPos(ImVec2(0,mIsInputPanelOpen ? size.y+PanelSize : size.y));
@@ -57,13 +60,16 @@ void StatusBarManager::Render(ImVec2& size,const ImGuiViewport* viewport){
 		if(ImGui::Button(ICON_FA_BARS)) FileNavigation::ToggleSideBar();
 		ImGui::PopFont();
 
-		ImGui::SameLine();
-		ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2.0f);
-		ImGui::Text("Line:%d",mTextEditor->GetCurrentCursor().mCursorPosition.mLine+1);
+		if(textEditor)
+		{
+			ImGui::SameLine();
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2.0f);
+			ImGui::Text("Line:%d",textEditor->GetCurrentCursor().mCursorPosition.mLine+1);
 
-		ImGui::SameLine();
-		ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2.0f);
-		ImGui::Text("Column:%d",mTextEditor->GetCurrentCursor().mCursorPosition.mColumn+1);
+			ImGui::SameLine();
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2.0f);
+			ImGui::Text("Column:%d",textEditor->GetCurrentCursor().mCursorPosition.mColumn+1);
+		}
 
 
 		if(mDisplayNotification){
@@ -78,29 +84,33 @@ void StatusBarManager::Render(ImVec2& size,const ImGuiViewport* viewport){
 		}
 
 
-		static bool branchLoaded =false;
-		static std::string branch;
-		if(!branchLoaded){
-			// branch=exec("git rev-parse --abbrev-ref HEAD > git.txt");
-			branchLoaded=true;
-		}
-		if(!branch.empty()){
-			ImGui::PushFont(io.Fonts->Fonts[0]);
-			ImGui::SameLine(ImGui::GetWindowWidth()-60.0f);
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY());
-			ImGui::Text("%s %s",ICON_FA_CODE_BRANCH,branch.c_str());
-			ImGui::PopFont();
-		}
+
+		// static bool branchLoaded =false;
+		// static std::string branch;
+		// if(!branchLoaded){
+		// 	// branch=exec("git rev-parse --abbrev-ref HEAD > git.txt");
+		// 	branchLoaded=true;
+		// }
+		// if(!branch.empty()){
+		// 	ImGui::PushFont(io.Fonts->Fonts[0]);
+		// 	ImGui::SameLine(ImGui::GetWindowWidth()-60.0f);
+		// 	ImGui::SetCursorPosY(ImGui::GetCursorPosY());
+		// 	ImGui::Text("%s %s",ICON_FA_CODE_BRANCH,branch.c_str());
+		// 	ImGui::PopFont();
+		// }
 
 		// FileType
-		float width=ImGui::CalcTextSize(mTextEditor->fileType.c_str()).x;
-		ImGui::SameLine(ImGui::GetWindowWidth()-width-10.0f);
-		ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2.0f);
-		ImGui::Text("%s", mTextEditor->fileType.c_str());
+		if(textEditor)
+		{
+			float width=ImGui::CalcTextSize(textEditor->fileType.c_str()).x;
+			ImGui::SameLine(ImGui::GetWindowWidth()-width-10.0f);
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2.0f);
+			ImGui::Text("%s", textEditor->fileType.c_str());
+		}
 
 	ImGui::End();
 	ImGui::PopStyleColor();
-	ImGui::PopStyleVar(3);
+	ImGui::PopStyleVar(mIsInputPanelOpen? 3 : 2);
 
 }
 

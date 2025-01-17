@@ -1,16 +1,19 @@
-#include "FileNavigation.h"
 #include "pch.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
-#include "CoreSystem.h"
-#include "ImageTexture.h"
-#include "MultiThreading.h"
+
 #include "resources/FontAwesomeRegular.embed"
 #include "resources/FontAwesomeSolid.embed"
 #include "resources/MonoLisaRegular.embed"
 #include "resources/JetBrainsMonoNLRegular.embed"
 #include "resources/JetBrainsMonoNLItalic.embed"
+
+#include "CoreSystem.h"
+#include "ImageTexture.h"
+#include "MultiThreading.h"
 #include "Terminal.h"
+#include "FileNavigation.h"
+#include "TabsManager.h"
 
 #ifdef min
 	#undef min
@@ -42,6 +45,7 @@ void CoreSystem::RenderDebugInfo()
 {
 	static bool show_demo = true;
 	ImGui::ShowDemoWindow(&show_demo);
+	Editor* currentEditor=TabsManager::GetCurrentActiveTextEditor();
 
 	ImGui::SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags_RefreshOnFocus);
 	ImGui::Begin("Project");
@@ -50,37 +54,37 @@ void CoreSystem::RenderDebugInfo()
 	ImGui::Text("%s", utf8);
 	ImGui::Text("Length:%d", ImTextCountCharsFromUtf8(utf8, 0));
 	ImGui::Text("Time:%f", glfwGetTime());
-	ImGui::Text("nCursor:%d", (int)Get().mTextEditor.GetEditorState()->mCursors.size());
+	ImGui::Text("nCursor:%d", (int)currentEditor->GetEditorState()->mCursors.size());
 
 	ImWchar buff[100];
 	int count = ImTextStrFromUtf8(buff, 100, utf8, nullptr, 0);
 
 	static int LineSpacing = 15.0f;
 	if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
-		Get().mTextEditor.SetLineSpacing(LineSpacing);
+		currentEditor->SetLineSpacing(LineSpacing);
 	}
 
 
 	ImGui::Spacing();
 	ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
 	ImGui::Spacing();
-	ImGui::Text("mCursorPosition: X:%d  Y:%d", Get().mTextEditor.GetCurrentCursor().mCursorPosition.mColumn,
-	            Get().mTextEditor.GetCurrentCursor().mCursorPosition.mLine);
-	ImGui::Text("mSelectionStart: X:%d  Y:%d", Get().mTextEditor.GetCurrentCursor().mSelectionStart.mColumn,
-	            Get().mTextEditor.GetCurrentCursor().mSelectionStart.mLine);
-	ImGui::Text("mSelectionEnd:   X:%d  Y:%d", Get().mTextEditor.GetCurrentCursor().mSelectionEnd.mColumn,
-	            Get().mTextEditor.GetCurrentCursor().mSelectionEnd.mLine);
-	ImGui::Text("mUndoManagerTop:   X:%d  Y:%d", Get().mTextEditor.GetCurrentCursor().mSelectionEnd.mColumn,
-	            Get().mTextEditor.GetCurrentCursor().mSelectionEnd.mLine);
+	ImGui::Text("mCursorPosition: X:%d  Y:%d", currentEditor->GetCurrentCursor().mCursorPosition.mColumn,
+	            currentEditor->GetCurrentCursor().mCursorPosition.mLine);
+	ImGui::Text("mSelectionStart: X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionStart.mColumn,
+	            currentEditor->GetCurrentCursor().mSelectionStart.mLine);
+	ImGui::Text("mSelectionEnd:   X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionEnd.mColumn,
+	            currentEditor->GetCurrentCursor().mSelectionEnd.mLine);
+	ImGui::Text("mUndoManagerTop:   X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionEnd.mColumn,
+	            currentEditor->GetCurrentCursor().mSelectionEnd.mLine);
 
 	ImGui::Spacing();
-	CoreSystem::GetTextEditor()->GetUndoMananger()->DisplayUndoStack();
+	currentEditor->GetUndoMananger()->DisplayUndoStack();
 
 	ImGui::Spacing();
 	ImGui::Spacing();
 	static std::string mode;
 	ImColor color;
-	switch (Get().mTextEditor.GetSelectionMode()) {
+	switch (currentEditor->GetSelectionMode()) {
 		case 0:
 			mode = "Normal";
 			color = ImColor(50, 206, 187, 255);
@@ -107,7 +111,7 @@ void CoreSystem::RenderDebugInfo()
 	ImGui::Text("Goto Line: ");
 	ImGui::SameLine();
 	if (ImGui::InputInt("##ScrollToLine", &v, 1, 100, ImGuiInputTextFlags_EnterReturnsTrue))
-		Get().mTextEditor.ScrollToLineNumber(v);
+		currentEditor->ScrollToLineNumber(v);
 
 	if (ImGui::Button("Select File"))
 		SelectFile();
@@ -129,7 +133,7 @@ void CoreSystem::RenderDebugInfo()
 		MultiThreading::ImageLoader::PushImageToQueue(&img3);
 		pushed = true;
 	}
-	MultiThreading::ImageLoader::LoadImages();
+	
 	ImageTexture::AsyncImage(&img1, ImVec2(362, 256));
 	ImageTexture::AsyncImage(&img2, ImVec2(362, 256));
 	ImageTexture::AsyncImage(&img3, ImVec2(362, 256));
@@ -183,7 +187,7 @@ void CoreSystem::Render()
 			ImGui::DockBuilderSetNodeSize(Get().mDockSpaceId, size);
 
 			Get().mLeftDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Left, 0.3f, nullptr, &Get().mDockSpaceId);
-			Get().mRightDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Right, 0.7f, nullptr, &Get().mDockSpaceId);
+			Get().mRightDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Right, 0.3f, nullptr, &Get().mDockSpaceId);
 			auto dock_id_left_bottom = ImGui::DockBuilderSplitNode(Get().mLeftDockSpaceId, ImGuiDir_Down, 0.3f, nullptr, &Get().mLeftDockSpaceId);
 			ImGui::DockBuilderDockWindow("Project Directory", Get().mLeftDockSpaceId);
 			// ImGui::DockBuilderDockWindow("#editor_container", Get().mRightDockSpaceId);
@@ -193,16 +197,19 @@ void CoreSystem::Render()
 			ImGui::DockBuilderDockWindow("Project", Get().mLeftDockSpaceId);
 #endif
 			ImGui::DockBuilderFinish(Get().mDockSpaceId);
+
+			TabsManager::SetNewTabsDockSpaceId(Get().mDockSpaceId);
 		}
 	}
 
 
 	if (ImGui::BeginMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
-			ImGui::MenuItem("New File");
+			if(ImGui::MenuItem("New File"))
+				TabsManager::OpenNewEmptyFile();
 
 			if (ImGui::MenuItem("Open File"))
-				Get().mTextEditor.LoadFile(SelectFile().c_str());
+				TabsManager::OpenFile(SelectFile().c_str());
 
 			if (ImGui::MenuItem("Open Folder")) {
 				std::string path = SelectFolder();
@@ -226,14 +233,15 @@ void CoreSystem::Render()
 
 
 #ifdef GL_DEBUG
-	RenderDebugInfo();
+	//RenderDebugInfo();
 #endif
 
 	if (FileNavigation::IsOpen())
 		FileNavigation::Render();
-	Get().mTextEditor.Render(Get().mDockSpaceId);
 	Get().mTerminal.Render();
 	StatusBarManager::Render(size, viewport);
+	TabsManager::Render();
+	MultiThreading::ImageLoader::LoadImages();
 }
 
 

@@ -9,10 +9,8 @@ namespace StatusBarManager{
 	enum class NotificationType{Info,Error,Warning,Success};
 
 	const float PanelSize=38.0f;
-	const float StatusBarSize=22.0f;
+	const float StatusBarSize=30.0f;
 
-
-	static inline Editor* mTextEditor=nullptr;
 
 	//Notification
 	static inline Animation mNotificationAnimation;
@@ -34,7 +32,7 @@ namespace StatusBarManager{
 	static inline char mInputTextBuffer[1024];
 
 
-	void Init(Editor* editorPtr);
+	void Init();
 
 
 	void Render(ImVec2& size,const ImGuiViewport* viewport);

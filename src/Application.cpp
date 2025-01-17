@@ -1,5 +1,6 @@
-#include "FileNavigation.h"
 #include "pch.h"
+#include "FileNavigation.h"
+#include "TabsManager.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
 #include "Timer.h"
@@ -29,7 +30,7 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 			FileNavigation::AddFolder(paths[i]);
 		} else {
 			GL_INFO("File: {}", paths[i]);
-			CoreSystem::GetTextEditor()->LoadFile(paths[i]);
+			TabsManager::OpenFile(paths[i]);
 		}
 	}
 }
@@ -37,7 +38,6 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
-	CoreSystem::GetTextEditor()->RecalculateBounds();
 	glViewport(0, 0, width, height);
 	Application::Get().Draw();
 }
@@ -98,12 +98,12 @@ bool Application::InitImGui()
 	// io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 
-#ifndef GL_DEBUG
+// #ifndef GL_DEBUG
 	// const std::string app_dir = GetUserDirectory("txedit");
 	// io.IniFilename = app_dir.c_str();
-	io.LogFilename = nullptr;
+	// io.LogFilename = nullptr;
 	io.IniFilename=nullptr;
-#endif
+// #endif
 
 	ImGuiStyle& style = ImGui::GetStyle();
 	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
@@ -182,7 +182,7 @@ void Application::Draw()
 	int display_w, display_h;
 	glfwGetFramebufferSize(Get().mWindow, &display_w, &display_h);
 	glViewport(0, 0, display_w, display_h);
-	glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
+	glClearColor(0.11f, 0.11f, 0.11f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 #ifdef GL_BUILD_OPENGL2
@@ -237,7 +237,8 @@ void Application::HandleArguments(std::wstring commands)
 		if (fs::exists(path)) {
 			if (fs::is_regular_file(path)) {
 				GL_INFO("FILE:{}", path.generic_string());
-				core->GetTextEditor()->LoadFile(path.generic_string().c_str());
+				TabsManager::OpenFile(path.generic_string());
+				// core->GetTextEditor()->LoadFile(path.generic_string().c_str());
 			} else if (fs::is_directory(path)) {
 				GL_INFO("FOLDER:{}", path.generic_string());
 				FileNavigation::AddFolder(path.generic_string());
