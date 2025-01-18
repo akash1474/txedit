@@ -96,8 +96,7 @@ void Editor::LoadFile(const char* filepath){
 
 	//When creating a new file filepath is passed empty()
 	if(strlen(filepath)==0){
-		mFileContents="";
-		this->SetBuffer(mFileContents);
+		this->SetBuffer("");
 		fileType="Unknown";
 		isFileLoaded=true;
 		return;
@@ -110,20 +109,28 @@ void Editor::LoadFile(const char* filepath){
 		return;
 	}
 	GL_INFO("Editor::LoadFile - {}",filepath);
-	mFileContents.clear();
 	this->ResetState();
-	size_t size{0};
-	std::ifstream t(filepath);
-	if(t.good())
-		mFilePath=filepath;
+
+	std::ifstream file(filepath);
+	if(!file.good())
+		GL_CRITICAL("Failed to ReadFile:{}",filepath);
+
+	mFilePath=filepath;
 	fileType=GetFileType();
 
-	t.seekg(0, std::ios::end);
-	size = t.tellg();
-	mFileContents.resize(size, ' ');
-	t.seekg(0);
-	t.read(&mFileContents[0], size);
-	this->SetBuffer(mFileContents);
+	file.seekg(0, std::ios::end);
+	size_t fileSize = file.tellg();
+	file.seekg(0,std::ios::beg);
+	
+	std::string content(fileSize, '\0');
+	file.read(&content[0], fileSize);
+
+	//Trimming the spaces located at the last line at the end
+	content.erase(std::find_if(content.rbegin(), content.rend(), [](char ch) {
+        return std::isspace(ch);
+    }).base(), content.end());
+
+	this->SetBuffer(content);
 	isFileLoaded=true;
 }
 
@@ -133,10 +140,8 @@ void Editor::SetBuffer(const std::string& text)
 	mLines.clear();
 	mLines.emplace_back(Line());
 
-	uint32_t offset=-1;
 	for (auto chr : text)
 	{
-		offset++;
 		if (chr == '\r')
 			continue;
 
@@ -144,7 +149,9 @@ void Editor::SetBuffer(const std::string& text)
 			mLines.emplace_back(Line());
 		}
 		else
+		{
 			mLines.back().emplace_back(chr, ColorSchemeIdx::Default);
+		}
 	}
 
 	if (mLines.back().size() > 400)
@@ -250,16 +257,26 @@ bool Editor::Render(bool* aIsOpen,std::string& aUUID){
 	style.ScrollbarSize=20.0f;
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin(aUUID.c_str(),aIsOpen);
+	ImGui::Begin(aUUID.c_str(),aIsOpen,this->mBufferModified ?  ImGuiWindowFlags_UnsavedDocument : ImGuiWindowFlags_None);
 		ImGui::PopStyleVar();
 		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[(uint8_t)Fonts::MonoLisaRegular]);
 
+		bool isWindowFocused=ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
 
+		if(isWindowFocused)
+			ImGui::SetNextWindowFocus();
+		// else if(!ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+		// {
+		// 	ImGui::PopFont();
+		// 	ImGui::End();  // #text_editor
+		// 	return false;
+		// }
+		// 	GL_INFO("Collapsed:{}",aUUID);
 		this->Draw();
-		bool isWindowFocused=ImGui::IsWindowFocused();
+
 
 		//Executes once when we focus on window
-		if(ImGui::IsWindowDocked() && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)){
+		if(ImGui::IsWindowDocked() && isWindowFocused){
 			TabsManager::SetNewTabsDockSpaceId(ImGui::GetWindowDockID());
 		}
 
@@ -285,6 +302,9 @@ bool Editor::Draw()
 	ImGui::SetNextWindowContentSize(ImVec2(ImGui::GetContentRegionMax().x + 1500.0f, sizeY+250.0f));
 	ImGui::BeginChild("TextEditor", {0,0}, 0,  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_HorizontalScrollbar);
 	ImGui::PopStyleColor();
+
+	if(ImGui::IsWindowCollapsed())
+		GL_INFO("Collapsed");
 	
 	mEditorWindow = ImGui::GetCurrentWindow();
 	mEditorSize = ImVec2(mEditorWindow->ContentRegionRect.Max.x, mLines.size() * (mLineSpacing + mCharacterSize.y));
@@ -1038,7 +1058,7 @@ std::string Editor::GetNearbyLinesString(int aLineNo,int aLineCount) {
 
 void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
 {
-	if(!mIsSyntaxHighlightingSupportForFile) return;
+	if(!mIsSyntaxHighlightingSupportForFile || !mQuery) return;
 
 	OpenGL::ScopedTimer timer("UpdateSyntaxHighlighting");
 	std::string sourceCode=GetNearbyLinesString(aLineNo,aLineCount);
@@ -1578,30 +1598,41 @@ Coordinates Editor::SanitizeCoordinates(const Coordinates& aValue) const
 	}
 }
 
+std::string Editor::GetText()
+{
+	int colMax=GetLineMaxColumn(mLines.size()-1);
+	return GetText({0,0},{(int)mLines.size(),colMax});
+}
+
 std::string Editor::GetText(const Coordinates& aStart, const Coordinates& aEnd) const
 {
-	std::string result;
+	assert(aStart < aEnd);
 
+	std::string result;
 	auto lstart = aStart.mLine;
 	auto lend = aEnd.mLine;
 	auto istart = GetCharacterIndex(aStart);
 	auto iend = GetCharacterIndex(aEnd);
-
 	size_t s = 0;
 
-	for (size_t i = lstart; i < lend; i++) s += mLines[i].size();
+	for (size_t i = lstart; i < lend; i++)
+		s += mLines[i].size();
 
-	result.reserve(s + lend-lstart+1);
+	result.reserve(s + s / 8);
 
-	while (istart < iend || lstart < lend) {
+	while (istart < iend || lstart < lend)
+	{
 		if (lstart >= (int)mLines.size())
 			break;
 
 		auto& line = mLines[lstart];
-		if (istart < (int)line.size()) {
+		if (istart < (int)line.size())
+		{
 			result += line[istart].mChar;
 			istart++;
-		} else {
+		}
+		else
+		{
 			istart = 0;
 			++lstart;
 			result += '\n';
@@ -1620,7 +1651,8 @@ void Editor::Copy()
 {
 	OpenGL::ScopedTimer timer("Editor::Copy");
 	Cursor& aCursor=GetCurrentCursor();
-	if (HasSelection(aCursor)) {
+	if (HasSelection(aCursor)) 
+	{
 		if(aCursor.mSelectionStart>aCursor.mSelectionEnd)
 			std::swap(aCursor.mSelectionStart,aCursor.mSelectionEnd);
 
@@ -1629,11 +1661,15 @@ void Editor::Copy()
 
 		if(	!text.empty())
 			ImGui::SetClipboardText(text.c_str());
-	} else {
-		if (!mLines.empty()) {
+	} 
+	else 
+	{
+		if (!mLines.empty()) 
+		{
 			std::string str;
 			auto& line = mLines[SanitizeCoordinates(aCursor.mCursorPosition).mLine];
-			for (auto& g : line) str.push_back(g.mChar);
+			for (auto& g : line) 
+				str.push_back(g.mChar);
 
 			ImGui::SetClipboardText(str.c_str());
 		}
@@ -1892,53 +1928,12 @@ void Editor::Cut(){
 	Backspace();
 }
 
-void Editor::SaveFile()
-{
-	std::string copyStr;
-	int startLine = 0;
-	while (startLine < mLines.size()) {
-		for (auto& glyph : mLines[startLine]) copyStr += glyph.mChar;
-		copyStr += '\n';
-		startLine++;
-	}
 
-	if(mFilePath.empty())
-	{
-		mFilePath=SaveFileAs(copyStr);
-		this->ResetState();
-		this->LoadFile(mFilePath.c_str());
-		FileTab* currTab=TabsManager::GetCurrentActiveTab();
-		if(currTab)
-		{
-			std::filesystem::path path(mFilePath);
-			currTab->filename=path.filename().string();
-			currTab->filepath=mFilePath;
-			currTab->id=path.filename().string()+"##"+std::to_string((int)currTab);
-		}
-		return;
-	}
-	else
-	{
-		std::ofstream file(mFilePath, std::ios::trunc);
-		if (!file.is_open()) {
-			GL_INFO("ERROR SAVING");
-			return;
-		}
-
-		file << copyStr;
-		file.close();
-	}
-
-
-	GL_INFO("Saving...");
-	// this->isFileSaving=true;
-	StatusBarManager::ShowNotification("Saved", mFilePath.c_str(), StatusBarManager::NotificationType::Success);
-}
 
 void Editor::SelectAll(){
 	GL_INFO("SELECT ALL");
 	Cursor& aCursor=GetCurrentCursor();
-	aCursor.mSelectionEnd=aCursor.mCursorPosition=Coordinates(mLines.size()-1,0);
+	aCursor.mSelectionEnd=aCursor.mCursorPosition=Coordinates(mLines.size()-1,GetLineMaxColumn(mLines.size()-1));
 	aCursor.mSelectionStart=Coordinates(0,0);
 	mSelectionMode=SelectionMode::Normal;
 }

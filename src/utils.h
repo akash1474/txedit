@@ -224,14 +224,14 @@ inline std::string SaveFileAs(std::string fileContent)
 
     ofn.lStructSize = sizeof(OPENFILENAME);
     ofn.hwndOwner = nullptr;       // Owner window handle, nullptr for no owner
-    ofn.lpstrFilter = L"Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0";
+    ofn.lpstrFilter = L"All Files (*.*)\0*.*\0";
     ofn.lpstrFile = fileName;      // Buffer to receive the file name
     ofn.nMaxFile = MAX_PATH;
     ofn.lpstrTitle = L"Save As";    // Title of the dialog box
-    ofn.Flags = OFN_OVERWRITEPROMPT; // Prompt before overwriting a file
+    ofn.Flags = OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR ; // Prompt before overwriting a file
 
     // Open the Save As dialog
-    if (GetSaveFileName(&ofn))
+    if (GetSaveFileNameW(&ofn))
     {
         // Get the selected file name
         std::string selectedFileName = ToUTF8(fileName);

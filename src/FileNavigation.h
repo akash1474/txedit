@@ -36,6 +36,8 @@ class FileNavigation{
 	std::vector<std::string> mFolders;
 	std::unordered_map<std::string, IconData> mIconDatabase;
 	DirectoryMonitor mDirectoryMonitor;
+	Entity* mCurrentEntity{0};
+	bool mHoveringThisFrame{0};
 
 	std::unordered_map<std::string,std::vector<Entity>> mDirectoryData;
 	static void ShowContextMenu(std::string& path,bool isFolder=false);

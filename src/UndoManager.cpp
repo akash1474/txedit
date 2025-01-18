@@ -1,11 +1,9 @@
 #pragma once
-#include "FontAwesome6.h"
-#include "imgui.h"
-#include "imgui_internal.h"
 #include "pch.h"
 #include "Coordinates.h"
 #include "UndoManager.h"
 #include "TextEditor.h"
+#include "TabsManager.h"
 
 UndoRecord::UndoRecord(const std::vector<UndoOperation>& aOperations,
 	EditorState& aBefore, EditorState& aAfter)
@@ -45,6 +43,7 @@ void UndoRecord::Undo(Editor* aEditor)
 
 	aEditor->mState = mBefore;
 	aEditor->EnsureCursorVisible();
+	aEditor->SetIsBufferModified(true);
 }
 
 void UndoRecord::Redo(Editor* aEditor)
@@ -75,6 +74,7 @@ void UndoRecord::Redo(Editor* aEditor)
 
 	aEditor->mState = mAfter;
 	aEditor->EnsureCursorVisible();
+	aEditor->SetIsBufferModified(true);
 }
 
 
@@ -99,6 +99,7 @@ void UndoManager::AddUndo(UndoRecord& aValue)
 	mUndoBuffer.resize((size_t)(mUndoIndex+1));
 	mUndoBuffer.back() = aValue;
 	++mUndoIndex;
+	TabsManager::GetCurrentActiveTextEditor()->SetIsBufferModified(true);
 }
 
 void UndoManager::DisplayUndoStack(){

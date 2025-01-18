@@ -38,7 +38,8 @@ public:
 	//Call when creating a new file
 	static bool OpenNewEmptyFile();
 	static void Render();
-	static bool RenderTab(std::vector<FileTab>::iterator tab,bool& removeTab);
+
+	static void SaveFile();
 
 private:
 	TabsManager();

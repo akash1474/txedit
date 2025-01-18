@@ -54,73 +54,66 @@ void CoreSystem::RenderDebugInfo()
 	ImGui::Text("%s", utf8);
 	ImGui::Text("Length:%d", ImTextCountCharsFromUtf8(utf8, 0));
 	ImGui::Text("Time:%f", glfwGetTime());
-	ImGui::Text("nCursor:%d", (int)currentEditor->GetEditorState()->mCursors.size());
 
-	ImWchar buff[100];
-	int count = ImTextStrFromUtf8(buff, 100, utf8, nullptr, 0);
 
-	static int LineSpacing = 15.0f;
-	if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
-		currentEditor->SetLineSpacing(LineSpacing);
+	if(currentEditor)
+	{
+		ImGui::Text("nCursor:%d", (int)currentEditor->GetEditorState()->mCursors.size());
+		static int LineSpacing = 15.0f;
+		if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
+			currentEditor->SetLineSpacing(LineSpacing);
+		}
+
+
+		ImGui::Spacing();
+		ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
+		ImGui::Spacing();
+		ImGui::Text("mCursorPosition: X:%d  Y:%d", currentEditor->GetCurrentCursor().mCursorPosition.mColumn,
+		            currentEditor->GetCurrentCursor().mCursorPosition.mLine);
+		ImGui::Text("mSelectionStart: X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionStart.mColumn,
+		            currentEditor->GetCurrentCursor().mSelectionStart.mLine);
+		ImGui::Text("mSelectionEnd:   X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionEnd.mColumn,
+		            currentEditor->GetCurrentCursor().mSelectionEnd.mLine);
+		ImGui::Text("mUndoManagerTop:   X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionEnd.mColumn,
+		            currentEditor->GetCurrentCursor().mSelectionEnd.mLine);
+
+		ImGui::Spacing();
+		currentEditor->GetUndoMananger()->DisplayUndoStack();
+
+		ImGui::Spacing();
+		ImGui::Spacing();
+		static std::string mode;
+		ImColor color;
+		switch (currentEditor->GetSelectionMode()) {
+			case 0:
+				mode = "Normal";
+				color = ImColor(50, 206, 187, 255);
+				break;
+			case 1:
+				mode = "Word";
+				color = ImColor(233, 196, 106, 255);
+				break;
+			case 2:
+				mode = "Line";
+				color = ImColor(231, 111, 81, 255);
+				break;
+		}
+		ImGui::Text("SelectionMode: ");
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, color.Value);
+		ImGui::Text("%s", mode.c_str());
+		ImGui::PopStyleColor();
+
+
+		ImGui::Spacing();
+		ImGui::Spacing();
+		static int v{1};
+		ImGui::Text("Goto Line: ");
+		ImGui::SameLine();
+		if (ImGui::InputInt("##ScrollToLine", &v, 1, 100, ImGuiInputTextFlags_EnterReturnsTrue))
+			currentEditor->ScrollToLineNumber(v);
+
 	}
-
-
-	ImGui::Spacing();
-	ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
-	ImGui::Spacing();
-	ImGui::Text("mCursorPosition: X:%d  Y:%d", currentEditor->GetCurrentCursor().mCursorPosition.mColumn,
-	            currentEditor->GetCurrentCursor().mCursorPosition.mLine);
-	ImGui::Text("mSelectionStart: X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionStart.mColumn,
-	            currentEditor->GetCurrentCursor().mSelectionStart.mLine);
-	ImGui::Text("mSelectionEnd:   X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionEnd.mColumn,
-	            currentEditor->GetCurrentCursor().mSelectionEnd.mLine);
-	ImGui::Text("mUndoManagerTop:   X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionEnd.mColumn,
-	            currentEditor->GetCurrentCursor().mSelectionEnd.mLine);
-
-	ImGui::Spacing();
-	currentEditor->GetUndoMananger()->DisplayUndoStack();
-
-	ImGui::Spacing();
-	ImGui::Spacing();
-	static std::string mode;
-	ImColor color;
-	switch (currentEditor->GetSelectionMode()) {
-		case 0:
-			mode = "Normal";
-			color = ImColor(50, 206, 187, 255);
-			break;
-		case 1:
-			mode = "Word";
-			color = ImColor(233, 196, 106, 255);
-			break;
-		case 2:
-			mode = "Line";
-			color = ImColor(231, 111, 81, 255);
-			break;
-	}
-	ImGui::Text("SelectionMode: ");
-	ImGui::SameLine();
-	ImGui::PushStyleColor(ImGuiCol_Text, color.Value);
-	ImGui::Text("%s", mode.c_str());
-	ImGui::PopStyleColor();
-
-
-	ImGui::Spacing();
-	ImGui::Spacing();
-	static int v{1};
-	ImGui::Text("Goto Line: ");
-	ImGui::SameLine();
-	if (ImGui::InputInt("##ScrollToLine", &v, 1, 100, ImGuiInputTextFlags_EnterReturnsTrue))
-		currentEditor->ScrollToLineNumber(v);
-
-	if (ImGui::Button("Select File"))
-		SelectFile();
-
-	if (ImGui::Button("Select Files")) {
-		auto files = SelectFiles();
-		for (auto& file : files) std::wcout << file << std::endl;
-	}
-
 	#ifdef GL_DEBUG
 
 	static ImageTexture img1("./assets/screenshots/editor.png");
@@ -233,7 +226,7 @@ void CoreSystem::Render()
 
 
 #ifdef GL_DEBUG
-	//RenderDebugInfo();
+	RenderDebugInfo();
 #endif
 
 	if (FileNavigation::IsOpen())

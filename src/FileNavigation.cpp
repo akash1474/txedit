@@ -97,16 +97,18 @@ std::pair<const std::string,IconData>* FileNavigation::GetIconForExtension(const
 void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
     static int selected=-1;
 
-    if (ImGui::BeginPopupContextItem(path.c_str()))
+    if (ImGui::BeginPopup(path.c_str()))
     {
 	    const char* options[] = {ICON_FA_CARET_RIGHT"  New File",ICON_FA_CARET_RIGHT"  Rename",ICON_FA_CARET_RIGHT"  Open Folder",ICON_FA_CARET_RIGHT"  Open Terminal",ICON_FA_CARET_RIGHT"  New Folder",ICON_FA_CARET_RIGHT"  Delete Folder"};
 	    if(!isFolder)
 	    	options[5]=ICON_FA_CARET_RIGHT"  Delete File";
 
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,8.0f));
-        for (int i = 0; i < IM_ARRAYSIZE(options); i++){
+        for (int i = 0; i < IM_ARRAYSIZE(options); i++)
+        {
         	if(i==4) ImGui::Separator();
-            if (ImGui::Selectable(options[i])){
+            if (ImGui::Selectable(options[i]))
+            {
             	selected = i;
                 std::string fpath=path;
             	switch(selected)
@@ -217,6 +219,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
                 		}
                 		break;
             	}
+            	ImGui::CloseCurrentPopup();
             }
         }
         ImGui::PopStyleVar();
@@ -294,12 +297,13 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 
 		if(ImGui::TreeNodeEx(folderName.c_str(),ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen))
 		{
+			// ShowContextMenu(path,true);
     		RenderFolderItems(path);
     		ImGui::TreePop();
     	}
-
 		ShowContextMenu(path,true);
     	ImGui::PopStyleVar(2);
+
     	return;
 	}
 
@@ -319,19 +323,32 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 
 	for(Entity& item:entities)
 	{
-		const char* icon = item.is_directory ? item.is_explored ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER : ICON_FA_FILE;
-		oss << icon << " " << item.filename.c_str();
 		if(item.is_directory) 
 		{
+			const char* icon = item.is_explored ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER;
+			oss << icon << " " << item.filename.c_str();
 			if(ImGui::TreeNodeEx(oss.str().c_str(),ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_Selected))
 			{
 				std::stringstream wss;
-				ShowContextMenu(item.path,item.is_directory); //Explored Folder
+				if(ImGui::IsItemHovered(0))
+				{
+					Get().mCurrentEntity=&item;
+					Get().mHoveringThisFrame=true;
+				}
+				// ShowContextMenu(item.path,item.is_directory); //Explored Folder
 				RenderFolderItems(item.path,false);
 				ImGui::TreePop();
 			}
+			else
+			{
+				if(ImGui::IsItemHovered(0)){
+					Get().mCurrentEntity=&item;
+					Get().mHoveringThisFrame=true;
+				}
+			}
 
-			ShowContextMenu(item.path,item.is_directory); // UnExplored Folder
+			// ShowContextMenu(item.path,item.is_directory); // UnExplored Folder
+			oss.str("");
 		}
 		else
 		{
@@ -350,11 +367,15 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 				TabsManager::OpenFile(item.path);
 
 			}
+			if(ImGui::IsItemHovered(0))
+			{
+				Get().mCurrentEntity=&item;
+				Get().mHoveringThisFrame=true;
+			}
 			ImGui::PopFont();
-			ShowContextMenu(item.path);
+			// ShowContextMenu(item.path);
 			
 		}
-		oss.str("");
 	}
 }
 
@@ -369,10 +390,20 @@ void FileNavigation::Render(){
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0.0f);
 	ImGui::Begin("Project Directory");
 
+		Get().mHoveringThisFrame=false;
     	auto& folders=GetFolders();
     	for(const auto& folder:folders)
     	{
     		Get().RenderFolderItems(folder,true);
+    	}
+
+    	if(Get().mCurrentEntity)
+    	{
+	    	Entity* entty=Get().mCurrentEntity;
+	    	ShowContextMenu(entty->path,entty->is_directory);
+
+    		if(Get().mHoveringThisFrame && ImGui::IsMouseDown(ImGuiMouseButton_Right))
+    			ImGui::OpenPopup(entty->path.c_str());
     	}
 
 	ImGui::End();

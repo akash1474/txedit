@@ -46,6 +46,7 @@ void StatusBarManager::Render(ImVec2& size,const ImGuiViewport* viewport){
 	if(mIsInputPanelOpen){
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f); //Popped at end of StatusBar
 		RenderInputPanel(size,viewport);
+		ImGui::PopStyleVar();
 	}
 
 
@@ -110,7 +111,7 @@ void StatusBarManager::Render(ImVec2& size,const ImGuiViewport* viewport){
 
 	ImGui::End();
 	ImGui::PopStyleColor();
-	ImGui::PopStyleVar(mIsInputPanelOpen? 3 : 2);
+	ImGui::PopStyleVar(2);
 
 }
 

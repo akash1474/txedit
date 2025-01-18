@@ -415,6 +415,7 @@ void Editor::InsertCharacter(char chr){
 
 	EnsureCursorVisible();
 	DebouncedReparse();
+	SetIsBufferModified(true);
 }
 
 /*

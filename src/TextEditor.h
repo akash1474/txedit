@@ -310,7 +310,6 @@ private:
 	void SortCursorsFromTopToBottom();
 	void MergeCursorsIfNeeded();
 	void ClearCursors();
-	std::string mFileContents;
 
 public:
 	EditorState mState;
@@ -337,6 +336,7 @@ private:
 	Lines mLines;
 	int mMinLineVisible{0};
 	double mLastClick{-1.0f};
+	bool mBufferModified{0};
 
 
 	// Editor Properties
@@ -373,7 +373,6 @@ private:
 	void Paste();
 	void Cut();
 	void Delete();
-	void SaveFile();
 	void SelectAll();
 
 	Coordinates GetActualCursorCoordinates() const;
@@ -472,6 +471,7 @@ public:
 	void EnsureCursorVisible();
 	void UpdateSyntaxHighlighting(int aLineNo,int aLineCount=3);
 	int InsertTextAt(Coordinates& aWhere, const char* aValue);
+	std::string GetText();
 
 	std::string GetCurrentFilePath() const { return mFilePath; };
 	std::string GetFileType();
@@ -482,6 +482,10 @@ public:
 	bool Draw();
 	void HandleKeyboardInputs();
 	void HandleMouseInputs();
+
+	inline bool IsBufferModified()const{return mBufferModified;}
+	//Called inside Undo/Redo Functions
+	inline void SetIsBufferModified(bool aIsModifiedValue){mBufferModified=aIsModifiedValue;}
 
 
 	void SetLineSpacing(float value) { this->mLineSpacing = value; }

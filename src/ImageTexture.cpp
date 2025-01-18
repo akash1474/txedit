@@ -11,7 +11,8 @@
 void ImageTexture::LoadTexture(const char* file_path){
 	mImageData = stbi_load(file_path, &mSize.width, &mSize.height, &mChannels, STBI_rgb_alpha);
     if (mImageData == nullptr) {
-        GL_CRITICAL("ImageTexture Loading Error:{}",stbi_failure_reason());
+        GL_CRITICAL("ImageTexture Loading Error:{}, FilePath:{}",stbi_failure_reason(),file_path);
+        GL_ERROR("ImageData: w({}) h({})",mSize.width,mSize.height);
         return;
     }
 }
@@ -34,7 +35,9 @@ void ImageTexture::BindTexture(){
 void ImageTexture::LoadAsync(ImageTexture* img){
     if(!img) return;
     if(!img->mFuture.valid())
+    {
         img->mFuture=std::async(std::launch::async,&ImageTexture::LoadTexture,img,img->mFilePath.c_str());
+    }
 
     if(!img->IsLoaded() && img->mFuture.valid() && img->mFuture.wait_for(std::chrono::milliseconds(5))==std::future_status::ready){
         img->BindTexture();
@@ -42,8 +45,10 @@ void ImageTexture::LoadAsync(ImageTexture* img){
 }
 
 void ImageTexture::AsyncImage(ImageTexture* img,const ImVec2& size){
-    if(img->IsLoaded()) ImGui::Image((void*)(intptr_t)img->GetTextureId(),size);
-    else{
+    if(img->IsLoaded()) 
+        ImGui::Image((void*)(intptr_t)img->GetTextureId(),size);
+    else
+    {
         ImGuiWindow* window = ImGui::GetCurrentWindow();
         if (window->SkipItems) return;
 

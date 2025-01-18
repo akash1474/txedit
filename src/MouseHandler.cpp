@@ -12,8 +12,10 @@ void Editor::HandleMouseInputs()
 	auto ctrl = io.ConfigMacOSXBehaviors ? io.KeySuper : io.KeyCtrl;
 	auto alt = io.ConfigMacOSXBehaviors ? io.KeyCtrl : io.KeyAlt;
 
-	if (ImGui::IsWindowHovered()) {
-		if (!shift && !alt) {
+	if (ImGui::IsWindowHovered()) 
+	{
+		if (!shift && !alt) 
+		{
 
 			auto click = ImGui::IsMouseClicked(0);
 			auto doubleClick = ImGui::IsMouseDoubleClicked(0);
@@ -22,9 +24,11 @@ void Editor::HandleMouseInputs()
 			auto tripleClick = click && !doubleClick && (mLastClick != -1.0f && (t - mLastClick) < io.MouseDoubleClickTime);
 
 			//Left mouse button triple click
-			if (tripleClick) {
+			if (tripleClick) 
+			{
 				DisableSearch();
-				if (!ctrl) {
+				if (!ctrl) 
+				{
 					GL_INFO("TRIPLE CLICK");
 					auto& aState=mState.mCursors[mState.mCurrentCursorIdx];
 
@@ -34,10 +38,11 @@ void Editor::HandleMouseInputs()
 					aState.mCursorPosition.mColumn=aState.mSelectionEnd.mColumn;
 				}
 				mLastClick = -1.0f;
-}
+			}
 
 			// Left mouse button double click
-			else if (doubleClick) {
+			else if (doubleClick) 
+			{
 
 				if(!ctrl) SelectWordUnderCursor(mState.mCursors[mState.mCurrentCursorIdx]);
 				mLastClick = (float)ImGui::GetTime();
@@ -62,7 +67,8 @@ void Editor::HandleMouseInputs()
 				}
 
 			}
-			else if(click && ctrl){
+			else if(click && ctrl)
+			{
 				DisableSearch();
 
 				Cursor aState;
@@ -78,7 +84,8 @@ void Editor::HandleMouseInputs()
 			}
 
 			// Left mouse button click
-			else if (click) {
+			else if (click) 
+			{
 				GL_INFO("MOUSE CLICK");
 
 				DisableSearch();
@@ -99,8 +106,10 @@ void Editor::HandleMouseInputs()
 			}
 
 			//Mouse Click And Dragging
-			else if (ImGui::IsMouseDragging(0) && ImGui::IsMouseDown(0)) {
-				if((ImGui::GetMousePos().y-mEditorPosition.y) <0.0f) return;
+			else if (ImGui::IsMouseDragging(0) && ImGui::IsMouseDown(0)) 
+			{
+				if((ImGui::GetMousePos().y-mEditorPosition.y) <0.0f) 
+					return;
 
 				io.WantCaptureMouse = true;
 				DisableSearch();
