@@ -1,9 +1,27 @@
 #pragma once
+#include "ImageTexture.h"
 #include "string"
 #include "vector"
-#include "map"
 #include "unordered_map"
 #include "TextEditor.h"
+#include "DirectoryMonitor.h"
+#include <rpcdcep.h>
+
+// Structure to store icon data
+struct IconData {
+    std::string name;
+    std::vector<std::string> extensions;
+    ImageTexture texture;
+};
+
+enum class DirectoryEvent{
+	FileModified,
+	FileAdded,
+	FileRemoved,
+	FileRenamedOldName,
+	FileRenamedNewName
+};
+
 
 class FileNavigation{
 	struct Entity{
@@ -13,27 +31,45 @@ class FileNavigation{
 		bool is_explored=false;
 	};
 
-	Editor* mTextEditor=nullptr;
 	bool mIsOpen=true;
+	bool mAreIconsLoaded=false;
 	std::vector<std::string> mFolders;
+	std::unordered_map<std::string, IconData> mIconDatabase;
+	DirectoryMonitor mDirectoryMonitor;
+	Entity* mCurrentEntity{0};
+	bool mHoveringThisFrame{0};
 
 	std::unordered_map<std::string,std::vector<Entity>> mDirectoryData;
-	void ShowContextMenu(std::string& path,bool isFolder=false);
-	void RenderFolderItems(std::string path,bool isRoot=false);
+	static void ShowContextMenu(std::string& path,bool isFolder=false);
+	static void RenderFolderItems(std::string path,bool isRoot=false);
+
+	FileNavigation();
 
 public:
+	FileNavigation(const FileNavigation&)=delete;
 
-	FileNavigation(){};
-	~FileNavigation(){ mDirectoryData.clear(); }
+	static FileNavigation& Get(){
+		static FileNavigation instance;
+		return instance;
+	}
 
-	void SetTextEditor(Editor* editorPtr){ this->mTextEditor=editorPtr;}
-	void Render();
+	~FileNavigation();
 
-	void UpdateDirectory(std::string directory);
+	static void Init();
 
-	void AddFolder(std::string path){ mFolders.push_back(path);}
-	void ToggleSideBar(){mIsOpen=!mIsOpen;}
-	const bool IsOpen()const{return mIsOpen;}
-	std::vector<std::string>& GetFolders(){ return mFolders;}
+	static void Render();
+	static bool AreIconsLoaded(){return Get().mAreIconsLoaded;}
+
+	static void ScanDirectory(const std::string& aDirectoryPath);
+	static bool CustomSelectable(std::string& aFileName,bool aIsSelected=false);
+
+	static void AddFolder(std::string aPath);
+	static void ToggleSideBar(){Get().mIsOpen=!Get().mIsOpen;}
+	static const bool IsOpen(){return Get().mIsOpen;}
+	static std::vector<std::string>& GetFolders(){ return Get().mFolders;}
+
+	static void HandleEvent(DirectoryEvent aEvent,std::wstring& aPayLoad);
+	static void LoadIconData(const std::string& aJsonPath);
+	static std::pair<const std::string,IconData>* GetIconForExtension(const std::string& aExtension);
 
 };

@@ -9,6 +9,9 @@ private:
 	int width = 1100;
 	int height = 650;
 	CoreSystem* mCoreSystem;
+	float mFrameRate;
+	double mFrameTime;
+	bool mIsFocused;
 
 public:
 	Application(const Application&) = delete;
@@ -19,6 +22,18 @@ public:
 		static Application instance;
 		return instance;
 	}
+
+	static void SetFrameRate(float aFrameRate)
+	{
+		Get().mFrameRate=aFrameRate;
+		Get().mFrameTime=1.0f/aFrameRate;
+	}
+
+	static float GetFrameRate(){return Get().mFrameRate;}
+	static float GetFrameTime(){return Get().mFrameTime;}
+	static bool IsWindowFocused(){return Get().mIsFocused;}
+	static void SetWindowIsFocused(bool aIsFocused=false) {Get().mIsFocused=aIsFocused;}
+
 
 	static void Draw();
 	static bool Init();

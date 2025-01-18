@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "FileNavigation.h"
+#include "TabsManager.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
 #include "Timer.h"
@@ -19,6 +21,26 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_img.h"
 
+// For files being dragged and dropped
+void drop_callback(GLFWwindow* window, int count, const char** paths)
+{
+	for (int i = 0; i < count; i++) {
+		if (std::filesystem::is_directory(paths[i])) {
+			GL_INFO("Folder: {}", paths[i]);
+			FileNavigation::AddFolder(paths[i]);
+		} else {
+			GL_INFO("File: {}", paths[i]);
+			TabsManager::OpenFile(paths[i]);
+		}
+	}
+}
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	glViewport(0, 0, width, height);
+	glViewport(0, 0, width, height);
+	Application::Get().Draw();
+}
 
 bool Application::Init()
 {
@@ -49,6 +71,8 @@ bool Application::Init()
 	    SUCCEEDED(DwmSetWindowAttribute(WinHwnd, DWMWINDOWATTRIBUTE::DWMWA_USE_IMMERSIVE_DARK_MODE, &USE_DARK_MODE, sizeof(USE_DARK_MODE)));
 
 
+	glfwSetDropCallback(Get().mWindow, drop_callback);
+	glfwSetFramebufferSizeCallback(Get().mWindow, framebuffer_size_callback);
 	return true;
 }
 
@@ -62,19 +86,6 @@ void Application::SetApplicationIcon(unsigned char* logo_img, int length)
 	stbi_image_free(images[0].pixels);
 }
 
-// For files being dragged and dropped
-void drop_callback(GLFWwindow* window, int count, const char** paths)
-{
-	for (int i = 0; i < count; i++) {
-		if (std::filesystem::is_directory(paths[i])) {
-			GL_INFO("Folder: {}", paths[i]);
-			CoreSystem::GetFileNavigation()->AddFolder(paths[i]);
-		} else {
-			GL_INFO("File: {}", paths[i]);
-			CoreSystem::GetTextEditor()->LoadFile(paths[i]);
-		}
-	}
-}
 
 bool Application::InitImGui()
 {
@@ -82,16 +93,18 @@ bool Application::InitImGui()
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
-	// ImGui::GetStyle().ScaleAllSizes(0.5f);
-
-
-#ifndef GL_DEBUG
-	const std::string app_dir = GetUserDirectory("txedit");
-	io.IniFilename = app_dir.c_str();
-	io.LogFilename = nullptr;
-#endif
-
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	// io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+
+// #ifndef GL_DEBUG
+	// const std::string app_dir = GetUserDirectory("txedit");
+	// io.IniFilename = app_dir.c_str();
+	// io.LogFilename = nullptr;
+	io.IniFilename=nullptr;
+// #endif
+
 	ImGuiStyle& style = ImGui::GetStyle();
 	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
 		style.WindowRounding = 0.0f;
@@ -114,8 +127,9 @@ bool Application::InitImGui()
 	}
 	GL_INFO("OPENGL - {}", (const char*)glGetString(GL_VERSION));
 
-	// glfwSwapInterval(0);
+	glfwSwapInterval(0); // Gives maximum FPS
 	SetStyleColorDarkness();
+
 	return true;
 }
 
@@ -148,23 +162,11 @@ void Application::BackupDataBeforeCrash()
 }
 
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	glViewport(0, 0, width, height);
-	// if(width==0 && height==0){
-	// 	GL_INFO("SLEEPING");
-	// 	Application::Get().SetIsSleeping(true);
-	// }else{
-	// 	if(Application::IsSleeping()) Application::SetIsSleeping(false);
-	// }
-	CoreSystem::GetTextEditor()->RecalculateBounds();
-	glViewport(0, 0, width, height);
-	Application::Get().Draw();
-}
 
 void Application::Draw()
 {
 	glfwPollEvents();
+	if(!Application::IsWindowFocused()) return;
 #ifdef GL_BUILD_OPENGL2
 	ImGui_ImplOpenGL2_NewFrame();
 #else
@@ -172,22 +174,7 @@ void Application::Draw()
 #endif
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
-	glfwSetDropCallback(Get().mWindow, drop_callback);
 
-
-	// if(Application::IsSleeping()){
-	// 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	// 	static size_t i=0;
-	// 	GL_INFO("{} Running...",i);
-	// 	i++;
-	// }
-	// static MSG wmsg;
-	// if(PeekMessage(&wmsg, glfwGetWin32Window(Application::GetGLFWwindow()), 0, 0, PM_NOREMOVE)){
-	// 	if(wmsg.message==WM_LBUTTONDOWN){
-	// 		GL_INFO("CLICKED");
-	// 	}
-	// }
-	// HWND WinHwnd=glfwGetWin32Window(Application::GetGLFWwindow());
 
 
 	Application::GetCoreSystem()->Render();
@@ -195,9 +182,8 @@ void Application::Draw()
 	int display_w, display_h;
 	glfwGetFramebufferSize(Get().mWindow, &display_w, &display_h);
 	glViewport(0, 0, display_w, display_h);
-	glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
+	glClearColor(0.11f, 0.11f, 0.11f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glfwSetFramebufferSizeCallback(Get().mWindow, framebuffer_size_callback);
 
 #ifdef GL_BUILD_OPENGL2
 	ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
@@ -205,14 +191,14 @@ void Application::Draw()
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 #endif
 
-	if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-		GLFWwindow* backup_current_context = glfwGetCurrentContext();
-		ImGui::UpdatePlatformWindows();
-		ImGui::RenderPlatformWindowsDefault();
-		glfwMakeContextCurrent(backup_current_context);
-	}
+	// if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+	// 	GLFWwindow* backup_current_context = glfwGetCurrentContext();
+	// 	ImGui::UpdatePlatformWindows();
+	// 	ImGui::RenderPlatformWindowsDefault();
+	// 	glfwMakeContextCurrent(backup_current_context);
+	// }
 
-	glfwMakeContextCurrent(Get().mWindow);
+	// glfwMakeContextCurrent(Get().mWindow);
 	glfwSwapBuffers(Get().mWindow);
 }
 
@@ -251,10 +237,11 @@ void Application::HandleArguments(std::wstring commands)
 		if (fs::exists(path)) {
 			if (fs::is_regular_file(path)) {
 				GL_INFO("FILE:{}", path.generic_string());
-				core->GetTextEditor()->LoadFile(path.generic_string().c_str());
+				TabsManager::OpenFile(path.generic_string());
+				// core->GetTextEditor()->LoadFile(path.generic_string().c_str());
 			} else if (fs::is_directory(path)) {
 				GL_INFO("FOLDER:{}", path.generic_string());
-				core->GetFileNavigation()->AddFolder(path.generic_string());
+				FileNavigation::AddFolder(path.generic_string());
 			} else {
 				ShowErrorMessage("Invalid File/Folder Selected");
 			}

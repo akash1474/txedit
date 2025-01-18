@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "ConPTY.h"
 #include <consoleapi2.h>  // For ConPTY APIs
+#include <namedpipeapi.h>
 #include <processthreadsapi.h>
 #include <ioapiset.h>
 
@@ -11,9 +12,7 @@ ConPTY::ConPTY(){
     ZeroMemory(&mProcessInfo, sizeof(PROCESS_INFORMATION));
 }
 
-ConPTY::~ConPTY(){
-    CloseShell();
-}
+ConPTY::~ConPTY(){}
 
 
 bool ConPTY::Initialize(){
@@ -73,14 +72,15 @@ bool ConPTY::CreateAndStartProcess(const std::wstring& cmd){
         &startupInfo.StartupInfo, &mProcessInfo
     );
 
+
     if (!result) {
     	GL_CRITICAL("ConPTY::Failed to CreateProcessW");
         return false;
     }
 
     // Clean up
-    CloseHandle(mProcessInfo.hProcess);
-    CloseHandle(mProcessInfo.hThread);
+    // CloseHandle(mProcessInfo.hProcess);
+    // CloseHandle(mProcessInfo.hThread);
 
 	return true;
 }
@@ -111,15 +111,37 @@ void ConPTY::WriteInput(const std::string& command){
 }
 
 
-void ConPTY::CloseShell(){
-	if (mProcessInfo.hProcess) {
-        TerminateProcess(mProcessInfo.hProcess, 0);
-        CloseHandle(mProcessInfo.hProcess);
-        CloseHandle(mProcessInfo.hThread);
+void ConPTY::CloseShell() {
+    if (hPC) {
+        ClosePseudoConsole(hPC); // Close the pseudoconsole handle first
+        hPC = nullptr;
     }
-    if (mHStdInWrite) CloseHandle(mHStdInWrite);
-    if (mHStdOutRead) CloseHandle(mHStdOutRead);
-    if (hPC) ClosePseudoConsole(hPC);
+    if (mProcessInfo.hProcess) {
+        TerminateProcess(mProcessInfo.hProcess, 0); // Terminate the process
+        WaitForSingleObject(mProcessInfo.hProcess, INFINITE); // Ensure the process is terminated
+        CloseHandle(mProcessInfo.hProcess);
+        mProcessInfo.hProcess = nullptr;
+    }
+    if (mProcessInfo.hThread) {
+        CloseHandle(mProcessInfo.hThread);
+        mProcessInfo.hThread = nullptr;
+    }
+    if (mHStdInWrite) {
+        CloseHandle(mHStdInWrite);
+        mHStdInWrite = nullptr;
+    }
+    if (mHStdOutRead) {
+        CloseHandle(mHStdOutRead);
+        mHStdOutRead = nullptr;
+    }
+    if (mHStdInRead) {
+        CloseHandle(mHStdInRead);
+        mHStdInRead = nullptr;
+    }
+    if (mHStdOutWrite) {
+        CloseHandle(mHStdOutWrite);
+        mHStdOutWrite = nullptr;
+    }
 }
 
 

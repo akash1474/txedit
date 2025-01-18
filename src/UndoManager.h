@@ -6,6 +6,17 @@
 
 class Editor; //Forward Declaration of Editor Class
 
+enum class UndoOperationType { Add, Delete };
+
+
+struct UndoOperation
+{
+    std::string mText;
+    Coordinates mStart;
+    Coordinates mEnd;
+    UndoOperationType mType;
+};
+
 class UndoRecord
 {
 public:
@@ -13,31 +24,18 @@ public:
     ~UndoRecord() {}
 
     UndoRecord(
-        const std::string& aAddedText,         // Text added
-        const Coordinates aAddedStart,     // Start position of added text
-        const Coordinates aAddedEnd,       // End position of added text
-        const std::string& aRemovedText,       // Text removed
-        const Coordinates aRemovedStart,   // Start position of removed text
-        const Coordinates aRemovedEnd,     // End position of removed text
-        EditorState& aBeforeState,      // State before change
-        EditorState& aAfterState       // State after change
-    );
+        const std::vector<UndoOperation>& aOperations,
+        EditorState& aBefore,
+        EditorState& aAfter);
 
     void Undo(Editor* aEditor);
     void Redo(Editor* aEditor);
 
-    std::string mAddedText;
-    Coordinates mAddedStart;
-    Coordinates mAddedEnd;
-    std::string mRemovedText;
-    Coordinates mRemovedStart;
-    Coordinates mRemovedEnd;
-    EditorState mBeforeState;
-    EditorState mAfterState;
-    bool isBatchStart{0};
-    bool isBatchEnd{0};
-};
+    std::vector<UndoOperation> mOperations;
 
+    EditorState mBefore;
+    EditorState mAfter;
+};
 
 
 class UndoManager{
@@ -56,6 +54,7 @@ public:
     void Redo(int aSteps,Editor* editor);
 
     void AddUndo(UndoRecord& aValue);
+    int GetUndoIndex()const{return mUndoIndex;}
 
     void DisplayUndoStack();
 

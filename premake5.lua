@@ -17,6 +17,8 @@ includeDirs["LunaSVG"]="packages/lunasvg/include"
 includeDirs["UUID"]="packages/uuid_v4"
 includeDirs["TreeSitter"]="packages/tree-sitter/lib/include"
 includeDirs["TreeSitterCpp"]="packages/tree-sitter-cpp/src"
+includeDirs["nlohmann"]="packages/nlohmann"
+
 
 -- /MP -- Multithreaded build 
 -- /MT -- Static Linking. Defines _MT 
@@ -49,7 +51,8 @@ project "text_editor"
       "%{includeDirs.SpdLog}",
       "%{includeDirs.UUID}",
       "%{includeDirs.TreeSitter}",
-      "%{includeDirs.TreeSitterCpp}"
+      "%{includeDirs.TreeSitterCpp}",
+      "%{includeDirs.nlohmann}"
    }
 
    files { 
@@ -68,6 +71,11 @@ project "text_editor"
       characterset ("Unicode") -- Default
       buildoptions { "/MP","/DEBUG:FULL","/utf-8" } --"/utf-8" - tells compiler to interprete string literals as utf8
       defines {"GL_DEBUG"} 
+
+      -- For Memory Leaks add this flag to defines DETECT_MEMORY_LEAKS_VLD
+      -- links{"vld"}
+      -- libdirs{"C:/Program Files (x86)/Visual Leak Detector/bin/Win64","C:/Program Files (x86)/Visual Leak Detector/lib/Win64"}
+      -- includedirs{"C:/Program Files (x86)/Visual Leak Detector/include"}
 
    filter {"configurations:Release"}
       runtime "Release"

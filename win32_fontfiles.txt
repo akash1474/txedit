@@ -551,3 +551,4 @@ C:/Windows/Fonts/YuGothB.ttc
 C:/Windows/Fonts/YuGothL.ttc
 C:/Windows/Fonts/YuGothM.ttc
 C:/Windows/Fonts/YuGothR.ttc
+C:/windows/Fonts/YuGothR.ttc

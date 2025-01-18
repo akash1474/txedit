@@ -1,21 +1,22 @@
 #pragma once
-#include "string"
-#include "vector"
 #include "GLFW/glfw3.h"
-#include "TextEditor.h"
 #include "DirectoryHandler.h"
-#include "FileNavigation.h"
 #include "StatusBarManager.h"
-#include "filesystem"
+#include "Terminal.h"
 
 
 class CoreSystem{
 	const char* mCurrentFile;
 	GLFWwindow* mWindow{0};
-	Editor mTextEditor;
-	FileNavigation mFileNavigation;
+	Terminal mTerminal;
+	ImGuiID mLeftDockSpaceId=-1;
+	ImGuiID mRightDockSpaceId=-1;
+	ImGuiID mDockSpaceId=-1;
 
 public:
+	static ImGuiID GetMainDockSpaceID(){ return Get().mDockSpaceId;}
+	static ImGuiID GetLeftMainDockSpaceID(){ return Get().mLeftDockSpaceId;}
+	static ImGuiID GetRightMainDockSpaceID(){ return Get().mRightDockSpaceId;}
 	CoreSystem(const CoreSystem&)=delete;
 
 	static CoreSystem& Get(){
@@ -23,8 +24,6 @@ public:
 		return instance;
 	}
 
-	static Editor* GetTextEditor(){return &Get().mTextEditor;}
-	static FileNavigation* GetFileNavigation(){return &Get().mFileNavigation;}
 	static GLFWwindow* GetGLFWwindow(){return Get().mWindow;}
 
 	static void Render();
@@ -42,8 +41,8 @@ public:
 
 private:
 	CoreSystem(){ 
-		mFileNavigation.SetTextEditor(&mTextEditor);
-		StatusBarManager::Init(&mTextEditor,&mFileNavigation);
+		StatusBarManager::Init();
 	}
 
 };
+

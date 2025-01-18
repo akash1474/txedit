@@ -22,8 +22,10 @@ class ImageTexture{
 	std::string mFilePath;
 		
 public:
+	ImageTexture(){}
 	ImageTexture(const char* path):mFilePath(path){}
 	void LoadTexture(const char* img_path);
+	void SetPath(std::string& path){mFilePath=path;}
 	void BindTexture();
 	bool IsLoaded(){return mIsLoaded;}
 	unsigned int GetTextureId(){return mTextureId;};

@@ -1,0 +1,172 @@
+{
+    "file_type_c": {
+        "extensions": ["c"],
+        "name": "C"
+    },
+    "file_type_cppheader":{
+        "extensions": ["h", "h++", "hh", "hpp", "hxx"],
+        "name": "C/C++ (Header)"
+    },
+    "file_type_cpp": {
+        "extensions": ["cpp", "cc", "cxx"],
+        "name": "C++"
+    },
+    "file_type_text": {
+        "extensions": ["AUTHORS", "NOTICE", "README", "RELEASE-NOTES","txt"],
+        "name": "Plain Text (Readme)"
+    },
+    "file_type_lua": {
+        "extensions": ["lua"],
+        "name": "Lua"
+    },
+    "file_type_windows": {
+        "extensions": ["bat"],
+        "name": "Batch File"
+    },
+    "file_type_log": {
+        "extensions": ["log" ],
+        "name": "Plain Text (Log)"
+    },
+    "file_type_settings":{
+        "extensions": [
+            "rc",
+            "fmt",
+            "cfg",
+            "ini",
+            "inf",
+            "lng",
+            "pbk",
+            "url",
+            "conf",
+            "config",
+            "Doxyfile"
+        ],
+        "name":"Plain Text (INI)"
+    },
+    "file_type_visualstudio": {
+        "extensions": [
+            ".coverage",
+            "idl",
+            "sln",
+            "csproj",
+            "fsproj",
+            "shproj",
+            "sqlproj",
+            "vbproj",
+            "vcxproj",
+            "vsproj",
+            "props",
+            "resx",
+            "ruleset",
+            "settings",
+            "targets",
+            "wxl",
+            "wxs",
+            "xaml"
+        ],
+        "name": "XML (Visual Studio)"
+    },
+    "file_type_python": {
+        "extensions": ["py", "pyc", "pyo", "pyd"],
+        "name": "Python"
+    },
+    "file_type_java": {
+        "extensions": ["java", "class", "jar"],
+        "name": "Java"
+    },
+    "file_type_javascript": {
+        "extensions": ["js", "mjs", "cjs"],
+        "name": "JavaScript"
+    },
+    "file_type_typescript": {
+        "extensions": ["ts", "tsx"],
+        "name": "TypeScript"
+    },
+    "file_type_html": {
+        "extensions": ["html", "htm"],
+        "name": "HTML"
+    },
+    "file_type_css": {
+        "extensions": ["css", "scss", "sass"],
+        "name": "CSS"
+    },
+    "file_type_php": {
+        "extensions": ["php", "phtml", "php3", "php4", "php5", "phps"],
+        "name": "PHP"
+    },
+    "file_type_ruby": {
+        "extensions": ["rb", "erb", "rake"],
+        "name": "Ruby"
+    },
+    "file_type_go": {
+        "extensions": ["go"],
+        "name": "Go"
+    },
+    "file_type_rust": {
+        "extensions": ["rs"],
+        "name": "Rust"
+    },
+    "file_type_kotlin": {
+        "extensions": ["kt", "kts"],
+        "name": "Kotlin"
+    },
+    "file_type_swift": {
+        "extensions": ["swift"],
+        "name": "Swift"
+    },
+    "file_type_dart": {
+        "extensions": ["dart"],
+        "name": "Dart"
+    },
+    "file_type_perl": {
+        "extensions": ["pl", "pm", "t"],
+        "name": "Perl"
+    },
+    "file_type_shell": {
+        "extensions": ["sh", "bash", "zsh"],
+        "name": "Shell"
+    },
+    "file_type_yaml": {
+        "extensions": ["yaml", "yml"],
+        "name": "YAML"
+    },
+    "file_type_json": {
+        "extensions": ["json"],
+        "name": "JSON"
+    },
+    "file_type_xml": {
+        "extensions": ["xml", "xsl", "xsd"],
+        "name": "XML"
+    },
+    "file_type_makefile": {
+        "extensions": ["Makefile", "mk"],
+        "name": "Makefile"
+    },
+    "file_type_docker": {
+        "extensions": ["Dockerfile", "dockerignore"],
+        "name": "Docker"
+    },
+    "file_type_git": {
+        "extensions": ["gitignore", "gitattributes", "gitmodules"],
+        "name": "Git"
+    },
+    "file_type_markdown": {
+        "extensions": ["md", "markdown"],
+        "name": "Markdown"
+    },
+    "file_type_image":{
+		"extensions": [
+			"bmp", "emf", "gif", "jp2", "jpeg", "jpg", "png",
+			"pnm", "ppm", "tga", "tif", "tiff", "webp", "xbm",
+			"xpm","ico"
+		],
+    	"name":"Binary (Image)"
+    },
+    "file_type_svg": {
+        "extensions": ["svg"],
+        "name": "XML (SVG)"
+    },
+    "file_type_default":{
+    	"name":"default"
+    }
+}

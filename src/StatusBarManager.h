@@ -9,11 +9,8 @@ namespace StatusBarManager{
 	enum class NotificationType{Info,Error,Warning,Success};
 
 	const float PanelSize=38.0f;
-	const float StatusBarSize=22.0f;
+	const float StatusBarSize=30.0f;
 
-
-	static inline Editor* mTextEditor=nullptr;
-	static inline FileNavigation* mFileNavigation=nullptr;
 
 	//Notification
 	static inline Animation mNotificationAnimation;
@@ -29,21 +26,23 @@ namespace StatusBarManager{
 	static inline std::string mPlaceholder;
 	static inline bool mShowButton=false;
 	static inline void (*mCallbackFn)(const char* data);
+	static inline void (*mCallbackFnEx)(const char* data1,const char* data2);
+
+	static inline bool mIsCallbackEx=false;
+	static inline char mInputTextBuffer[1024];
 
 
-	void Init(Editor* editorPtr,FileNavigation* fileNavigation);
+	void Init();
 
 
 	void Render(ImVec2& size,const ImGuiViewport* viewport);
 	void RenderInputPanel(ImVec2& size,const ImGuiViewport* viewport);
-
-	FileNavigation* GetFileNavigation();
-
 
 	void ShowNotification(const char* title,const char* info,NotificationType type=NotificationType::Info);
 	void SetFileType(const char* filetype);
 	void SetCursorCoordinate(const Coordinates& cursorPosition);
 	bool IsInputPanelOpen();
 	void ShowInputPanel(const char* title,void(*callback)(const char*),const char* placeholder=nullptr,bool showButton=false,const char* btnName="Done");
+	void ShowInputPanelEx(const char* title,void(*callback)(const char*,const char*),const char* placeholder=nullptr,bool showButton=false,const char* btnName="Done");
 	void CloseInputPanel();
 };

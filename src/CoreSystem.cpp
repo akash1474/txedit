@@ -1,19 +1,23 @@
+#include "pch.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
-#include "pch.h"
-#include "CoreSystem.h"
-#include "ImageTexture.h"
-#include "MultiThreading.h"
+
 #include "resources/FontAwesomeRegular.embed"
 #include "resources/FontAwesomeSolid.embed"
 #include "resources/MonoLisaRegular.embed"
 #include "resources/JetBrainsMonoNLRegular.embed"
 #include "resources/JetBrainsMonoNLItalic.embed"
-#include <chrono>
-#include <cstring>
-#include <thread>
-#include "Terminal.h"
 
+#include "CoreSystem.h"
+#include "ImageTexture.h"
+#include "MultiThreading.h"
+#include "Terminal.h"
+#include "FileNavigation.h"
+#include "TabsManager.h"
+
+#ifdef min
+	#undef min
+#endif
 #ifdef GL_DEBUG
 
 void ShowFPS()
@@ -41,7 +45,9 @@ void CoreSystem::RenderDebugInfo()
 {
 	static bool show_demo = true;
 	ImGui::ShowDemoWindow(&show_demo);
+	Editor* currentEditor=TabsManager::GetCurrentActiveTextEditor();
 
+	ImGui::SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags_RefreshOnFocus);
 	ImGui::Begin("Project");
 	ShowFPS();
 	const char* utf8 = "Mastering » Ñandú.txt";
@@ -49,71 +55,65 @@ void CoreSystem::RenderDebugInfo()
 	ImGui::Text("Length:%d", ImTextCountCharsFromUtf8(utf8, 0));
 	ImGui::Text("Time:%f", glfwGetTime());
 
-	ImWchar buff[100];
-	int count = ImTextStrFromUtf8(buff, 100, utf8, nullptr, 0);
 
-	static int LineSpacing = 15.0f;
-	if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
-		Get().mTextEditor.SetLineSpacing(LineSpacing);
+	if(currentEditor)
+	{
+		ImGui::Text("nCursor:%d", (int)currentEditor->GetEditorState()->mCursors.size());
+		static int LineSpacing = 15.0f;
+		if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
+			currentEditor->SetLineSpacing(LineSpacing);
+		}
+
+
+		ImGui::Spacing();
+		ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
+		ImGui::Spacing();
+		ImGui::Text("mCursorPosition: X:%d  Y:%d", currentEditor->GetCurrentCursor().mCursorPosition.mColumn,
+		            currentEditor->GetCurrentCursor().mCursorPosition.mLine);
+		ImGui::Text("mSelectionStart: X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionStart.mColumn,
+		            currentEditor->GetCurrentCursor().mSelectionStart.mLine);
+		ImGui::Text("mSelectionEnd:   X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionEnd.mColumn,
+		            currentEditor->GetCurrentCursor().mSelectionEnd.mLine);
+		ImGui::Text("mUndoManagerTop:   X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionEnd.mColumn,
+		            currentEditor->GetCurrentCursor().mSelectionEnd.mLine);
+
+		ImGui::Spacing();
+		currentEditor->GetUndoMananger()->DisplayUndoStack();
+
+		ImGui::Spacing();
+		ImGui::Spacing();
+		static std::string mode;
+		ImColor color;
+		switch (currentEditor->GetSelectionMode()) {
+			case 0:
+				mode = "Normal";
+				color = ImColor(50, 206, 187, 255);
+				break;
+			case 1:
+				mode = "Word";
+				color = ImColor(233, 196, 106, 255);
+				break;
+			case 2:
+				mode = "Line";
+				color = ImColor(231, 111, 81, 255);
+				break;
+		}
+		ImGui::Text("SelectionMode: ");
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, color.Value);
+		ImGui::Text("%s", mode.c_str());
+		ImGui::PopStyleColor();
+
+
+		ImGui::Spacing();
+		ImGui::Spacing();
+		static int v{1};
+		ImGui::Text("Goto Line: ");
+		ImGui::SameLine();
+		if (ImGui::InputInt("##ScrollToLine", &v, 1, 100, ImGuiInputTextFlags_EnterReturnsTrue))
+			currentEditor->ScrollToLineNumber(v);
+
 	}
-
-
-	ImGui::Spacing();
-	ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
-	ImGui::Spacing();
-	ImGui::Text("mCursorPosition: X:%d  Y:%d", Get().mTextEditor.GetEditorState()->mCursorPosition.mColumn,
-	            Get().mTextEditor.GetEditorState()->mCursorPosition.mLine);
-	ImGui::Text("mSelectionStart: X:%d  Y:%d", Get().mTextEditor.GetEditorState()->mSelectionStart.mColumn,
-	            Get().mTextEditor.GetEditorState()->mSelectionStart.mLine);
-	ImGui::Text("mSelectionEnd:   X:%d  Y:%d", Get().mTextEditor.GetEditorState()->mSelectionEnd.mColumn,
-	            Get().mTextEditor.GetEditorState()->mSelectionEnd.mLine);
-	ImGui::Text("mUndoManagerTop:   X:%d  Y:%d", Get().mTextEditor.GetEditorState()->mSelectionEnd.mColumn,
-	            Get().mTextEditor.GetEditorState()->mSelectionEnd.mLine);
-
-	ImGui::Spacing();
-	CoreSystem::GetTextEditor()->GetUndoMananger()->DisplayUndoStack();
-
-	ImGui::Spacing();
-	ImGui::Spacing();
-	static std::string mode;
-	ImColor color;
-	switch (Get().mTextEditor.GetSelectionMode()) {
-		case 0:
-			mode = "Normal";
-			color = ImColor(50, 206, 187, 255);
-			break;
-		case 1:
-			mode = "Word";
-			color = ImColor(233, 196, 106, 255);
-			break;
-		case 2:
-			mode = "Line";
-			color = ImColor(231, 111, 81, 255);
-			break;
-	}
-	ImGui::Text("SelectionMode: ");
-	ImGui::SameLine();
-	ImGui::PushStyleColor(ImGuiCol_Text, color.Value);
-	ImGui::Text("%s", mode.c_str());
-	ImGui::PopStyleColor();
-
-
-	ImGui::Spacing();
-	ImGui::Spacing();
-	static int v{1};
-	ImGui::Text("Goto Line: ");
-	ImGui::SameLine();
-	if (ImGui::InputInt("##ScrollToLine", &v, 1, 100, ImGuiInputTextFlags_EnterReturnsTrue))
-		Get().mTextEditor.ScrollToLineNumber(v);
-
-	if (ImGui::Button("Select File"))
-		SelectFile();
-
-	if (ImGui::Button("Select Files")) {
-		auto files = SelectFiles();
-		for (auto& file : files) std::wcout << file << std::endl;
-	}
-
 	#ifdef GL_DEBUG
 
 	static ImageTexture img1("./assets/screenshots/editor.png");
@@ -126,7 +126,7 @@ void CoreSystem::RenderDebugInfo()
 		MultiThreading::ImageLoader::PushImageToQueue(&img3);
 		pushed = true;
 	}
-	MultiThreading::ImageLoader::LoadImages();
+	
 	ImageTexture::AsyncImage(&img1, ImVec2(362, 256));
 	ImageTexture::AsyncImage(&img2, ImVec2(362, 256));
 	ImageTexture::AsyncImage(&img3, ImVec2(362, 256));
@@ -146,7 +146,7 @@ void CoreSystem::Render()
 
 	static const ImGuiIO& io = ImGui::GetIO();
 	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
-	static ImGuiWindowFlags window_flags = ImGuiWindowFlags_None | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+	static ImGuiWindowFlags window_flags = ImGuiWindowFlags_None | ImGuiWindowFlags_MenuBar ;
 
 
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -167,45 +167,47 @@ void CoreSystem::Render()
 	ImGui::Begin("Container", nullptr, window_flags | ImGuiWindowFlags_NoResize);
 	ImGui::PopStyleVar(3);
 
-	static Terminal terminal;
-
 
 	if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
-		ImGuiID dockspace_id = ImGui::GetID("DDockSpace");
-		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+		Get().mDockSpaceId = ImGui::GetID("DDockSpace");
+		ImGui::DockSpace(Get().mDockSpaceId, ImVec2(0.0f, 0.0f), dockspace_flags);
 
 		static bool setupRequired = true;
 		if (setupRequired) {
 			setupRequired = false;
-			ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
-			ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
-			ImGui::DockBuilderSetNodeSize(dockspace_id, size);
+			ImGui::DockBuilderRemoveNode(Get().mDockSpaceId); // clear any previous layout
+			ImGui::DockBuilderAddNode(Get().mDockSpaceId, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+			ImGui::DockBuilderSetNodeSize(Get().mDockSpaceId, size);
 
-			auto dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.3f, nullptr, &dockspace_id);
-			// auto dock_id_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.7f, nullptr, &dockspace_id);
-			ImGui::DockBuilderDockWindow("Project Directory", dock_id_left);
-			ImGui::DockBuilderDockWindow("#editor_container", dockspace_id);
-// ImGui::DockBuilderDockWindow("#terminal", dockspace_id);
+			Get().mLeftDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Left, 0.3f, nullptr, &Get().mDockSpaceId);
+			Get().mRightDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Right, 0.3f, nullptr, &Get().mDockSpaceId);
+			auto dock_id_left_bottom = ImGui::DockBuilderSplitNode(Get().mLeftDockSpaceId, ImGuiDir_Down, 0.3f, nullptr, &Get().mLeftDockSpaceId);
+			ImGui::DockBuilderDockWindow("Project Directory", Get().mLeftDockSpaceId);
+			// ImGui::DockBuilderDockWindow("#editor_container", Get().mRightDockSpaceId);
+			ImGui::DockBuilderDockWindow("Terminal", dock_id_left_bottom);
 #ifdef GL_DEBUG
-			ImGui::DockBuilderDockWindow("Dear ImGui Demo", dock_id_left);
-			ImGui::DockBuilderDockWindow("Project", dock_id_left);
+			ImGui::DockBuilderDockWindow("Dear ImGui Demo", Get().mLeftDockSpaceId);
+			ImGui::DockBuilderDockWindow("Project", Get().mLeftDockSpaceId);
 #endif
-			ImGui::DockBuilderFinish(dockspace_id);
+			ImGui::DockBuilderFinish(Get().mDockSpaceId);
+
+			TabsManager::SetNewTabsDockSpaceId(Get().mDockSpaceId);
 		}
 	}
 
 
 	if (ImGui::BeginMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
-			ImGui::MenuItem("New File");
+			if(ImGui::MenuItem("New File"))
+				TabsManager::OpenNewEmptyFile();
 
 			if (ImGui::MenuItem("Open File"))
-				Get().mTextEditor.LoadFile(SelectFile().c_str());
+				TabsManager::OpenFile(SelectFile().c_str());
 
 			if (ImGui::MenuItem("Open Folder")) {
 				std::string path = SelectFolder();
 				if (!path.empty())
-					Get().mFileNavigation.AddFolder(path.c_str());
+					FileNavigation::AddFolder(path.c_str());
 			}
 
 			ImGui::EndMenu();
@@ -227,11 +229,12 @@ void CoreSystem::Render()
 	RenderDebugInfo();
 #endif
 
-	if (Get().mFileNavigation.IsOpen())
-		Get().mFileNavigation.Render();
-	Get().mTextEditor.Render();
-	terminal.Render();
+	if (FileNavigation::IsOpen())
+		FileNavigation::Render();
+	Get().mTerminal.Render();
 	StatusBarManager::Render(size, viewport);
+	TabsManager::Render();
+	MultiThreading::ImageLoader::LoadImages();
 }
 
 

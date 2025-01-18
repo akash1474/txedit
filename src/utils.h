@@ -6,6 +6,7 @@
 #include <shobjidl.h>
 #include <stdio.h>
 #include "userenv.h"
+#include <commdlg.h>
 
 enum class Fonts{
     JetBrainsMonoNLRegular,
@@ -92,7 +93,7 @@ inline void SetStyleColorDarkness()
 
     ImGuiStyle& style = ImGui::GetStyle();
     style.WindowPadding = ImVec2(8.00f, 8.00f);
-    style.FramePadding = ImVec2(5.00f, 2.00f);
+    style.FramePadding = ImVec2(5.00f, 5.00f);
     style.CellPadding = ImVec2(6.00f, 6.00f);
     style.ItemSpacing = ImVec2(6.00f, 6.00f);
     style.ItemInnerSpacing = ImVec2(6.00f, 6.00f);
@@ -112,7 +113,7 @@ inline void SetStyleColorDarkness()
     style.ScrollbarRounding = 2;
     style.GrabRounding = 2;
     style.LogSliderDeadzone = 2;
-    style.TabRounding = 2;
+    style.TabRounding = 0;
 }
 
 
@@ -213,6 +214,50 @@ inline std::wstring StringToWString(const std::string& utf8_string) {
     MultiByteToWideChar(CP_UTF8, 0, utf8_string.c_str(), (int)utf8_string.size(), &wideString[0], size_needed);
     return wideString;
 }
+
+
+inline std::string SaveFileAs(std::string fileContent)
+{
+    // Initialize the OPENFILENAME structure
+    OPENFILENAMEW ofn = {0};
+    wchar_t fileName[MAX_PATH] = L""; // Buffer for the selected file name
+
+    ofn.lStructSize = sizeof(OPENFILENAME);
+    ofn.hwndOwner = nullptr;       // Owner window handle, nullptr for no owner
+    ofn.lpstrFilter = L"All Files (*.*)\0*.*\0";
+    ofn.lpstrFile = fileName;      // Buffer to receive the file name
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrTitle = L"Save As";    // Title of the dialog box
+    ofn.Flags = OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR ; // Prompt before overwriting a file
+
+    // Open the Save As dialog
+    if (GetSaveFileNameW(&ofn))
+    {
+        // Get the selected file name
+        std::string selectedFileName = ToUTF8(fileName);
+        GL_INFO(selectedFileName);
+
+        // Save the file content to the selected file
+        std::ofstream outFile(selectedFileName);
+        if (outFile)
+        {
+            outFile << fileContent;
+            outFile.close();
+            // std::cout << "File saved successfully: " << selectedFileName << std::endl;
+        }
+        else
+        {
+            GL_CRITICAL("Failed to save the file: {}",selectedFileName);
+        }
+    }
+    else
+    {
+        GL_CRITICAL("Save As dialog was canceled or an error occurred.");
+    }
+
+    return ToUTF8(fileName);
+}
+
 
 inline std::string SelectFolder(){
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
