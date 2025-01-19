@@ -74,9 +74,17 @@
         "extensions": ["java", "class", "jar"],
         "name": "Java"
     },
-    "file_type_javascript": {
+    "file_type_js": {
         "extensions": ["js", "mjs", "cjs"],
         "name": "JavaScript"
+    },
+    "file_type_jsx": {
+        "extensions": ["jsx"],
+        "name": "JSX"
+    },
+    "file_type_tsx": {
+        "extensions": ["tsx"],
+        "name": "TSX"
     },
     "file_type_typescript": {
         "extensions": ["ts", "tsx"],

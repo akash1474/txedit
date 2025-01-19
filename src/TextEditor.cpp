@@ -50,20 +50,11 @@ void Editor::SetLanguageDefinition(const LanguageDefinition & aLanguageDef)
 	mLanguageDefinition = aLanguageDef;
 }
 
-const Editor::LanguageDefinition& Editor::LanguageDefinition::CPlusPlus()
-{
-	static bool inited = false;
-	static LanguageDefinition langDef;
-	return langDef;
-}
-
-
 Editor::Editor()
 {
 	InitPallet();
 	InitFileExtensions();
 	SetPalette(GetGruvboxPalette());
-	SetLanguageDefinition(LanguageDefinition::CPlusPlus());
 	mLines.push_back(Line());
 	workerThread_ = std::thread(&Editor::WorkerThread, this);
 	mState.mCursors.emplace_back(Cursor());
@@ -251,13 +242,16 @@ std::string Editor::GetFileType(){
 
 
 
-bool Editor::Render(bool* aIsOpen,std::string& aUUID){
+bool Editor::Render(bool* aIsOpen,std::string& aUUID,bool& aIsTemp){
 	ImGuiStyle& style=ImGui::GetStyle();
 	float width=style.ScrollbarSize;
 	style.ScrollbarSize=20.0f;
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	if(aIsTemp) ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 	ImGui::Begin(aUUID.c_str(),aIsOpen,this->mBufferModified ?  ImGuiWindowFlags_UnsavedDocument : ImGuiWindowFlags_None);
+		if(aIsTemp) ImGui::PopFont();
+
 		ImGui::PopStyleVar();
 		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[(uint8_t)Fonts::MonoLisaRegular]);
 
@@ -539,7 +533,11 @@ bool Editor::Draw()
 	//Line Number Background
 	mEditorWindow->DrawList->AddRectFilled({mEditorPosition}, {mEditorPosition.x + mLineBarWidth, mEditorSize.y}, mGruvboxPalletDark[(size_t)Pallet::Background]); // LineNo
 	// Highlight Current Lin
-	mEditorWindow->DrawList->AddRectFilled({mEditorPosition.x,mEditorPosition.y+(aCursor.mCursorPosition.mLine*mLineHeight)-scrollY},{mEditorPosition.x+mLineBarWidth, mEditorPosition.y+(aCursor.mCursorPosition.mLine*mLineHeight)-scrollY + mLineHeight},mGruvboxPalletDark[(size_t)Pallet::Highlight]); // Code
+	mEditorWindow->DrawList->AddRectFilled(
+		{mEditorPosition.x,mEditorPosition.y+(aCursor.mCursorPosition.mLine*mLineHeight)-scrollY},
+		{mEditorPosition.x+mLineBarWidth, mEditorPosition.y+(aCursor.mCursorPosition.mLine*mLineHeight)-scrollY + mLineHeight},
+		mGruvboxPalletDark[(size_t)Pallet::Highlight]
+	); // Code
 	mLineHeight = mLineSpacing + mCharacterSize.y;
 
 	//Horizonal scroll Shadow
@@ -572,7 +570,19 @@ bool Editor::Draw()
 		float linePosY =mEditorPosition.y + (lineNo * mLineHeight) + 0.5f*mLineSpacing - scrollY;
 		float linePosX=mEditorPosition.x + mLineBarPadding + (mLineBarMaxCountWidth-GetNumberWidth(lineNo+1))*mCharacterSize.x;
 
+		//Error Highlighting
+		if(mErrorMarkers[lineNo])
+		{
+			mEditorWindow->DrawList->AddRectFilled(
+				{mEditorPosition.x,mEditorPosition.y+(lineNo*mLineHeight)-scrollY},
+				{mEditorPosition.x+mLineBarWidth, mEditorPosition.y+(lineNo*mLineHeight)-scrollY + mLineHeight},
+				mPalette[(size_t)PaletteIndex::RED]
+			); // Code
+		}
+
+		//Line Number
 		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (lineNo==aCursor.mCursorPosition.mLine) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(lineNo + 1).c_str());
+
 	}
 
 	ImGuiID hover_id = ImGui::GetHoveredID();
@@ -943,6 +953,8 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	((namespace_identifier) @namespace
 			(#match? @namespace "^[A-Z]"))
 
+	(ERROR) @error
+
     )";
 
 	// Define a simple query to match syntax elements
@@ -967,6 +979,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	TSQueryCursor* cursor = ts_query_cursor_new();
 	ts_query_cursor_exec(cursor, mQuery, ts_tree_root_node(tree));
     // GL_INFO("Duration:{}",timerx.ElapsedMillis());
+    mErrorMarkers.clear();
 
 	// 5. Highlight matching nodes
 	TSQueryMatch match;
@@ -985,6 +998,15 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 
 		    TSPoint startPoint = ts_node_start_point(node);
 		    TSPoint endPoint = ts_node_end_point(node);
+
+		    if(std::string(captureName)=="error")
+		    {
+		    	for(int i=startPoint.row;i<=endPoint.row;i++)
+		    		mErrorMarkers[i]=true;
+		    	
+		    	continue;
+		    }
+
 		    endPoint.column--;
 
 		    ColorSchemeIdx colorIndex = GetColorSchemeIndexForNode(captureName);

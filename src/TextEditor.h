@@ -197,10 +197,7 @@ public:
 	};
 
 	typedef std::string String;
-	typedef std::unordered_map<std::string, Identifier> Identifiers;
-	typedef std::unordered_set<std::string> Keywords;
-	typedef std::map<int, std::string> ErrorMarkers;
-	typedef std::unordered_set<int> Breakpoints;
+	typedef std::unordered_map<int, bool> ErrorMarkers;
 	typedef std::array<ImU32, (unsigned)PaletteIndex::Max> Palette;
 	typedef uint8_t Char;
 
@@ -214,32 +211,7 @@ public:
 	typedef std::vector<Glyph> Line;
 	typedef std::vector<Line> Lines;
 
-	struct LanguageDefinition {
-		typedef std::pair<std::string, PaletteIndex> TokenRegexString;
-		typedef std::vector<TokenRegexString> TokenRegexStrings;
-		typedef bool (*TokenizeCallback)(const char* in_begin, const char* in_end, const char*& out_begin, const char*& out_end,
-		                                 PaletteIndex& paletteIndex);
-
-		std::string mName;
-		Keywords mKeywords;
-		Identifiers mIdentifiers;
-		Identifiers mPreprocIdentifiers;
-		std::string mCommentStart, mCommentEnd, mSingleLineComment;
-		char mPreprocChar;
-		bool mAutoIndentation;
-
-		TokenizeCallback mTokenize;
-
-		TokenRegexStrings mTokenRegexStrings;
-
-		bool mCaseSensitive;
-
-		LanguageDefinition() : mPreprocChar('#'), mAutoIndentation(true), mTokenize(nullptr), mCaseSensitive(true) {}
-
-		static const LanguageDefinition& CPlusPlus();
-		static const LanguageDefinition& C();
-		static const LanguageDefinition& Lua();
-	};
+	struct LanguageDefinition {};
 
 	struct BracketMatch {
 		bool mHasMatch = false;
@@ -252,6 +224,7 @@ public:
 
 	//TreeSitter Experimental
 	TSQuery* mQuery=nullptr;
+	ErrorMarkers mErrorMarkers;
 
 	TSInputEdit mTSInputEdit;
 	bool mIsSyntaxHighlightingSupportForFile=false;
@@ -478,7 +451,7 @@ public:
 	void LoadFile(const char* filepath);
 	int GetSelectionMode() const { return (int)mSelectionMode; };
 
-	bool Render(bool* aIsOpen,std::string& aUUID);
+	bool Render(bool* aIsOpen,std::string& aUUID,bool& aIsTemp);
 	bool Draw();
 	void HandleKeyboardInputs();
 	void HandleMouseInputs();

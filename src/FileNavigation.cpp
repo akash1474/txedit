@@ -117,7 +117,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
                 	{
                 		GL_INFO("New File:{}",path);
                 		if(!std::filesystem::is_directory(fpath)) 
-                			fpath=std::filesystem::path(fpath).parent_path().generic_string();
+                			fpath=std::filesystem::path(fpath).parent_path().generic_string()+"/";
 
 
                 		StatusBarManager::ShowInputPanel(

@@ -125,7 +125,7 @@ void TabsManager::Render(){
 		ImGui::SetNextWindowDockID(Get().mDockSpaceId, ImGuiCond_FirstUseEver);
 
 		//Rendering the editor and updating the active ptr
-		if(it->editor->Render(&it->isOpen,it->id) && !it->isActive){
+		if(it->editor->Render(&it->isOpen,it->id,it->isTemp) && !it->isActive){
 			for(auto&tab:Get().mTabs) 
 				tab.isActive=false;
 

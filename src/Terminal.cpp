@@ -425,7 +425,7 @@ void Terminal::Draw()
 
 
 	// Highlight Selections
-	if (mSelectionMode == SelectionMode::Word || mSelectionMode == SelectionMode::Line) {
+	if (ImGui::IsWindowFocused() && (mSelectionMode == SelectionMode::Word || mSelectionMode == SelectionMode::Line)) {
 		Coordinates selectionStart = mState.mSelectionStart;
 		Coordinates selectionEnd = mState.mSelectionEnd;
 
