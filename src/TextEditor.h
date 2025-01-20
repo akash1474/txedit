@@ -197,7 +197,7 @@ public:
 	};
 
 	typedef std::string String;
-	typedef std::unordered_map<int, bool> ErrorMarkers;
+	// typedef std::unordered_map<int, bool> ErrorMarkers;
 	typedef std::array<ImU32, (unsigned)PaletteIndex::Max> Palette;
 	typedef uint8_t Char;
 
@@ -224,7 +224,7 @@ public:
 
 	//TreeSitter Experimental
 	TSQuery* mQuery=nullptr;
-	ErrorMarkers mErrorMarkers;
+	// ErrorMarkers mErrorMarkers;
 
 	TSInputEdit mTSInputEdit;
 	bool mIsSyntaxHighlightingSupportForFile=false;
@@ -380,8 +380,8 @@ private:
 		std::vector<Coordinates> mFoundPositions;
 		bool mIsGlobal = false;
 		int mIdx = 0;
-		bool IsValid() const { return mWord.length() > 0; }
-		void SetSearchWord(std::string& word){
+		bool IsValid() const { return mWord.length() > 0 && mFoundPositions.size() > 0; }
+		void SetSearchWord(const std::string& word){
 			mWord=word;
 			mWordLen=GetUTF8StringLength(word);
 		}
@@ -396,10 +396,7 @@ private:
 	};
 	SearchState mSearchState;
 
-	void DisableSearch(){
-		if(mSearchState.IsValid())
-			mSearchState.Reset();
-	}
+	void PerformSearch(const std::string& aWord);
 
 	void HighlightCurrentWordInBuffer();
 	void FindAllOccurancesOfWord(std::string word,size_t aStartLineIdx,size_t aEndLineIdx);
@@ -440,6 +437,18 @@ public:
 
 	EditorState* GetEditorState() { return &mState; }
 	UndoManager* GetUndoMananger() { return &this->mUndoManager; }
+
+	void ExecuteSearch(const std::string& aWord);
+	void GotoNextMatch();
+	void GotoPreviousMatch();
+	void HighlightAllMatches();
+	void DisableSearch(){
+		if(mSearchState.IsValid())
+			mSearchState.Reset();
+	}
+	bool HasSearchStarted(const std::string& aWord){return mSearchState.mWord==aWord && mSearchState.IsValid() && mSearchState.mIsGlobal;}
+
+	std::string GetSelectedText();
 
 	void EnsureCursorVisible();
 	void UpdateSyntaxHighlighting(int aLineNo,int aLineCount=3);

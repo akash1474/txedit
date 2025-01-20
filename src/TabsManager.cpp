@@ -236,3 +236,10 @@ void TabsManager::SaveFile()
 		currTab->editor->SetIsBufferModified(false);
 	}
 }
+
+void TabsManager::DisableSearchForAllTabs(){
+	for(auto& aTab:Get().mTabs)
+	{
+		aTab.editor->DisableSearch();
+	}
+}

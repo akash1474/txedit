@@ -41,6 +41,8 @@ public:
 
 	static void SaveFile();
 
+	static void DisableSearchForAllTabs();
+
 private:
 	TabsManager();
 };

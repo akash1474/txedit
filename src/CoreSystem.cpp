@@ -1,3 +1,4 @@
+#include "imgui_internal.h"
 #include "pch.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
@@ -151,7 +152,7 @@ void CoreSystem::Render()
 
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowPos(viewport->WorkPos);
-	ImVec2 size(viewport->WorkSize.x, StatusBarManager::IsInputPanelOpen()
+	ImVec2 size(viewport->WorkSize.x, StatusBarManager::IsAnyPanelOpen()
 	                                      ? viewport->WorkSize.y - StatusBarManager::StatusBarSize - StatusBarManager::PanelSize
 	                                      : viewport->WorkSize.y - StatusBarManager::StatusBarSize);
 	ImGui::SetNextWindowSize(size);
@@ -202,7 +203,11 @@ void CoreSystem::Render()
 				TabsManager::OpenNewEmptyFile();
 
 			if (ImGui::MenuItem("Open File"))
-				TabsManager::OpenFile(SelectFile().c_str());
+			{
+				std::string path=SelectFile();
+				if(!path.empty())
+					TabsManager::OpenFile(path);
+			}
 
 			if (ImGui::MenuItem("Open Folder")) {
 				std::string path = SelectFolder();
@@ -231,10 +236,15 @@ void CoreSystem::Render()
 
 	if (FileNavigation::IsOpen())
 		FileNavigation::Render();
+
+
 	Get().mTerminal.Render();
 	StatusBarManager::Render(size, viewport);
 	TabsManager::Render();
 	MultiThreading::ImageLoader::LoadImages();
+
+	if(ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_F))
+		StatusBarManager::ShowFileSearchPanel();
 }
 
 

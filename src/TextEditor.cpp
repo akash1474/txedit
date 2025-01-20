@@ -113,13 +113,12 @@ void Editor::LoadFile(const char* filepath){
 	size_t fileSize = file.tellg();
 	file.seekg(0,std::ios::beg);
 	
-	std::string content(fileSize, '\0');
+	std::string content(fileSize, ' ');
 	file.read(&content[0], fileSize);
 
 	//Trimming the spaces located at the last line at the end
-	content.erase(std::find_if(content.rbegin(), content.rend(), [](char ch) {
-        return std::isspace(ch);
-    }).base(), content.end());
+	while(content.size()>0 && content[content.size()-1]==' ')
+		content.pop_back();
 
 	this->SetBuffer(content);
 	isFileLoaded=true;
@@ -313,8 +312,6 @@ bool Editor::Draw()
 
 	mLinePosition = ImVec2({mEditorPosition.x + mLineBarWidth + mPaddingLeft, mEditorPosition.y});
 	mLineHeight = mLineSpacing + mCharacterSize.y;
-
-	mSelectionMode = SelectionMode::Normal;
 
 	const ImGuiIO& io = ImGui::GetIO();
 
@@ -570,15 +567,15 @@ bool Editor::Draw()
 		float linePosY =mEditorPosition.y + (lineNo * mLineHeight) + 0.5f*mLineSpacing - scrollY;
 		float linePosX=mEditorPosition.x + mLineBarPadding + (mLineBarMaxCountWidth-GetNumberWidth(lineNo+1))*mCharacterSize.x;
 
-		//Error Highlighting
-		if(mErrorMarkers[lineNo])
-		{
-			mEditorWindow->DrawList->AddRectFilled(
-				{mEditorPosition.x,mEditorPosition.y+(lineNo*mLineHeight)-scrollY},
-				{mEditorPosition.x+mLineBarWidth, mEditorPosition.y+(lineNo*mLineHeight)-scrollY + mLineHeight},
-				mPalette[(size_t)PaletteIndex::RED]
-			); // Code
-		}
+		// //Error Highlighting
+		// if(mErrorMarkers[lineNo])
+		// {
+		// 	mEditorWindow->DrawList->AddRectFilled(
+		// 		{mEditorPosition.x,mEditorPosition.y+(lineNo*mLineHeight)-scrollY},
+		// 		{mEditorPosition.x+mLineBarWidth, mEditorPosition.y+(lineNo*mLineHeight)-scrollY + mLineHeight},
+		// 		mPalette[(size_t)PaletteIndex::RED]
+		// 	); // Code
+		// }
 
 		//Line Number
 		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (lineNo==aCursor.mCursorPosition.mLine) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(lineNo + 1).c_str());
@@ -979,7 +976,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	TSQueryCursor* cursor = ts_query_cursor_new();
 	ts_query_cursor_exec(cursor, mQuery, ts_tree_root_node(tree));
     // GL_INFO("Duration:{}",timerx.ElapsedMillis());
-    mErrorMarkers.clear();
+    // mErrorMarkers.clear();
 
 	// 5. Highlight matching nodes
 	TSQueryMatch match;
@@ -999,13 +996,13 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 		    TSPoint startPoint = ts_node_start_point(node);
 		    TSPoint endPoint = ts_node_end_point(node);
 
-		    if(std::string(captureName)=="error")
-		    {
-		    	for(int i=startPoint.row;i<=endPoint.row;i++)
-		    		mErrorMarkers[i]=true;
+		    // if(std::string(captureName)=="error")
+		    // {
+		    // 	for(int i=startPoint.row;i<=endPoint.row;i++)
+		    // 		mErrorMarkers[i]=true;
 		    	
-		    	continue;
-		    }
+		    // 	continue;
+		    // }
 
 		    endPoint.column--;
 
@@ -1432,53 +1429,152 @@ std::pair<int, int> Editor::GetIndexOfWordAtCursor(const Coordinates& coords) co
     return {start_idx, end_idx};
 }
 
+void Editor::ExecuteSearch(const std::string& aWord)
+{
+	OpenGL::ScopedTimer timer("Editor::ExecuteSearch");
+	if(aWord.empty())
+	{
+		DisableSearch();
+		return;
+	}
+	PerformSearch(aWord);
+	GotoNextMatch();
+}
+
+
+void Editor::GotoNextMatch()
+{
+	if(!mSearchState.IsValid()) 
+		return;
+
+	OpenGL::ScopedTimer timer("Editor::GotoNextMatch");
+	const Coordinates& coord = mSearchState.mFoundPositions[mSearchState.mIdx];
+	ScrollToLineNumber(coord.mLine);
+
+	Cursor& aCursor=GetCurrentCursor();
+	aCursor.mSelectionStart = aCursor.mSelectionEnd = coord;
+	aCursor.mSelectionEnd.mColumn = coord.mColumn + mSearchState.mWordLen;
+	aCursor.mCursorPosition = aCursor.mSelectionEnd;
+
+	GL_INFO("[{}  {} {}]", aCursor.mSelectionStart.mColumn, aCursor.mSelectionEnd.mColumn, mSearchState.mWord.size());
+
+
+	mSearchState.mIdx++;
+
+	if (mSearchState.mIdx == mSearchState.mFoundPositions.size())
+		mSearchState.mIdx = 0;
+}
+
+
+void Editor::GotoPreviousMatch()
+{
+	if(!mSearchState.IsValid()) 
+		return;
+
+	OpenGL::ScopedTimer timer("Editor::GotoPreviousMatch");
+	if(mSearchState.mIdx == 0)
+		mSearchState.mIdx=mSearchState.mFoundPositions.size()-1;
+	else 
+		mSearchState.mIdx--;
+
+	const Coordinates& coord = mSearchState.mFoundPositions[mSearchState.mIdx];
+	ScrollToLineNumber(coord.mLine);
+
+	Cursor& aCursor=GetCurrentCursor();
+	aCursor.mSelectionStart = aCursor.mSelectionEnd = coord;
+	aCursor.mSelectionEnd.mColumn = coord.mColumn + mSearchState.mWordLen;
+	aCursor.mCursorPosition = aCursor.mSelectionEnd;
+
+	// GL_INFO("[{}  {} {}]", aCursor.mSelectionStart.mColumn, aCursor.mSelectionEnd.mColumn, mSearchState.mWord.size());
+}
+
+void Editor::HighlightAllMatches()
+{
+	if(!mSearchState.IsValid())
+		return;
+
+	OpenGL::ScopedTimer timer("Editor::HighlightAllMatches");
+	ClearCursors();
+	for(Coordinates& aMatchCoord:mSearchState.mFoundPositions)
+	{
+		Cursor nCursor;
+
+		nCursor.mSelectionStart = nCursor.mSelectionEnd = aMatchCoord;
+		nCursor.mSelectionEnd.mColumn = aMatchCoord.mColumn + mSearchState.mWordLen;
+		nCursor.mCursorPosition = nCursor.mSelectionEnd;
+
+		mState.mCursors.push_back(nCursor);
+		mState.mCurrentCursorIdx++;
+	}
+
+	DisableSearch();
+}
+
+void Editor::PerformSearch(const std::string& aWord)
+{
+	OpenGL::ScopedTimer timer("Editor::PerformSearch");
+	if(!(aWord==mSearchState.mWord && mSearchState.mIsGlobal))
+	{
+		mSearchState.SetSearchWord(aWord);
+		mSearchState.mIsGlobal=true;
+		mSearchState.mIdx=0;
+
+		GL_INFO("WORD:{} Len:{}",aWord,mSearchState.mWordLen);
+
+		FindAllOccurancesOfWord(aWord,0,mLines.size()-1);
+	}
+
+
+	auto& aCursor=GetCurrentCursor();
+	// Find coord of match closest to current line
+	int minDist=mLines.size();
+	for(int i=0;i<mSearchState.mFoundPositions.size();i++)
+	{
+		int dist=std::abs(mSearchState.mFoundPositions[i].mLine-aCursor.mCursorPosition.mLine);
+		if(dist<minDist)
+		{
+			mSearchState.mIdx=i;
+			minDist=dist;
+		}
+		else if(dist > minDist)
+			break; //As the match positions are sorted
+	}
+}
 
 
 void Editor::HandleCtrlD(){
 	//First time
-	auto& aCursor=GetCurrentCursor();
 	if(mSelectionMode!=SelectionMode::Word)
 	{
+		auto& aCursor=GetCurrentCursor();
 		if(!HasSelection(aCursor))
+		{
 			SelectWordUnderCursor(aCursor);
+			// if still no selection then search can't be performed
+			if(!HasSelection(aCursor))
+				return;
+		}
 
-		if(!HasSelection(aCursor))
-			return;
+		const std::string word=GetSelectedText(aCursor);
+		PerformSearch(word);
 
 		mSelectionMode=SelectionMode::Word;
-		std::string word=GetText(aCursor.mSelectionStart,aCursor.mSelectionEnd);
-
-		mSearchState.SetSearchWord(word);
-		mSearchState.mIsGlobal=true;
-
-		GL_INFO("WORD:{} Len:{}",word,mSearchState.mWordLen);
-
-		FindAllOccurancesOfWord(word,0,mLines.size()-1);
-
-		// Finding Index of Position same as currentLine to get next occurance
-		auto it = std::find_if(
-			mSearchState.mFoundPositions.begin(), mSearchState.mFoundPositions.end(),
-		    [&](const auto& coord) { return coord.mLine == aCursor.mCursorPosition.mLine; 
-		});
-
-		if (it != mSearchState.mFoundPositions.end())
-		{
-			const Coordinates& coord=*it;
-
-			mSearchState.mIdx = std::min(
-				(int)mSearchState.mFoundPositions.size() - 1,
-			    (int)std::distance(mSearchState.mFoundPositions.begin(), it) + 1
-			);
-		}
+		mSearchState.mIdx++;
 	}
 	else
 	{
-		if(!mSearchState.IsValid()) return;
-		// assert(false && "Feature not implemented!");
+		if(!mSearchState.IsValid()) 
+			return;
+
+		// We have added cursors at all the matched positions
+		if(mSearchState.mFoundPositions.size() == mState.mCursors.size())
+			return;
 
 		GL_INFO("Finding Next");
 		const Coordinates& coord = mSearchState.mFoundPositions[mSearchState.mIdx];
 		ScrollToLineNumber(coord.mLine);
+
+
 
 		Cursor nCursor;
 		nCursor.mSelectionStart = nCursor.mSelectionEnd = coord;
@@ -1486,8 +1582,10 @@ void Editor::HandleCtrlD(){
 		GL_INFO("[{}  {} {}]", nCursor.mSelectionStart.mColumn, nCursor.mSelectionEnd.mColumn, mSearchState.mWord.size());
 
 		nCursor.mCursorPosition = nCursor.mSelectionEnd;
+
 		mState.mCursors.push_back(nCursor);
 		mState.mCurrentCursorIdx++;
+
 		mSearchState.mIdx++;
 
 		if (mSearchState.mIdx == mSearchState.mFoundPositions.size())
@@ -1573,28 +1671,33 @@ void Editor::ScrollToLineNumber(int aToLine,bool aAnimate){
 
 	aToLine=std::max(0,std::min((int)mLines.size()-1,aToLine));
 
-	int start = std::min((int)mLines.size()-1,(int)floor(ImGui::GetScrollY() / mLineHeight));
+	int start = std::min((int)mLines.size()-1,(int)floor(mEditorWindow->Scroll.y / mLineHeight));
 	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
-	int end = std::min(start+lineCount+1,(int)mLines.size()) - 1;
+	int end = std::min(start+lineCount,(int)mLines.size()-1);
 	int currLine=GetCurrentCursor().mCursorPosition.mLine;
 
 	GL_INFO("StartLine:{} EndLine:{}",start,end);
 
-	if(aToLine > start && aToLine < end) return;
 
-	int diff=std::abs(aToLine-currLine+2);
+	if(aToLine > (start+1) && aToLine < (end-1)) 
+		return;
+
+
+	int diff=aToLine-start;
+	diff= diff < 0 ? diff-4 : aToLine-end+4;
 	mScrollAmount=diff*mLineHeight;
+	GL_INFO("To:{},From:{}, Diff:{}, sAmount:{}",aToLine,currLine,diff,mScrollAmount);
 
 	if(!aAnimate){
-		ImGui::SetScrollY(ImGui::GetScrollY() + mScrollAmount);
+		mEditorWindow->Scroll.y += mScrollAmount;
 		return;
 	}
 
 	//Handling quick change in nextl
 	if((ImGui::GetTime()-mLastClick)<0.25f){
-		ImGui::SetScrollY(ImGui::GetScrollY() + mScrollAmount);
+		mEditorWindow->Scroll.y += mScrollAmount;
 	}else{
-		mInitialScrollY=ImGui::GetScrollY();
+		mInitialScrollY=mEditorWindow->Scroll.y;
 		mScrollAnimation.start();
 	}
 
@@ -1628,7 +1731,7 @@ std::string Editor::GetText()
 
 std::string Editor::GetText(const Coordinates& aStart, const Coordinates& aEnd) const
 {
-	assert(aStart < aEnd);
+	assert(aStart <= aEnd);
 
 	std::string result;
 	auto lstart = aStart.mLine;
@@ -1664,6 +1767,10 @@ std::string Editor::GetText(const Coordinates& aStart, const Coordinates& aEnd) 
 	return result;
 }
 
+std::string Editor::GetSelectedText(){
+	auto& aCursor=GetCurrentCursor();
+	return std::move(GetSelectedText(aCursor));
+}
 
 std::string Editor::GetSelectedText(const Cursor& aCursor) const { 
 	return std::move(GetText(aCursor.mSelectionStart, aCursor.mSelectionEnd)); 
