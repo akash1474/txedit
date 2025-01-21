@@ -13,6 +13,9 @@ void StatusBarManager::Init(){
 }
 
 bool StatusBarManager::IsInputPanelOpen(){ return mIsInputPanelOpen;}
+bool StatusBarManager::IsCaseSensitiveSearch(){return mIsCaseSensitive;}
+bool StatusBarManager::IsRegexSearch(){return mIsRegexSearch;}
+bool StatusBarManager::IsWholeWordSearch(){return mIsWholeWordSearch;}
 
 
 ImVec4 StatusBarManager::GetNotificationColor(NotificationType type){
@@ -238,6 +241,9 @@ void StatusBarManager::RenderFileSearchPanel(ImVec2& size,const ImGuiViewport* v
 		if(clicked)
 		{
 			mIsCaseSensitive=!mIsCaseSensitive;
+			Editor* currentEditor=TabsManager::GetCurrentActiveTextEditor();
+			currentEditor->DisableSearch();
+			currentEditor->ExecuteSearch(mSearchInputBuffer);
 		}
 
 
@@ -254,12 +260,35 @@ void StatusBarManager::RenderFileSearchPanel(ImVec2& size,const ImGuiViewport* v
 		if(clicked)
 		{
 			mIsRegexSearch=!mIsRegexSearch;
+			Editor* currentEditor=TabsManager::GetCurrentActiveTextEditor();
+			currentEditor->DisableSearch();
+			currentEditor->ExecuteSearch(mSearchInputBuffer);
 		}
+
+
+		ImGui::SameLine();
+
+		if(mIsWholeWordSearch)
+		{
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImColor(215, 153, 33, 255).Value);
+			ImGui::PushStyleColor(ImGuiCol_Text,ImColor(0,0,0).Value);
+		}
+		clicked=Button("\"\"","Whole Word",{7.0f,6.0f},mIsWholeWordSearch ? ImColor(250, 189, 47, 255).Value : ImGui::GetStyle().Colors[ImGuiCol_Border]);
+		if(mIsWholeWordSearch) ImGui::PopStyleColor(2);
+
+		if(clicked)
+		{
+			mIsWholeWordSearch=!mIsWholeWordSearch;
+			Editor* currentEditor=TabsManager::GetCurrentActiveTextEditor();
+			currentEditor->DisableSearch();
+			currentEditor->ExecuteSearch(mSearchInputBuffer);
+		}
+
 
 
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(4.0f,6.0f));
 		ImGui::PushStyleColor(ImGuiCol_FrameBg,ImGui::GetStyle().Colors[ImGuiCol_MenuBarBg]);
-		const float inputWidth= viewport->WorkSize.x-360.0f;
+		const float inputWidth= viewport->WorkSize.x-400.0f;
 		ImGui::PushItemWidth(inputWidth);
 		ImGui::SameLine();
 		if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))

@@ -418,10 +418,6 @@ void Editor::InsertCharacter(char chr){
 	SetIsBufferModified(true);
 }
 
-/*
-	- 
-
-*/
 void Editor::MoveTop(bool aShift)
 {
 	DisableSearch();

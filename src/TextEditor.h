@@ -434,6 +434,7 @@ public:
 	std::string fileType;
 	void SetBuffer(const std::string& buffer);
 	void ClearEditor();
+	ImGuiWindow* GetImGuiWindowPtr(){return mEditorWindow;}
 
 	EditorState* GetEditorState() { return &mState; }
 	UndoManager* GetUndoMananger() { return &this->mUndoManager; }

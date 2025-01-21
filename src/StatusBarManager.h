@@ -32,8 +32,13 @@ namespace StatusBarManager{
 	static inline bool mIsCallbackEx=false;
 	static inline char mInputTextBuffer[1024];
 	static inline char mSearchInputBuffer[1024];
-	static inline bool mIsCaseSensitive=false;
+	static inline bool mIsCaseSensitive=true;
 	static inline bool mIsRegexSearch=false;
+	static inline bool mIsWholeWordSearch=false;
+
+	bool IsCaseSensitiveSearch();
+	bool IsRegexSearch();
+	bool IsWholeWordSearch();
 
 
 	void Init();

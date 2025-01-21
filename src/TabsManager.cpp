@@ -49,6 +49,11 @@ bool TabsManager::OpenNewEmptyFile(){
 	return OpenFile("",true);
 }
 
+void TabsManager::OpenFileWithAtLineNumber(const std::string& aFilePath,int aLineNumber){
+	OpenFile(aFilePath);
+	Get().mLineNumberToScroll=aLineNumber;
+}
+
 bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 {
 	GL_INFO("Opening File:{}",aFilePath);
@@ -108,6 +113,7 @@ bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 
 		it->isActive=true;
 		it->isTemp=false;
+		ImGui::FocusWindow(it->winPtr);
 	}
 
 
@@ -130,6 +136,12 @@ void TabsManager::Render(){
 				tab.isActive=false;
 
 			it->isActive=true;
+		}
+
+		//Updating the windowptr
+		if(it->winPtr==nullptr)
+		{
+			it->winPtr=it->editor->GetImGuiWindowPtr();
 		}
 
 		// if(ImGui::IsItemClicked(ImGuiMouseButton_Left) && ImGui::GetIO().MouseDoubleClicked[0])
@@ -199,6 +211,11 @@ void TabsManager::Render(){
 	// 	ImGui::EndPopup();
 	// }
 	// ImGui::PopStyleVar();
+	if(Get().mLineNumberToScroll>-1)
+	{
+		GetCurrentActiveTextEditor()->ScrollToLineNumber(Get().mLineNumberToScroll);
+		Get().mLineNumberToScroll=-1;
+	}
 
 }
 
@@ -225,7 +242,8 @@ void TabsManager::SaveFile()
 	else
 	{
 		std::ofstream file(currTab->filepath, std::ios::trunc);
-		if (!file.is_open()) {
+		if (!file.is_open()) 
+		{
 			GL_INFO("ERROR SAVING");
 			return;
 		}

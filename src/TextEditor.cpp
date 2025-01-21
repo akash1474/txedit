@@ -12,6 +12,7 @@
 #include <ctype.h>
 #include <filesystem>
 #include <ios>
+#include <regex>
 #include <stdint.h>
 
 #include <cctype>
@@ -513,13 +514,16 @@ bool Editor::Draw()
 
 
 	//Cursors
-	for(const Cursor& cursor:mState.mCursors){
-		ImVec2 linePos = GetLinePosition(cursor.mCursorPosition);
-		float cx = TextDistanceFromLineStart(cursor.mCursorPosition);
-
-		ImVec2 cstart(linePos.x+mLineBarWidth+mPaddingLeft + cx - 1.0f, linePos.y);
-		ImVec2 cend(linePos.x+mLineBarWidth+mPaddingLeft + cx+1.0f, linePos.y + mLineHeight);
-		mEditorWindow->DrawList->AddRectFilled(cstart,cend,ImColor(255, 255, 255, 255));
+	if(ImGui::IsWindowFocused())
+	{
+		for(const Cursor& cursor:mState.mCursors){
+			ImVec2 linePos = GetLinePosition(cursor.mCursorPosition);
+			float cx = TextDistanceFromLineStart(cursor.mCursorPosition);
+			
+			ImVec2 cstart(linePos.x+mLineBarWidth+mPaddingLeft + cx - 1.0f, linePos.y);
+			ImVec2 cend(linePos.x+mLineBarWidth+mPaddingLeft + cx+1.0f, linePos.y + mLineHeight);
+			mEditorWindow->DrawList->AddRectFilled(cstart,cend,ImColor(255, 255, 255, 255));
+		}
 	}
 
 
@@ -773,8 +777,10 @@ void Editor::DebouncedReparse()
     cv_.notify_one();
 }
 
-void Editor::WorkerThread() {
-    while (true) {
+void Editor::WorkerThread() 
+{
+    while (true) 
+    {
         std::unique_lock<std::mutex> lock(mutex_);
         
         cv_.wait(lock, [this] { return needsUpdate_ || terminate_; });
@@ -1302,7 +1308,7 @@ void Editor::HighlightCurrentWordInBuffer() {
 }
 
 // FIX: Needs a find function to search for a substring in buffer
-void Editor::FindAllOccurancesOfWord(std::string word,size_t aStartLineIdx,size_t aEndLineIdx){
+void Editor::FindAllOccurancesOfWord(std::string aWord,size_t aStartLineIdx,size_t aEndLineIdx){
 
 	OpenGL::ScopedTimer timer("Editor::FindAllOccurancesOfWord");
 	mSearchState.mFoundPositions.clear();
@@ -1314,17 +1320,46 @@ void Editor::FindAllOccurancesOfWord(std::string word,size_t aStartLineIdx,size_
 
 		size_t searchOffset=0;
 		std::string clText=GetText(Coordinates(i,0),Coordinates(i,GetLineMaxColumn(i)));
-        while ((searchOffset = clText.find(word, searchOffset)) != std::string::npos) {
 
-            size_t startIndex = searchOffset;
-            size_t endIndex = searchOffset + word.length() - 1;
+		if(StatusBarManager::IsRegexSearch() || !StatusBarManager::IsCaseSensitiveSearch() || StatusBarManager::IsWholeWordSearch())
+		{
+		    std::regex_constants::syntax_option_type options = std::regex_constants::ECMAScript;
+		    if (!StatusBarManager::IsCaseSensitiveSearch())
+		        options |= std::regex_constants::icase; // Add case-insensitivity flag
+		    
+		    std::string regexPattern = StatusBarManager::IsWholeWordSearch() ?  "\\b" + aWord + "\\b" :  aWord;
+		    std::regex pattern(regexPattern, options);
+		    std::smatch match;
+		    
+		    std::string::const_iterator searchStart(clText.cbegin());
+		    
+		    // Search for matches using regex
+		    while (std::regex_search(searchStart, clText.cend(), match, pattern)) {
+		        // Store the start index of the match
+		        size_t idx=match.position() + std::distance(clText.cbegin(), searchStart);
+		        mSearchState.mFoundPositions.emplace_back(i,GetCharacterColumn(i,idx));
+		        GL_TRACE("Line {} : Found '{}' at [{},{}] ",i+1,aWord,idx,idx+mSearchState.mWordLen);
+		        
+		        // Move the search start to after the last match
+		        searchStart += match.position() + match.length();
+		    }
+
+		}
+		else
+		{
+	        while ((searchOffset = clText.find(aWord, searchOffset)) != std::string::npos) {
+
+	            size_t startIndex = searchOffset;
+	            size_t endIndex = searchOffset + aWord.length() - 1;
 
 
-            GL_TRACE("Line {} : Found '{}' at [{},{}] ",i+1,word,startIndex,endIndex);
+	            GL_TRACE("Line {} : Found '{}' at [{},{}] ",i+1,aWord,startIndex,endIndex);
 
-            mSearchState.mFoundPositions.emplace_back(i,GetCharacterColumn(i,startIndex));
-            searchOffset = endIndex + 1;
-        }
+	            mSearchState.mFoundPositions.emplace_back(i,GetCharacterColumn(i,startIndex));
+	            searchOffset = endIndex + 1;
+	        }
+		}
+
 	}
 }
 

@@ -15,6 +15,7 @@
 #include "Terminal.h"
 #include "FileNavigation.h"
 #include "TabsManager.h"
+#include "DirectoryFinder.h"
 
 #ifdef min
 	#undef min
@@ -184,7 +185,7 @@ void CoreSystem::Render()
 			Get().mRightDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Right, 0.3f, nullptr, &Get().mDockSpaceId);
 			auto dock_id_left_bottom = ImGui::DockBuilderSplitNode(Get().mLeftDockSpaceId, ImGuiDir_Down, 0.3f, nullptr, &Get().mLeftDockSpaceId);
 			ImGui::DockBuilderDockWindow("Project Directory", Get().mLeftDockSpaceId);
-			// ImGui::DockBuilderDockWindow("#editor_container", Get().mRightDockSpaceId);
+			ImGui::DockBuilderDockWindow("Directory Finder", Get().mRightDockSpaceId);
 			ImGui::DockBuilderDockWindow("Terminal", dock_id_left_bottom);
 #ifdef GL_DEBUG
 			ImGui::DockBuilderDockWindow("Dear ImGui Demo", Get().mLeftDockSpaceId);
@@ -240,11 +241,21 @@ void CoreSystem::Render()
 
 	Get().mTerminal.Render();
 	StatusBarManager::Render(size, viewport);
+	DirectoryFinder::Render();
 	TabsManager::Render();
 	MultiThreading::ImageLoader::LoadImages();
 
 	if(ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_F))
 		StatusBarManager::ShowFileSearchPanel();
+
+	if(ImGui::IsKeyDown(ImGuiKey_ModShift) && ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_F))
+	{
+		auto& folders=FileNavigation::GetFolders();
+		if(!folders.empty())
+		{
+			DirectoryFinder::Setup(folders[0]);
+		}	
+	}
 }
 
 

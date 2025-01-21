@@ -11,6 +11,7 @@ struct FileTab{
 	bool isActive=false;
 	bool isSaved=false;
 	bool isOpen=true;
+	ImGuiWindow* winPtr=nullptr;
 	std::string id;
 	Editor* editor;
 	FileTab(std::string path,std::string file,bool temp,bool active,bool save,std::string idx)
@@ -20,6 +21,7 @@ struct FileTab{
 class TabsManager{
 	std::vector<FileTab> mTabs;
 	ImGuiID mDockSpaceId;
+	int mLineNumberToScroll=-1;
 
 
 public:
@@ -35,6 +37,7 @@ public:
 
 	static void SetNewTabsDockSpaceId(ImGuiID aMainDockSpaceId);
 	static bool OpenFile(std::string filepath,bool isTemp=true);
+	static void OpenFileWithAtLineNumber(const std::string& aFilePath,int aLineNumber);
 	//Call when creating a new file
 	static bool OpenNewEmptyFile();
 	static void Render();
