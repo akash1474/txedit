@@ -428,8 +428,28 @@ private:
 	void InitFileExtensions();
 	std::map<std::string, std::string> FileExtensions;
 
-
 public:
+	struct Highlight{
+		Coordinates aStart,aEnd;
+		int iStart,iEnd;
+		int lineNo;
+		bool isPresent{0};
+		float startTime;
+	};
+
+	
+	Highlight mHighlight;
+
+	inline bool IsHighlightPresent()const
+	{
+		return mHighlight.isPresent;
+	}
+
+	void RenderHighlight(const Highlight& aHighlight);
+	void CreateHighlight(int aLineNumber,int aStartIndex,int aEndIndex);
+
+
+
 	float maxLineWidth{0.0f}; // max horizontal scroll;
 	std::string fileType;
 	void SetBuffer(const std::string& buffer);

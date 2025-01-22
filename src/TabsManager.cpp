@@ -49,16 +49,19 @@ bool TabsManager::OpenNewEmptyFile(){
 	return OpenFile("",true);
 }
 
-void TabsManager::OpenFileWithAtLineNumber(const std::string& aFilePath,int aLineNumber){
-	OpenFile(aFilePath);
-	Get().mLineNumberToScroll=aLineNumber;
+void TabsManager::OpenFileWithAtLineNumber(const std::string& aFilePath,int aLineNumber,int aStartIndex,int aEndIndex){
+	FileTab* openedTab=OpenFile(aFilePath);
+	if(openedTab)
+	{
+		Get().mLineNumberToScroll=aLineNumber;
+		openedTab->editor->CreateHighlight(aLineNumber, aStartIndex, aEndIndex);
+	}
 }
 
-bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
+FileTab* TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 {
 	GL_INFO("Opening File:{}",aFilePath);
-	// static UUIDv4::UUIDGenerator<std::mt19937_64> mUIDGenerator;
-	// UUIDv4::UUID uuid = mUIDGenerator.getUUID();
+
 	std::filesystem::path path(aFilePath);
 	std::string uuid=path.filename().generic_u8string() + "##" + std::to_string((int)&Get());
 	GL_INFO(uuid);
@@ -69,7 +72,7 @@ bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 		FileTab& aTab=Get().mTabs.back();
 		aTab.editor=new Editor();
 		aTab.editor->LoadFile(aFilePath.c_str());
-		return true;
+		return &aTab;
 	}
 
 
@@ -103,6 +106,7 @@ bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 			aTab.editor=new Editor();
 			aTab.editor->LoadFile(aFilePath.c_str());
 		// }
+		return &aTab;
 
 	}
 	else //Reusing/Reactivating the previous one
@@ -114,11 +118,12 @@ bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 		it->isActive=true;
 		it->isTemp=false;
 		ImGui::FocusWindow(it->winPtr);
+		return &(*it);
 	}
 
 
 
-	return true;
+	return nullptr;
 }
 
 

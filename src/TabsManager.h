@@ -36,8 +36,8 @@ public:
 	static FileTab* GetCurrentActiveTab();
 
 	static void SetNewTabsDockSpaceId(ImGuiID aMainDockSpaceId);
-	static bool OpenFile(std::string filepath,bool isTemp=true);
-	static void OpenFileWithAtLineNumber(const std::string& aFilePath,int aLineNumber);
+	static FileTab* OpenFile(std::string filepath,bool isTemp=true);
+	static void OpenFileWithAtLineNumber(const std::string& aFilePath,int aLineNumber,int aStartIndex,int aEndIndex);
 	//Call when creating a new file
 	static bool OpenNewEmptyFile();
 	static void Render();

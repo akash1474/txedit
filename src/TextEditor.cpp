@@ -247,26 +247,21 @@ bool Editor::Render(bool* aIsOpen,std::string& aUUID,bool& aIsTemp){
 	float width=style.ScrollbarSize;
 	style.ScrollbarSize=20.0f;
 
+	bool isWindowFocused=false;
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	if(aIsTemp) ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-	ImGui::Begin(aUUID.c_str(),aIsOpen,this->mBufferModified ?  ImGuiWindowFlags_UnsavedDocument : ImGuiWindowFlags_None);
-		if(aIsTemp) ImGui::PopFont();
+	if(ImGui::Begin(aUUID.c_str(),aIsOpen,this->mBufferModified ?  ImGuiWindowFlags_UnsavedDocument : ImGuiWindowFlags_None))
+	{
 
-		ImGui::PopStyleVar();
-		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[(uint8_t)Fonts::MonoLisaRegular]);
-
-		bool isWindowFocused=ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+		isWindowFocused=ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
 
 		if(isWindowFocused)
 			ImGui::SetNextWindowFocus();
-		// else if(!ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
-		// {
-		// 	ImGui::PopFont();
-		// 	ImGui::End();  // #text_editor
-		// 	return false;
-		// }
-		// 	GL_INFO("Collapsed:{}",aUUID);
+
+		// GL_INFO("Rendering:{}",aUUID);
+		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[(uint8_t)Fonts::MonoLisaRegular]);
 		this->Draw();
+		ImGui::PopFont();
 
 
 		//Executes once when we focus on window
@@ -275,8 +270,9 @@ bool Editor::Render(bool* aIsOpen,std::string& aUUID,bool& aIsTemp){
 		}
 
 		style.ScrollbarSize=width;
-		ImGui::PopFont();
+	}
 	ImGui::End();  // #text_editor
+	ImGui::PopStyleVar();
 
 	return isWindowFocused;
 }
@@ -436,7 +432,6 @@ bool Editor::Draw()
 	auto drawList = ImGui::GetWindowDrawList();
 	float spaceSize = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, " ", nullptr, nullptr).x;
 
-	//Rendering Lines and Vertical Indentation Lines
 	for (int lineNo=start;lineNo < end;lineNo++) {
 
 		Line& line=mLines[lineNo];
@@ -480,6 +475,7 @@ bool Editor::Draw()
 		}
 
 
+		//Indentation line rendering
 		if(mLines[lineNo].empty()){
 			int i=i_prev;
 			while(i>-1){
@@ -506,6 +502,11 @@ bool Editor::Draw()
 
 			if(mBracketMatch.mEndBracket.mLine==lineNo)
 				HighlightBracket(mBracketMatch.mEndBracket);
+		}
+
+		if(mHighlight.isPresent)
+		{
+			RenderHighlight(mHighlight);
 		}
 	}
 
@@ -600,6 +601,38 @@ bool Editor::Draw()
 // 	DebugDisplayNearByText();
 // #endif
 	return true;
+}
+
+void Editor::RenderHighlight(const Highlight& aHighlight)
+{
+	ImVec2 linePos=GetLinePosition(mHighlight.aStart);
+	float leftOffset=mLineBarWidth+mPaddingLeft;	
+	linePos.x+=leftOffset;
+
+	ImVec2 pos(linePos.x+(mHighlight.aStart.mColumn*mCharacterSize.x)-1.0f,linePos.y);
+
+	float currentTime=(float)ImGui::GetTime();
+	float alpha = 0.35f + 0.35f * sinf(currentTime * 2.0f);
+
+	mEditorWindow->DrawList->AddRect(pos,{linePos.x+(mHighlight.aEnd.mColumn*mCharacterSize.x)+1.0f,linePos.y+mLineHeight}, IM_COL32(250, 189, 47, 255));
+	float diff=currentTime - mHighlight.startTime;
+	if(diff > 2.0f)
+	{
+		mHighlight.startTime=0.0f;
+		mHighlight.isPresent=false;
+	}
+}
+
+void Editor::CreateHighlight(int aLineNumber,int aStartIndex,int aEndIndex){
+	mHighlight.aStart=Coordinates(aLineNumber,GetCharacterColumn(aLineNumber, aStartIndex));
+	mHighlight.aEnd=Coordinates(aLineNumber,GetCharacterColumn(aLineNumber, aEndIndex));
+
+	auto& aCursor = GetCurrentCursor();
+	aCursor.mCursorPosition=aCursor.mSelectionEnd=mHighlight.aEnd;
+	aCursor.mSelectionStart=mHighlight.aStart;
+
+	mHighlight.isPresent=true;
+	mHighlight.startTime=(float)ImGui::GetTime();
 }
 
 void Editor::HighlightBracket(const Coordinates& aCoords){
@@ -818,7 +851,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
     TSTree* tree = ts_parser_parse_string(parser, nullptr, sourceCode.c_str(), sourceCode.size());
 
 	static std::string query_string = R"(
-	[   
+	[
 		"if" 
 		"else" 
 		"while" 

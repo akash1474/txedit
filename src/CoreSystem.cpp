@@ -42,6 +42,7 @@ void ShowFPS()
 	ImGui::Text("FPS: %.1f", fps);
 }
 
+float EaseOutQuadraticFn(float t) { return 1.0f - pow(1.0f - t, 4);}
 
 void CoreSystem::RenderDebugInfo()
 {
@@ -55,7 +56,19 @@ void CoreSystem::RenderDebugInfo()
 	const char* utf8 = "Mastering » Ñandú.txt";
 	ImGui::Text("%s", utf8);
 	ImGui::Text("Length:%d", ImTextCountCharsFromUtf8(utf8, 0));
-	ImGui::Text("Time:%f", glfwGetTime());
+	ImGui::Text("GLFW::Time:%f", glfwGetTime());
+	ImGui::Text("ImGui::Time:%f", (float)ImGui::GetTime());
+	static float add=0.5f,scale=0.5f;
+	static int speed=2;
+	ImGui::SliderInt("Speed", &speed, 1, 10);
+	ImGui::SliderFloat("Added", &add, 0.0f, 1.0f);
+	ImGui::SliderFloat("Scale", &scale, 0.0f, 1.0f);
+	float alpha = add + scale * sin((float)ImGui::GetTime() * speed);
+	float value=EaseOutQuadraticFn(alpha);
+	ImGui::Text("Value:%.2f",alpha);
+	ImGui::SliderFloat("##slider", &alpha, -1.0f, 1.0f);
+	ImGui::SliderFloat("##slider", &value, -1.0f, 1.0f);
+
 
 
 	if(currentEditor)
@@ -194,6 +207,7 @@ void CoreSystem::Render()
 			ImGui::DockBuilderFinish(Get().mDockSpaceId);
 
 			TabsManager::SetNewTabsDockSpaceId(Get().mDockSpaceId);
+			DirectoryFinder::SetDockspaceId(Get().mRightDockSpaceId);
 		}
 	}
 
@@ -248,12 +262,12 @@ void CoreSystem::Render()
 	if(ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_F))
 		StatusBarManager::ShowFileSearchPanel();
 
-	if(ImGui::IsKeyDown(ImGuiKey_ModShift) && ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_F))
+	if(ImGui::IsKeyDown(ImGuiKey_ModShift) && ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_S))
 	{
 		auto& folders=FileNavigation::GetFolders();
 		if(!folders.empty())
 		{
-			DirectoryFinder::Setup(folders[0]);
+			DirectoryFinder::Setup(folders[0],false);
 		}	
 	}
 }

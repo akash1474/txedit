@@ -1,9 +1,11 @@
 #pragma once
-#include <regex>
 #include <string>
 #include <vector>
 #include <thread>
 #include <mutex>
+
+#include "imgui.h"
+
 
 #define INPUT_BUFFER_SIZE 256
 #define MAX_PATH_LENGTH 512
@@ -32,12 +34,13 @@ class DirectoryFinder
 
 private:
 	DirectoryFinder(){};
-	int mCreatedFromFolderView = -1;
+	bool mOpenedFromExplorer =false;
 	bool mIsWindowOpen=false;
 
+	bool mRegexEnabled = false;
+	bool mCaseSensitiveEnabled = false;
+	
 	char mDirectoryPath[MAX_PATH_LENGTH] = "\0";
-	bool mRegexEnabled = true;
-	bool mCaseSensitiveEnabled = true;
 	char mToFind[INPUT_BUFFER_SIZE] = "\0";
 
 	std::vector<DFResultFile> mResultFiles;
@@ -45,9 +48,11 @@ private:
 
 	std::thread* mFinderThread = nullptr;
 	std::mutex mFinderMutex;
+	ImGuiID mDockspaceId;	
 
 public:
+	static void SetDockspaceId(ImGuiID aRightDockspaceId){Get().mDockspaceId=aRightDockspaceId;}
 	static void Find();
-	static void Setup(const std::string& aFolderPath, int aOpenedFromExplorer = -1);
+	static void Setup(const std::string& aFolderPath,bool aOpenedFromExplorer = false);
 	static bool Render();
 };

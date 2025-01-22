@@ -7,9 +7,10 @@
 #include "TabsManager.h"
 
 
-void DirectoryFinder::Setup(const std::string& aFolderPath, int aOpenedFromExplorer)
+void DirectoryFinder::Setup(const std::string& aFolderPath, bool aOpenedFromExplorer)
 {
 	Get().mIsWindowOpen=true;
+	Get().mOpenedFromExplorer=aOpenedFromExplorer;
 	if(!aFolderPath.empty())
 	{
 		strcpy_s(Get().mDirectoryPath,aFolderPath.c_str());
@@ -22,7 +23,7 @@ bool DirectoryFinder::Render()
 	if(!Get().mIsWindowOpen)
 		return false;
 
-
+	ImGui::SetNextWindowDockID(Get().mDockspaceId,ImGuiCond_FirstUseEver);
 	if (ImGui::Begin("Directory Finder", &Get().mIsWindowOpen, ImGuiWindowFlags_NoSavedSettings))
 	{
 		ImGui::Text("Folder:");ImGui::SameLine();
@@ -32,11 +33,11 @@ bool DirectoryFinder::Render()
 		ImGui::Checkbox("Case sensitive", &Get().mCaseSensitiveEnabled);
 
 		ImGui::Text("To Find:");ImGui::SameLine();
-		ImGui::InputText("##df_tofind", Get().mToFind, INPUT_BUFFER_SIZE);
+		bool startSearching=ImGui::InputText("##df_tofind", Get().mToFind, INPUT_BUFFER_SIZE,ImGuiInputTextFlags_EnterReturnsTrue);
 
 		if (Get().mFinderThread == nullptr)
 		{
-			if (ImGui::Button("Find") && !std::string(Get().mToFind).empty()){
+			if ((ImGui::Button("Find") || startSearching) && !std::string(Get().mToFind).empty()){
 				Get().mFinderThread = new std::thread(&DirectoryFinder::Find);
 			}
 		}
@@ -75,9 +76,10 @@ bool DirectoryFinder::Render()
 					ImGui::PopStyleColor();
 					ImGui::PushStyleColor(ImGuiCol_HeaderHovered,ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
 					for (DFResult* res : Get().mResultsInFile)
-						if (ImGui::Selectable(res->displayText.c_str()))
+						if (ImGui::Selectable(std::string(res->displayText + "##" + file.fileName).c_str(),false))
 						{
-							TabsManager::OpenFileWithAtLineNumber(file.filePath, res->lineNumber);
+							GL_INFO("GoTo Match:{} {}",res->lineNumber,file.fileName);
+							TabsManager::OpenFileWithAtLineNumber(file.filePath, res->lineNumber-1,res->startCharIndex,res->endCharIndex);
 						}
 
 					ImGui::PopStyleColor();
