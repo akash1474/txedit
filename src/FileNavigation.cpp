@@ -277,7 +277,7 @@ bool FileNavigation::CustomSelectable(std::string& aFileName,bool aIsSelected)
 	ImVec2 img_min(pos.x,pos.y+((height-img_size)*0.5f));
 	ImVec2 img_max(img_min.x+img_size,img_min.y+img_size);
 	if(icondata->second.texture.IsLoaded())
-		window->DrawList->AddImage((void*)(intptr_t)icondata->second.texture.GetTextureId(),img_min,img_max);
+		window->DrawList->AddImage((ImTextureID)(intptr_t)icondata->second.texture.GetTextureId(),img_min,img_max);
 
 	const ImVec2 text_min(pos.x+25.0f,pos.y+ImGui::GetStyle().FramePadding.y);
     const ImVec2 text_max(text_min.x + label_size.x, text_min.y + label_size.y);

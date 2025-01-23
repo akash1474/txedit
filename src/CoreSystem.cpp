@@ -16,6 +16,7 @@
 #include "FileNavigation.h"
 #include "TabsManager.h"
 #include "DirectoryFinder.h"
+#include "Trie.h"
 
 #ifdef min
 	#undef min
@@ -73,6 +74,19 @@ void CoreSystem::RenderDebugInfo()
 
 	if(currentEditor)
 	{
+		static char buff[1024]="";
+		static bool isFirst=true;
+		static Trie::Node* root=TabsManager::GetTokenSuggestions();
+		static std::vector<std::string> suggestionsOut;
+
+		if(ImGui::InputText("Search", buff, 1024))
+		{
+			suggestionsOut.clear();
+			Trie::GetSuggestions(root, buff,suggestionsOut);
+		}
+		for(auto& suggestion:suggestionsOut)
+			ImGui::Text("%s", suggestion.c_str());
+
 		ImGui::Text("nCursor:%d", (int)currentEditor->GetEditorState()->mCursors.size());
 		static int LineSpacing = 15.0f;
 		if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
@@ -125,7 +139,7 @@ void CoreSystem::RenderDebugInfo()
 		static int v{1};
 		ImGui::Text("Goto Line: ");
 		ImGui::SameLine();
-		if (ImGui::InputInt("##ScrollToLine", &v, 1, 100, ImGuiInputTextFlags_EnterReturnsTrue))
+		if (ImGui::InputInt("##ScrollToLine", &v, 1, 100))
 			currentEditor->ScrollToLineNumber(v);
 
 	}

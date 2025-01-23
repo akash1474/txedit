@@ -3,6 +3,7 @@
 #include "string"
 #include "imgui.h"
 #include "TextEditor.h"
+#include "Trie.h"
 
 struct FileTab{
 	std::string filepath;
@@ -22,6 +23,7 @@ class TabsManager{
 	std::vector<FileTab> mTabs;
 	ImGuiID mDockSpaceId;
 	int mLineNumberToScroll=-1;
+	Trie::Node* mTokenSuggestionsRoot{0};
 
 
 public:
@@ -31,6 +33,8 @@ public:
 	}
 
 	~TabsManager();
+
+	static Trie::Node* GetTokenSuggestions();
 
 	static Editor* GetCurrentActiveTextEditor();
 	static FileTab* GetCurrentActiveTab();

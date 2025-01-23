@@ -428,6 +428,8 @@ private:
 	void InitFileExtensions();
 	std::map<std::string, std::string> FileExtensions;
 
+
+
 public:
 	struct Highlight{
 		Coordinates aStart,aEnd;
@@ -447,6 +449,10 @@ public:
 
 	void RenderHighlight(const Highlight& aHighlight);
 	void CreateHighlight(int aLineNumber,int aStartIndex,int aEndIndex);
+
+	std::vector<std::string> suggestions;
+	std::string GetCurrentlyTypedWord();
+	void RenderSuggestionBox(const std::vector<std::string>& suggestions, int& selectedIndex);
 
 
 

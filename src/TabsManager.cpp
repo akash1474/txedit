@@ -30,6 +30,14 @@ FileTab* TabsManager::GetCurrentActiveTab()
 	return rTab;
 }
 
+Trie::Node* TabsManager::GetTokenSuggestions(){
+		if(Get().mTokenSuggestionsRoot)
+			return Get().mTokenSuggestionsRoot;
+		
+		Get().mTokenSuggestionsRoot=new Trie::Node();
+		return Get().mTokenSuggestionsRoot;
+}
+
 TabsManager::~TabsManager(){
 	auto& aTabs=mTabs;
 	for(auto& tab:aTabs)
@@ -184,9 +192,9 @@ void TabsManager::Render(){
 
 	ImGuiIO& io = ImGui::GetIO();
 
-	if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_S)))
+	if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_S))
 		SaveFile();
-	else if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_N)))
+	else if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_N))
 		OpenFile("",true);
 
 	// static const char* names[] = { 

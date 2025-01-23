@@ -1,18 +1,19 @@
-#include "DataTypes.h"
-#include "Timer.h"
 #include "pch.h"
-#include "Coordinates.h"
-#include "Log.h"
-#include "UndoManager.h"
-#include "imgui.h"
-#include "TextEditor.h"
-#include "tree_sitter/api.h"
 #include <algorithm>
 #include <cstdint>
-#include <iostream>
-#include <sstream>
-#include <unordered_map>
 #include <winnt.h>
+
+#include "Log.h"
+#include "imgui.h"
+
+#include "DataTypes.h"
+#include "Timer.h"
+#include "Trie.h"
+#include "Coordinates.h"
+#include "UndoManager.h"
+#include "TextEditor.h"
+#include "tree_sitter/api.h"
+#include "TabsManager.h"
 
 void Editor::MoveUp(bool ctrl, bool shift)
 {
@@ -416,6 +417,14 @@ void Editor::InsertCharacter(char chr){
 	EnsureCursorVisible();
 	DebouncedReparse();
 	SetIsBufferModified(true);
+
+	std::string currentWord=GetCurrentlyTypedWord();
+	GL_INFO("CurrentWord:{}",currentWord);
+
+	suggestions.clear();
+	if(!currentWord.empty()){
+		Trie::GetSuggestions(TabsManager::GetTokenSuggestions(), currentWord, suggestions);
+	}
 }
 
 void Editor::MoveTop(bool aShift)
@@ -799,6 +808,14 @@ void Editor::Backspace()
 	UpdateSyntaxHighlighting(newCursor.mCursorPosition.mLine,0);
 	FindBracketMatch(newCursor.mCursorPosition);
 	DebouncedReparse();
+	
+	std::string currentWord=GetCurrentlyTypedWord();
+	GL_INFO("CurrentWord:{}",currentWord);
+
+	suggestions.clear();
+	if(!currentWord.empty()){
+		Trie::GetSuggestions(TabsManager::GetTokenSuggestions(), currentWord, suggestions);
+	}
 }
 
 

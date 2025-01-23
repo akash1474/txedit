@@ -567,6 +567,12 @@ bool Editor::Draw()
 		}
 	}
 
+	if(!suggestions.empty())
+	{
+		static int selectedIndex=0;
+		RenderSuggestionBox(suggestions,selectedIndex);
+	}
+
 	//Rendering Line Number
 	for (int lineNo=start;lineNo<end;lineNo++) {
 		float linePosY =mEditorPosition.y + (lineNo * mLineHeight) + 0.5f*mLineSpacing - scrollY;
@@ -602,6 +608,62 @@ bool Editor::Draw()
 // #endif
 	return true;
 }
+
+void Editor::RenderSuggestionBox(const std::vector<std::string>& suggestions, int& selectedIndex) 
+{
+    Cursor& aCursor=GetCurrentCursor();
+
+    ImVec2 pos=GetLinePosition(aCursor.mCursorPosition);
+    pos.x+=mLineBarWidth+mPaddingLeft+(aCursor.mCursorPosition.mColumn*mCharacterSize.x);
+    pos.y+=mLineHeight;
+
+    ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(300, 150));
+
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize,15.0f);
+    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[(int)Fonts::JetBrainsMonoNLRegular]);
+    if(ImGui::Begin("##suggestionBox",NULL,ImGuiWindowFlags_NoFocusOnAppearing  | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
+    {
+	    for (size_t i = 0; i < suggestions.size(); ++i) 
+	    {
+	        bool isSelected = (selectedIndex == (int)i);
+
+	        if (isSelected) 
+	        {
+	            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+	        }
+	        
+	        if (ImGui::Selectable(suggestions[i].c_str(), isSelected,ImGuiSelectableFlags_NoPadWithHalfSpacing)) 
+	        {
+	            selectedIndex = (int)i;
+	        }
+	        
+
+	        if (isSelected)
+	            ImGui::PopStyleColor();
+	    }
+
+    }
+	ImGui::End();
+    ImGui::PopFont();
+    ImGui::PopStyleVar();
+}
+
+std::string Editor::GetCurrentlyTypedWord(){
+	const Cursor& aCursor=GetCurrentCursor();
+	auto [start_idx,end_idx] = GetIndexOfWordAtCursor(aCursor.mCursorPosition);
+	if(start_idx==end_idx) 
+		return "";
+
+	std::string currentWord;
+	for(int i=start_idx;i<end_idx;i++)
+		currentWord+=(char)mLines[aCursor.mCursorPosition.mLine][i].mChar;
+
+	return currentWord;
+}
+
 
 void Editor::RenderHighlight(const Highlight& aHighlight)
 {
@@ -990,6 +1052,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 			(#match? @namespace "^[A-Z]"))
 
 	(ERROR) @error
+	(identifier) @identifier
 
     )";
 
@@ -1019,6 +1082,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 
 	// 5. Highlight matching nodes
 	TSQueryMatch match;
+	Trie::Node* aGlobalTokens=TabsManager::GetTokenSuggestions();
 	while (ts_query_cursor_next_match(cursor, &match)) {
 		for (unsigned int i = 0; i < match.capture_count; ++i) {
 			TSQueryCapture capture = match.captures[i];
@@ -1035,7 +1099,11 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 		    TSPoint startPoint = ts_node_start_point(node);
 		    TSPoint endPoint = ts_node_end_point(node);
 
-		    // if(std::string(captureName)=="error")
+		    if(std::string(captureName)=="identifier"){
+	    	    uint32_t startByte = ts_node_start_byte(node);
+			    uint32_t endByte = ts_node_end_byte(node);
+		    	Trie::Insert(aGlobalTokens,sourceCode.substr(startByte, endByte - startByte));
+		    }
 		    // {
 		    // 	for(int i=startPoint.row;i<=endPoint.row;i++)
 		    // 		mErrorMarkers[i]=true;
