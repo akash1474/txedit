@@ -284,6 +284,8 @@ void CoreSystem::Render()
 			DirectoryFinder::Setup(folders[0],false);
 		}	
 	}
+
+	
 }
 
 

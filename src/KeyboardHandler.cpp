@@ -24,9 +24,9 @@ void Editor::HandleKeyboardInputs()
 		io.WantTextInput = true;
 
 		if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGuiKey_Z))
-			mUndoManager.Undo(1, this);
+			mUndoManager.Undo(5, this);
 		else if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGuiKey_Y))
-			mUndoManager.Redo(1, this);
+			mUndoManager.Redo(5, this);
 		else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGuiKey_UpArrow))
 			MoveUp();
 		else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGuiKey_DownArrow))
@@ -79,7 +79,17 @@ void Editor::HandleKeyboardInputs()
 		else if (ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGuiKey_A))
 			SelectAll();
 		else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGuiKey_Enter))
-			InsertLineBreak();
+		{
+			if(HasSuggestions())
+			{
+		        for(auto& cursor:mState.mCursors)
+		        	ApplySuggestion(mSuggestions[iCurrentSuggestion],cursor);
+
+		        ClearSuggestions();
+			}
+			else
+				InsertLineBreak();
+		}
 		else if (!IsReadOnly() && !ctrl && !alt && ImGui::IsKeyPressed(ImGuiKey_Tab))
 			InsertTab(shift);
 

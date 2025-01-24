@@ -17,6 +17,11 @@
 
 void Editor::MoveUp(bool ctrl, bool shift)
 {
+	if(HasSuggestions())
+	{
+		//Handing this movement in Editor::RenderSuggestionBox
+		return;
+	}
 
 	for (auto& aCursor : mState.mCursors) {
 		DisableSearch();
@@ -41,6 +46,13 @@ void Editor::MoveUp(bool ctrl, bool shift)
 
 void Editor::MoveDown(bool ctrl, bool shift)
 {
+
+	if(HasSuggestions())
+	{
+		//Handing this movement in Editor::RenderSuggestionBox
+		return;
+	}
+
 	for (auto& aCursor : mState.mCursors) {
 		DisableSearch();
 
@@ -421,9 +433,9 @@ void Editor::InsertCharacter(char chr){
 	std::string currentWord=GetCurrentlyTypedWord();
 	GL_INFO("CurrentWord:{}",currentWord);
 
-	suggestions.clear();
+	ClearSuggestions();
 	if(!currentWord.empty()){
-		Trie::GetSuggestions(TabsManager::GetTokenSuggestions(), currentWord, suggestions);
+		Trie::GetSuggestions(TabsManager::GetTokenSuggestions(), currentWord, mSuggestions);
 	}
 }
 
@@ -812,9 +824,9 @@ void Editor::Backspace()
 	std::string currentWord=GetCurrentlyTypedWord();
 	GL_INFO("CurrentWord:{}",currentWord);
 
-	suggestions.clear();
+	ClearSuggestions();
 	if(!currentWord.empty()){
-		Trie::GetSuggestions(TabsManager::GetTokenSuggestions(), currentWord, suggestions);
+		Trie::GetSuggestions(TabsManager::GetTokenSuggestions(), currentWord, mSuggestions);
 	}
 }
 
@@ -927,6 +939,16 @@ void Editor::InsertTab(bool isShiftPressed)
 
 	UndoRecord uRecord;
 	uRecord.mBefore = mState;
+
+
+	if(HasSuggestions())
+	{
+        for(auto& cursor:mState.mCursors)
+        	ApplySuggestion(mSuggestions[iCurrentSuggestion],cursor);
+
+        ClearSuggestions();
+		return;
+	}
 
 	if (!HasSelection(GetCurrentCursor())) {
 		for (int i = 0; i < mState.mCursors.size(); i++) {

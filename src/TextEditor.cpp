@@ -567,10 +567,9 @@ bool Editor::Draw()
 		}
 	}
 
-	if(!suggestions.empty())
+	if(ImGui::IsWindowFocused() && !mSuggestions.empty())
 	{
-		static int selectedIndex=0;
-		RenderSuggestionBox(suggestions,selectedIndex);
+		RenderSuggestionBox(mSuggestions,iCurrentSuggestion);
 	}
 
 	//Rendering Line Number
@@ -609,7 +608,101 @@ bool Editor::Draw()
 	return true;
 }
 
-void Editor::RenderSuggestionBox(const std::vector<std::string>& suggestions, int& selectedIndex) 
+void Editor::ApplySuggestion(const std::string& aString,Cursor& aCursor)
+{
+	auto [start_idx,end_idx] = GetIndexOfWordAtCursor(aCursor.mCursorPosition);
+	if(start_idx==end_idx) 
+		return;
+
+	int lineNumber=aCursor.mCursorPosition.mLine;
+	Coordinates dStart(lineNumber,GetCharacterColumn(lineNumber, start_idx));
+	Coordinates dEnd(lineNumber,GetCharacterColumn(lineNumber, end_idx));
+
+	UndoRecord uRecord;
+	uRecord.mBefore=mState;
+
+	UndoOperation uRemoved;
+	uRemoved.mType=UndoOperationType::Delete;
+	uRemoved.mStart=dStart;
+	uRemoved.mText=GetCurrentlyTypedWord();
+	GL_INFO(uRemoved.mText);
+
+	DeleteRange(dStart,dEnd);
+
+	uRemoved.mEnd=dEnd; //after deletion
+	uRecord.mOperations.push_back(uRemoved);
+
+
+
+	UndoOperation uAdded;
+	uAdded.mStart=dStart;
+	uAdded.mType=UndoOperationType::Add;
+	uAdded.mText=aString;
+
+	InsertTextAt(dStart, aString.c_str());
+	aCursor.mCursorPosition.mColumn=GetCharacterColumn(lineNumber, start_idx+aString.size());
+	aCursor.mSelectionStart=aCursor.mSelectionEnd=aCursor.mCursorPosition;
+
+	uAdded.mEnd=aCursor.mCursorPosition;
+	uRecord.mOperations.push_back(uAdded);
+
+
+	uRecord.mAfter=mState;
+
+	mUndoManager.AddUndo(uRecord);
+}
+
+bool CustomSelectable(const std::string& aFileName,bool aIsSelected,int type=0)
+{
+	//Settingup custom component
+	ImGuiWindow* window=ImGui::GetCurrentWindow();
+	if(window->SkipItems) return false;
+
+	const ImGuiID id=window->GetID(aFileName.c_str());
+	const ImVec2 label_size=ImGui::CalcTextSize(aFileName.c_str());
+
+	const ImVec2 itemSize(window->WorkRect.Max.x-window->WorkRect.Min.x,label_size.y+2.0f+(2*ImGui::GetStyle().FramePadding.y));
+	ImVec2 pos=window->DC.CursorPos;
+
+
+	const ImRect bb(pos,ImVec2(pos.x+itemSize.x,pos.y+itemSize.y));
+	const float height=bb.Max.y-bb.Min.y;
+
+
+	ImGui::ItemSize(bb,0.0f);
+	if(!ImGui::ItemAdd(bb, id)) return false;
+
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held);
+
+
+    ImU32 col;
+    if (aIsSelected && !hovered)
+        col = IM_COL32(50, 50, 50, 255);
+    else
+        col = ImGui::GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? IM_COL32(40, 40, 40, 255) : ImGuiCol_WindowBg);
+
+	ImGui::RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
+
+	float img_size=itemSize.y;
+	ImVec2 pmin(pos.x,pos.y+((height-img_size)*0.5f));
+	ImVec2 pmax(pmin.x+img_size,pmin.y+img_size);
+	window->DrawList->AddRectFilled(pmin, pmax, IM_COL32(40, 40, 40, 150));
+
+	float sizex=ImGui::CalcTextSize("#").x;
+	float texty=pos.y+(height-label_size.y)*0.5f;
+
+	window->DrawList->AddText({pos.x+(img_size-sizex)*0.5f,texty},IM_COL32(255, 255, 255, 255),"t");
+
+	const ImVec2 text_min(pos.x+40.0f,texty);
+    const ImVec2 text_max(text_min.x + label_size.x, text_min.y + label_size.y);
+	ImGui::RenderTextClipped(text_min,text_max,aFileName.c_str(),0,&label_size, ImGui::GetStyle().SelectableTextAlign, &bb);
+
+
+	return pressed;
+}
+
+void Editor::RenderSuggestionBox(const std::vector<std::string>& aSuggestions, size_t& selectedIndex) 
 {
     Cursor& aCursor=GetCurrentCursor();
 
@@ -618,32 +711,76 @@ void Editor::RenderSuggestionBox(const std::vector<std::string>& suggestions, in
     pos.y+=mLineHeight;
 
     ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(300, 150));
 
+    size_t nSuggestions=aSuggestions.size();
+    float suggestionSize=ImGui::GetIO().Fonts->Fonts[0]->FontSize+2.0f+(2*ImGui::GetStyle().FramePadding.y);
+    float winSize=std::min((floor(ImGui::GetWindowSize().y-pos.y)/suggestionSize)*suggestionSize,nSuggestions>10 ? nSuggestions*10.0f : nSuggestions*suggestionSize);
+    ImGui::SetNextWindowSize(ImVec2(500, winSize));
     ImGuiStyle& style = ImGui::GetStyle();
 
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize,15.0f);
     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[(int)Fonts::JetBrainsMonoNLRegular]);
     if(ImGui::Begin("##suggestionBox",NULL,ImGuiWindowFlags_NoFocusOnAppearing  | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
     {
-	    for (size_t i = 0; i < suggestions.size(); ++i) 
+
+	    for (size_t i = 0; i < aSuggestions.size(); ++i) 
 	    {
-	        bool isSelected = (selectedIndex == (int)i);
+	        bool isSelected = (selectedIndex == i);
 
 	        if (isSelected) 
 	        {
 	            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 	        }
-	        
-	        if (ImGui::Selectable(suggestions[i].c_str(), isSelected,ImGuiSelectableFlags_NoPadWithHalfSpacing)) 
-	        {
-	            selectedIndex = (int)i;
-	        }
-	        
+
+	       	bool isClicked=CustomSelectable(aSuggestions[i], isSelected);
 
 	        if (isSelected)
 	            ImGui::PopStyleColor();
+
+	       	if(isClicked)
+	       	{
+	            selectedIndex = i;
+	            for(auto& cursor:mState.mCursors)
+	            	ApplySuggestion(aSuggestions[selectedIndex],cursor);
+
+	            ClearSuggestions();
+	            break;
+	       	}
 	    }
+
+	    //Scrolling with the selectedIndex
+	    if(ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow))
+	    {
+		    float scrollY=ImGui::GetScrollY();
+		    int minIdx=scrollY/suggestionSize;
+		    int maxIdx=(scrollY+winSize)/suggestionSize;
+
+		    if(ImGui::IsKeyPressed(ImGuiKey_UpArrow))
+		    {
+				if(selectedIndex==0)
+					selectedIndex=mSuggestions.size()-1;
+				else
+					selectedIndex--;
+
+
+		    }
+		    else if(ImGui::IsKeyPressed(ImGuiKey_DownArrow))
+		    {
+
+				if(selectedIndex==mSuggestions.size()-1)
+					selectedIndex=0;
+				else
+					selectedIndex++;
+
+		    }
+
+		    if (selectedIndex <= minIdx) 
+		        ImGui::SetScrollY(selectedIndex * suggestionSize);
+		    else if (selectedIndex >= maxIdx)
+		        ImGui::SetScrollY((selectedIndex + 1) * suggestionSize - winSize);
+	    }
+
+
 
     }
 	ImGui::End();
@@ -1080,6 +1217,8 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
     // GL_INFO("Duration:{}",timerx.ElapsedMillis());
     // mErrorMarkers.clear();
 
+    // mSuggestions.clear();
+	static bool isFirst=true;
 	// 5. Highlight matching nodes
 	TSQueryMatch match;
 	Trie::Node* aGlobalTokens=TabsManager::GetTokenSuggestions();
@@ -1099,10 +1238,12 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 		    TSPoint startPoint = ts_node_start_point(node);
 		    TSPoint endPoint = ts_node_end_point(node);
 
-		    if(std::string(captureName)=="identifier"){
-	    	    uint32_t startByte = ts_node_start_byte(node);
-			    uint32_t endByte = ts_node_end_byte(node);
-		    	Trie::Insert(aGlobalTokens,sourceCode.substr(startByte, endByte - startByte));
+		    if(isFirst){
+			    if(std::string(captureName)=="identifier"){
+		    	    uint32_t startByte = ts_node_start_byte(node);
+				    uint32_t endByte = ts_node_end_byte(node);
+			    	Trie::Insert(aGlobalTokens,sourceCode.substr(startByte, endByte - startByte));
+			    }
 		    }
 		    // {
 		    // 	for(int i=startPoint.row;i<=endPoint.row;i++)
@@ -1127,6 +1268,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 		    }
 		}
 	}
+	isFirst=false;
 
     // Get the start and end positions of the node
     ts_tree_delete(tree);

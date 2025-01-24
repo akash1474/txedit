@@ -90,7 +90,7 @@ void Editor::HandleMouseInputs()
 
 				DisableSearch();
 				ClearCursors();
-				suggestions.clear();
+				ClearSuggestions();
 
 				Cursor& aState=GetCurrentCursor();
 

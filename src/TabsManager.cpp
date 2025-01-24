@@ -196,6 +196,8 @@ void TabsManager::Render(){
 		SaveFile();
 	else if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_N))
 		OpenFile("",true);
+	if(ImGui::IsKeyPressed(ImGuiKey_Escape))
+		GetCurrentActiveTextEditor()->ClearSuggestions();
 
 	// static const char* names[] = { 
 	// 	"Close Tabs to the Right", 

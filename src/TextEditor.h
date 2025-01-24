@@ -428,9 +428,6 @@ private:
 	void InitFileExtensions();
 	std::map<std::string, std::string> FileExtensions;
 
-
-
-public:
 	struct Highlight{
 		Coordinates aStart,aEnd;
 		int iStart,iEnd;
@@ -439,20 +436,28 @@ public:
 		float startTime;
 	};
 
-	
 	Highlight mHighlight;
+	std::vector<std::string> mSuggestions;
+	size_t iCurrentSuggestion{0};
 
+	void RenderHighlight(const Highlight& aHighlight);
+	void RenderSuggestionBox(const std::vector<std::string>& suggestions, size_t& selectedIndex);
+	void ApplySuggestion(const std::string& aString,Cursor& aCursor);
+public:
 	inline bool IsHighlightPresent()const
 	{
 		return mHighlight.isPresent;
 	}
 
-	void RenderHighlight(const Highlight& aHighlight);
 	void CreateHighlight(int aLineNumber,int aStartIndex,int aEndIndex);
 
-	std::vector<std::string> suggestions;
 	std::string GetCurrentlyTypedWord();
-	void RenderSuggestionBox(const std::vector<std::string>& suggestions, int& selectedIndex);
+	inline bool HasSuggestions()const{return !mSuggestions.empty();}
+	void ClearSuggestions()
+	{
+		mSuggestions.clear();
+		iCurrentSuggestion=0;
+	}
 
 
 
