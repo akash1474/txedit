@@ -2,6 +2,7 @@
 #include "DataTypes.h"
 #include "imgui.h"
 #include "TextEditor.h"
+#include <unordered_set>
 
 
 void Editor::HandleMouseInputs()

@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "FileNavigation.h"
 #include "DataTypes.h"
 #include "Coordinates.h"
 #include "Timer.h"
@@ -30,6 +31,9 @@
 
 #include "tree_sitter/api.h"
 
+#undef min
+#undef max
+
 template <class InputIt1, class InputIt2, class BinaryPredicate>
 bool equals(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2, BinaryPredicate p)
 {
@@ -54,7 +58,6 @@ void Editor::SetLanguageDefinition(const LanguageDefinition & aLanguageDef)
 Editor::Editor()
 {
 	InitPallet();
-	InitFileExtensions();
 	SetPalette(GetGruvboxPalette());
 	mLines.push_back(Line());
 	workerThread_ = std::thread(&Editor::WorkerThread, this);
@@ -89,8 +92,8 @@ void Editor::LoadFile(const char* filepath){
 	//When creating a new file filepath is passed empty()
 	if(strlen(filepath)==0){
 		this->SetBuffer("");
-		fileType="Unknown";
 		isFileLoaded=true;
+		mFileTypeName=FileNavigation::GetFileTypeNameFromFilePath(filepath);
 		return;
 	}
 
@@ -108,7 +111,6 @@ void Editor::LoadFile(const char* filepath){
 		GL_CRITICAL("Failed to ReadFile:{}",filepath);
 
 	mFilePath=filepath;
-	fileType=GetFileType();
 
 	file.seekg(0, std::ios::end);
 	size_t fileSize = file.tellg();
@@ -121,17 +123,18 @@ void Editor::LoadFile(const char* filepath){
 	while(content.size()>0 && content[content.size()-1]==' ')
 		content.pop_back();
 
+	mFileTypeName=FileNavigation::GetFileTypeNameFromFilePath(filepath);
 	this->SetBuffer(content);
 	isFileLoaded=true;
 }
 
-void Editor::SetBuffer(const std::string& text)
+void Editor::SetBuffer(const std::string& aFileBuffer)
 {
 	GL_INFO("Editor::SetBuffer");
 	mLines.clear();
 	mLines.emplace_back(Line());
 
-	for (auto chr : text)
+	for (auto chr : aFileBuffer)
 	{
 		if (chr == '\r')
 			continue;
@@ -158,7 +161,7 @@ void Editor::SetBuffer(const std::string& text)
 	if(ext==".cpp" || ext==".h" || ext==".hpp" || ext==".c")
 	{
 		mIsSyntaxHighlightingSupportForFile=true;
-		ApplySyntaxHighlighting(text);
+		ApplySyntaxHighlighting(aFileBuffer);
 	}
 	else 
 		mIsSyntaxHighlightingSupportForFile=false;
@@ -168,76 +171,13 @@ void Editor::SetBuffer(const std::string& text)
 void Editor::ClearEditor(){
 	mFilePath.clear();
 	isFileLoaded=false;
-	fileType.clear();
 	mLines.clear();
 	ResetState();
 }
 
-void Editor::InitFileExtensions(){
-    FileExtensions[".c"] = "C";
-    FileExtensions[".cpp"] = "C++";
-    FileExtensions[".h"] = "C/C++ Header";
-    FileExtensions[".hpp"] = "C++ Header";
-    FileExtensions[".java"] = "Java";
-    FileExtensions[".py"] = "Python";
-    FileExtensions[".html"] = "HTML";
-    FileExtensions[".css"] = "CSS";
-    FileExtensions[".js"] = "JavaScript";
-    FileExtensions[".php"] = "PHP";
-    FileExtensions[".rb"] = "Ruby";
-    FileExtensions[".pl"] = "Perl";
-    FileExtensions[".swift"] = "Swift";
-    FileExtensions[".ts"] = "TypeScript";
-    FileExtensions[".csharp"] = "C#";
-    FileExtensions[".go"] = "Go";
-    FileExtensions[".rust"] = "Rust";
-    FileExtensions[".kotlin"] = "Kotlin";
-    FileExtensions[".scala"] = "Scala";
-    FileExtensions[".sql"] = "SQL";
-    FileExtensions[".json"] = "JSON";
-    FileExtensions[".xml"] = "XML";
-    FileExtensions[".yaml"] = "YAML";
-    FileExtensions[".makefile"] = "Makefile";
-    FileExtensions[".bat"] = "Batch";
-    FileExtensions[".sh"] = "Shell Script";
-    FileExtensions[".md"] = "Markdown";
-    FileExtensions[".tex"] = "LaTeX";
-    FileExtensions[".csv"] = "CSV";
-    FileExtensions[".tsv"] = "TSV";
-    FileExtensions[".svg"] = "SVG";
-    FileExtensions[".gitignore"] = "Git Ignore";
-    FileExtensions[".dockerfile"] = "Dockerfile";
-    FileExtensions[".lua"] = "Lua";
-    FileExtensions[".sln"] = "Visual Studio Solution";
-    FileExtensions[".gitmodules"] = "Git Modules";
-    
-    FileExtensions[".asm"] = "Assembly";
-    FileExtensions[".bat"] = "Batch Script";
-    FileExtensions[".conf"] = "Configuration";
-    FileExtensions[".dll"] = "Dynamic Link Library";
-    FileExtensions[".exe"] = "Executable";
-    FileExtensions[".obj"] = "Object";
-    FileExtensions[".pch"] = "Precompiled Header";
-    FileExtensions[".pdf"] = "PDF";
-    FileExtensions[".ppt"] = "PowerPoint";
-    FileExtensions[".txt"] = "Plain Text";
-    FileExtensions[".xls"] = "Excel";
-    FileExtensions[".zip"] = "Zip Archive";
-    FileExtensions[".log"] = "Log File";
-}
 
-
-
-std::string Editor::GetFileType(){
-	std::string ext=std::filesystem::path(mFilePath).extension().generic_u8string();
-	if(FileExtensions.find(ext)!=FileExtensions.end())
-		return FileExtensions[ext];
-
-	if(ext.size()>0){
-		ext=ext.substr(1);
-		std::transform(ext.begin(), ext.end(), ext.begin(), ::toupper);
-	}
-	return ext;
+std::string Editor::GetFileTypeName(){
+	return mFileTypeName;
 }
 
 
@@ -567,7 +507,7 @@ bool Editor::Draw()
 		}
 	}
 
-	if(ImGui::IsWindowFocused() && !mSuggestions.empty())
+	if(ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow) && !mSuggestions.empty())
 	{
 		RenderSuggestionBox(mSuggestions,iCurrentSuggestion);
 	}
@@ -652,7 +592,7 @@ void Editor::ApplySuggestion(const std::string& aString,Cursor& aCursor)
 	mUndoManager.AddUndo(uRecord);
 }
 
-bool CustomSelectable(const std::string& aFileName,bool aIsSelected,int type=0)
+bool CustomAutoCompleteSuggestion(const std::string& aFileName,bool aIsSelected,int type=0)
 {
 	//Settingup custom component
 	ImGuiWindow* window=ImGui::GetCurrentWindow();
@@ -720,7 +660,7 @@ void Editor::RenderSuggestionBox(const std::vector<std::string>& aSuggestions, s
 
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize,15.0f);
     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[(int)Fonts::JetBrainsMonoNLRegular]);
-    if(ImGui::Begin("##suggestionBox",NULL,ImGuiWindowFlags_NoFocusOnAppearing  | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
+    if(ImGui::Begin("##suggestionBox",NULL, ImGuiWindowFlags_NoFocusOnAppearing  | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
     {
 
 	    for (size_t i = 0; i < aSuggestions.size(); ++i) 
@@ -732,7 +672,7 @@ void Editor::RenderSuggestionBox(const std::vector<std::string>& aSuggestions, s
 	            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 	        }
 
-	       	bool isClicked=CustomSelectable(aSuggestions[i], isSelected);
+	       	bool isClicked=CustomAutoCompleteSuggestion(aSuggestions[i], isSelected);
 
 	        if (isSelected)
 	            ImGui::PopStyleColor();
@@ -1221,7 +1161,8 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	static bool isFirst=true;
 	// 5. Highlight matching nodes
 	TSQueryMatch match;
-	Trie::Node* aGlobalTokens=TabsManager::GetTokenSuggestions();
+	Trie::Node* aGlobalTokens=TabsManager::GetTrieRootNode();
+
 	while (ts_query_cursor_next_match(cursor, &match)) {
 		for (unsigned int i = 0; i < match.capture_count; ++i) {
 			TSQueryCapture capture = match.captures[i];

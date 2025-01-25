@@ -435,7 +435,7 @@ void Editor::InsertCharacter(char chr){
 
 	ClearSuggestions();
 	if(!currentWord.empty()){
-		Trie::GetSuggestions(TabsManager::GetTokenSuggestions(), currentWord, mSuggestions);
+		Trie::GetSuggestions(TabsManager::GetTrieRootNode(), currentWord, mSuggestions);
 	}
 }
 
@@ -826,7 +826,7 @@ void Editor::Backspace()
 
 	ClearSuggestions();
 	if(!currentWord.empty()){
-		Trie::GetSuggestions(TabsManager::GetTokenSuggestions(), currentWord, mSuggestions);
+		Trie::GetSuggestions(TabsManager::GetTrieRootNode(), currentWord, mSuggestions);
 	}
 }
 

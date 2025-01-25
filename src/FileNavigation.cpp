@@ -31,6 +31,20 @@ void FileNavigation::Init(){
 	Get().mAreIconsLoaded=true;
 }
 
+std::string FileNavigation::GetFileTypeNameFromFilePath(const std::string& aFilePath)
+{
+	std::string extension=std::filesystem::path(aFilePath).extension().string().substr(1);
+	for(auto& [name,iconData]:Get().mIconDatabase)
+	{
+		if(std::find(iconData.extensions.begin(),iconData.extensions.end(),extension)!=iconData.extensions.end())
+		{
+			return iconData.name;
+		}
+	}
+
+	return "Text (Unknown)";
+}
+
 void FileNavigation::AddFolder(std::string aPath)
 {
 	if(!Get().mAreIconsLoaded)

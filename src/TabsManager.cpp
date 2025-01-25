@@ -30,7 +30,7 @@ FileTab* TabsManager::GetCurrentActiveTab()
 	return rTab;
 }
 
-Trie::Node* TabsManager::GetTokenSuggestions(){
+Trie::Node* TabsManager::GetTrieRootNode(){
 		if(Get().mTokenSuggestionsRoot)
 			return Get().mTokenSuggestionsRoot;
 		
@@ -42,6 +42,8 @@ TabsManager::~TabsManager(){
 	auto& aTabs=mTabs;
 	for(auto& tab:aTabs)
 		free(tab.editor);
+
+	Trie::Free(mTokenSuggestionsRoot);
 }
 
 TabsManager::TabsManager(){

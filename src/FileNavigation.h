@@ -73,4 +73,6 @@ public:
 	static void LoadIconData(const std::string& aJsonPath);
 	static std::pair<const std::string,IconData>* GetIconForExtension(const std::string& aExtension);
 
+	// Returns file type name to be displayed in status bar
+	static std::string GetFileTypeNameFromFilePath(const std::string& aFilePath);
 };

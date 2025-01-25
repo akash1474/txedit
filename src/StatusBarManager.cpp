@@ -110,9 +110,9 @@ void StatusBarManager::Render(ImVec2& size,const ImGuiViewport* viewport){
 		// FileType
 		if(textEditor)
 		{
-			float width=ImGui::CalcTextSize(textEditor->fileType.c_str()).x;
+			float width=ImGui::CalcTextSize(textEditor->GetFileTypeName().c_str()).x;
 			ImGui::SameLine(ImGui::GetWindowWidth()-width-10.0f);
-			ImGui::Text("%s", textEditor->fileType.c_str());
+			ImGui::Text("%s", textEditor->GetFileTypeName().c_str());
 		}
 
 	ImGui::End();

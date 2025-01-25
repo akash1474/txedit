@@ -34,7 +34,7 @@ public:
 
 	~TabsManager();
 
-	static Trie::Node* GetTokenSuggestions();
+	static Trie::Node* GetTrieRootNode();
 
 	static Editor* GetCurrentActiveTextEditor();
 	static FileTab* GetCurrentActiveTab();

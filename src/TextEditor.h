@@ -6,16 +6,11 @@
 #include "string"
 #include "tree_sitter/api.h"
 #include "vector"
-#include <chrono>
 #include <cstdint>
-#include <map>
 #include <mutex>
-#include <regex>
 #include <stdint.h>
 #include <array>
 #include <thread>
-#include <unordered_map>
-#include <unordered_set>
 
 
 #include "Animation.h"
@@ -191,10 +186,6 @@ public:
 		CurrentLineEdge=(int)PaletteIndex::FG4,
 		Max
 	};
-	struct Identifier {
-		Coordinates mLocation;
-		std::string mDeclaration;
-	};
 
 	typedef std::string String;
 	// typedef std::unordered_map<int, bool> ErrorMarkers;
@@ -323,7 +314,7 @@ private:
 	int mLineHeight{0};
 	float mPaddingLeft{5.0f};
 	int mTabSize{4};
-	float mLineSpacing = 10.f;
+	float mLineSpacing = 8.0f;
 	bool mReadOnly = false;
 
 
@@ -425,8 +416,6 @@ private:
 
 	void DeleteCharacter(Cursor& aCursor,bool aDeletePreviousCharacter,UndoRecord* uRecord=nullptr);
 	void ResetState();
-	void InitFileExtensions();
-	std::map<std::string, std::string> FileExtensions;
 
 	struct Highlight{
 		Coordinates aStart,aEnd;
@@ -443,6 +432,8 @@ private:
 	void RenderHighlight(const Highlight& aHighlight);
 	void RenderSuggestionBox(const std::vector<std::string>& suggestions, size_t& selectedIndex);
 	void ApplySuggestion(const std::string& aString,Cursor& aCursor);
+
+	std::string mFileTypeName;
 public:
 	inline bool IsHighlightPresent()const
 	{
@@ -462,8 +453,7 @@ public:
 
 
 	float maxLineWidth{0.0f}; // max horizontal scroll;
-	std::string fileType;
-	void SetBuffer(const std::string& buffer);
+	void SetBuffer(const std::string& aBuffer);
 	void ClearEditor();
 	ImGuiWindow* GetImGuiWindowPtr(){return mEditorWindow;}
 
@@ -488,7 +478,9 @@ public:
 	std::string GetText();
 
 	std::string GetCurrentFilePath() const { return mFilePath; };
-	std::string GetFileType();
+	std::string GetFileTypeName();
+
+
 	void LoadFile(const char* filepath);
 	int GetSelectionMode() const { return (int)mSelectionMode; };
 

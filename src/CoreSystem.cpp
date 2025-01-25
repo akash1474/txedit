@@ -1,22 +1,20 @@
-#include "imgui_internal.h"
+#include "Timer.h"
 #include "pch.h"
+#include "imgui_internal.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
 
 #include "resources/FontAwesomeRegular.embed"
 #include "resources/FontAwesomeSolid.embed"
-#include "resources/MonoLisaRegular.embed"
 #include "resources/JetBrainsMonoNLRegular.embed"
 #include "resources/JetBrainsMonoNLItalic.embed"
 
 #include "CoreSystem.h"
 #include "ImageTexture.h"
 #include "MultiThreading.h"
-#include "Terminal.h"
 #include "FileNavigation.h"
 #include "TabsManager.h"
 #include "DirectoryFinder.h"
-#include "Trie.h"
 
 #ifdef min
 	#undef min
@@ -76,19 +74,9 @@ void CoreSystem::RenderDebugInfo()
 	{
 		static char buff[1024]="";
 		static bool isFirst=true;
-		static Trie::Node* root=TabsManager::GetTokenSuggestions();
-		static std::vector<std::string> suggestionsOut;
-
-		if(ImGui::InputText("Search", buff, 1024))
-		{
-			suggestionsOut.clear();
-			Trie::GetSuggestions(root, buff,suggestionsOut);
-		}
-		for(auto& suggestion:suggestionsOut)
-			ImGui::Text("%s", suggestion.c_str());
 
 		ImGui::Text("nCursor:%d", (int)currentEditor->GetEditorState()->mCursors.size());
-		static int LineSpacing = 15.0f;
+		static int LineSpacing = 8.0f;
 		if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
 			currentEditor->SetLineSpacing(LineSpacing);
 		}
@@ -168,6 +156,81 @@ void CoreSystem::RenderDebugInfo()
 }
 
 #endif
+
+// Function to compute Levenshtein distance
+int LevenshteinDistance(const std::string& s1, const std::string& s2) {
+    size_t len1 = s1.size(), len2 = s2.size();
+    std::vector<std::vector<int>> dp(len1 + 1, std::vector<int>(len2 + 1));
+    
+    for (size_t i = 0; i <= len1; ++i) dp[i][0] = i;
+    for (size_t j = 0; j <= len2; ++j) dp[0][j] = j;
+    
+    for (size_t i = 1; i <= len1; ++i) {
+        for (size_t j = 1; j <= len2; ++j) {
+            int cost = (s1[i - 1] == s2[j - 1]) ? 0 : 1;
+            dp[i][j] = std::min({ dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost });
+        }
+    }
+    return dp[len1][len2];
+}
+
+std::vector<std::string> GetFilesInDirectory(const std::string& directoryPath, int maxDepth = 1, int currentDepth = 0) {
+    std::vector<std::string> files;
+    if (currentDepth > maxDepth) return files;
+    
+    for (const auto& entry : std::filesystem::directory_iterator(directoryPath)) {
+        if (entry.is_regular_file()) {
+        	std::string ext=entry.path().extension().generic_string();
+        	if(ext == ".cpp" || ext == ".h" || ext==".c" || ext==".svg" || ext==".bat" || ext==".txt" || ext==".json" || ext==".md" || ext==".sln" || ext==".scm" )
+            	files.push_back(std::filesystem::relative(entry.path(), directoryPath).generic_u8string());
+        } else if (entry.is_directory()) {
+        	std::string name=entry.path().filename().string();
+        	if( name==".git" || name=="bin" || name==".cache" || name==".vs" )
+        		continue;
+            auto subFiles = GetFilesInDirectory(entry.path().string(), maxDepth, currentDepth + 1);
+            files.insert(files.end(), subFiles.begin(), subFiles.end());
+        }
+    }
+    return files;
+}
+
+
+// File Finder Modal
+void ShowFileFinder(bool& isOpen, std::vector<std::string>& files) {
+    static char searchBuffer[256] = "";
+    static std::vector<std::pair<std::string, int>> matches;
+    
+    if (!isOpen) return;
+    ImGui::OpenPopup("File Finder");
+
+    if (ImGui::BeginPopupModal("File Finder", &isOpen, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if(ImGui::InputText("##search", searchBuffer, sizeof(searchBuffer)))
+        {
+	        matches.clear();
+	        if (strlen(searchBuffer) > 0) {
+	            for (const auto& file : files) {
+	                int distance = LevenshteinDistance(searchBuffer, file);
+	                matches.emplace_back(file, distance);
+	            }
+	            std::sort(matches.begin(), matches.end(), [](auto& a, auto& b) { return a.second < b.second; });
+
+		        if(matches.size()>8)
+	        		matches.erase(matches.begin()+8,matches.end());
+	        }
+        }
+
+        
+        if (!matches.empty()) {
+            for (const auto& match : matches) {
+                if (ImGui::Selectable(match.first.c_str())) {
+                    // Handle file selection
+                    isOpen = false;
+                }
+            }
+        }
+        ImGui::EndPopup();
+    }
+}
 
 
 void CoreSystem::Render()
@@ -285,7 +348,17 @@ void CoreSystem::Render()
 		}	
 	}
 
-	
+	static bool fileFinderOpen=false;
+	static std::vector<std::string> files;
+
+    if (ImGui::IsKeyPressed(ImGuiKey_P) && ImGui::GetIO().KeyCtrl) {
+        fileFinderOpen = true;
+        if(files.empty())
+        	files=GetFilesInDirectory(FileNavigation::GetFolders()[0]);
+
+        GL_INFO(files.size());
+    }
+    ShowFileFinder(fileFinderOpen, files);
 }
 
 
@@ -319,14 +392,14 @@ void CoreSystem::InitFonts()
 	font_config.FontDataOwnedByAtlas = false;
 	const float font_size = GetFontSize();
 	// io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf",font_size+3,&font_config);
-	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size + 2, &font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size+2.0f, &font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeSolid, IM_ARRAYSIZE(FontAwesomeSolid), (font_size + 4.0f) * 2.0f / 3.0f, &icon_config,
 	                               icons_ranges);
 
 	// io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeuii.ttf",font_size+3,&font_config);
-	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLItalic, IM_ARRAYSIZE(JetBrainsMonoNLItalic), font_size + 2, &font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLItalic, IM_ARRAYSIZE(JetBrainsMonoNLItalic), font_size + 2.0f, &font_config);
 
-	io.Fonts->AddFontFromMemoryTTF((void*)MonoLisaRegular, IM_ARRAYSIZE(MonoLisaRegular), font_size - 4.0f, &font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size+2.0f, &font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeRegular, IM_ARRAYSIZE(FontAwesomeRegular), (font_size + 4.0f) * 2.0f / 3.0f,
 	                               &icon_config, icons_ranges);
 }
