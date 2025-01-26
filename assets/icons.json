@@ -142,7 +142,7 @@
         "extensions": ["json"],
         "name": "JSON"
     },
-    "file_type_xml": {
+    "file_type_xsl": {
         "extensions": ["xml", "xsl", "xsd"],
         "name": "XML"
     },

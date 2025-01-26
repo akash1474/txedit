@@ -228,7 +228,7 @@ public:
 	uint32_t GetLineLengthInBytes(int aLineIdx);
 	void PrintTree(const TSNode &node, const std::string &source_code,std::string& output, int indent = 0);
 
-	std::string GetNearbyLinesString(int aLineNo,int aLineCount=3);
+	std::string GetNearbyLinesString(int aLineNo,int aLineCount=5);
 
 	Coordinates GetCoordinatesFromOffset(uint32_t offset);
 
@@ -441,6 +441,7 @@ public:
 	}
 
 	void CreateHighlight(int aLineNumber,int aStartIndex,int aEndIndex);
+	size_t GetCursorCount(){return mState.mCursors.size();}
 
 	std::string GetCurrentlyTypedWord();
 	inline bool HasSuggestions()const{return !mSuggestions.empty();}

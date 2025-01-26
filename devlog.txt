@@ -1,2 +1,0 @@
-28th Sept 2024
-	30min - Tried fixing the closing of editor but didn't succeed

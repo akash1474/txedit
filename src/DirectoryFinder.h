@@ -39,6 +39,7 @@ private:
 
 	bool mRegexEnabled = false;
 	bool mCaseSensitiveEnabled = false;
+	bool mIsDirectoryPathValid=false;
 	
 	char mDirectoryPath[MAX_PATH_LENGTH] = "\0";
 	char mToFind[INPUT_BUFFER_SIZE] = "\0";

@@ -1,60 +1,10 @@
-TODO
-» Open the prev tab if current tab is closed
-» Add additional editor.height amt of scrolling in editor
-» Fix the bug related to filename overflow and use a small font like arial
-» Use a proper algorithm to detect the brackets beyond the visible buffer
-» Implement a ThreadPool class
-» Fix line number cliping for large files
-» Implement a FileBuffer class that handles all the info related to a current state of file buffer and editor
-» Change the font of inputpanel to editor font
+Features:
+- Added rendering of git branch to show the current branch
+- Added QuickFileSearch feature for quick file lookup in current directory
+- FindInFolder opened using keybinding sets the default search path to parent directory of current tab
+- Added safety checks and valid mDirectoryPath indicator to DirectoryFinder class
 
-TASK
-» Add UTF8 support to Terminal
-» Add UTF8 support to Editor
-» Undo for Brackets
-
-
-
-18th Oct 2024
-+ Complete Input Handling
-+ Terminal History Mgmt
-+ Full Unicode Support + input parsing for alt keycodes
-
-
-17th Oct 2024
-+ Custom Terminal Shell Text Render implemenation (Keyboard input remaining)
-
-16th Oct 2024
-+ Regex parsing of ANSI Sequences in terminal output
-
-13th Oct 2024
-+ added ConPTY support to Integrated Terminal
-+ Experimentation with ImGui::InputTextMultiline for terminal UI Implementation
-
-06th Oct 2024 Sunday
-+ added 'SetConsoleOutputCP( CP_UTF8 )' to Log.cpp for utf8 encoded string output to console using spdlog
-+ Experimentation with UTF8/UTF16(wchar_t) encoding in ImGui & WindowsConsole.
-
-05th Oct 2024 Sunday
-+ Fixed the docking and terminal resizing issue
-+ TreeSitter Experimentation
-
-02th Oct 2024 Sunday
-+ Bug fix related to text selection using shift(+ctrl) and arrow keys
-
-30th Sept 2024 Sunday
-+ Added a lite version of terminal
-+ Update internal imgui api [imgui_widgets.cpp(L5161)] - Added ImGuiInputTextFlags_HideCursor and Updated the InputTextEx Fn 
-
-7th Sept 2024 Saturday
-+ Batch undoing for a group of 7 text
-
-           
-6th Sept 2024 Friday
-+ Update the editor API functions name(eg GetCurrentLineLength --> GetCurrentLineMaxColumn)
-+ Added debug table for undo stack representation
-+ Single line indentation undo/redo
-
-1-5th Sept 2024
-+ Code Refactoring and reorganization
-+ Implemented UndoManager class and UndoRecord                                                            
+BugFixes/Improvements:
+- Fixed mapping of xml extension inside icons.json by changing from file_type_xml to file_type_xsl
+- Fixed crash due to files not having any extension (at FileNavigation::GetFileTypeNameFromFilePath)
+- Fixed improper syntax highlighting due to added query for capturing autocomplete suggestion.

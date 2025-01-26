@@ -106,14 +106,15 @@ inline void SetStyleColorDarkness()
     style.PopupBorderSize = 1;
     style.FrameBorderSize = 1;
     style.TabBorderSize = 1;
-    style.WindowRounding = 2;
-    style.ChildRounding = 2;
-    style.FrameRounding = 2;
-    style.PopupRounding = 2;
-    style.ScrollbarRounding = 2;
-    style.GrabRounding = 2;
+    style.TabBarOverlineSize=3;
+    style.WindowRounding = 2.0f;
+    style.ChildRounding = 2.0f;
+    style.FrameRounding = 2.0f;
+    style.PopupRounding = 2.0f;
+    style.ScrollbarRounding = 2.0f;
+    style.GrabRounding = 2.0f;
     style.LogSliderDeadzone = 2;
-    style.TabRounding = 0;
+    style.TabRounding = 2.0f;
 }
 
 

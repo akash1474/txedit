@@ -1129,7 +1129,6 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 			(#match? @namespace "^[A-Z]"))
 
 	(ERROR) @error
-	(identifier) @identifier
 
     )";
 
@@ -1180,7 +1179,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 		    TSPoint endPoint = ts_node_end_point(node);
 
 		    if(isFirst){
-			    if(std::string(captureName)=="identifier"){
+			    if(std::string(captureName)=="type.indentifier" || std::string(captureName)=="function.namespace" || std::string(captureName)=="function"){
 		    	    uint32_t startByte = ts_node_start_byte(node);
 				    uint32_t endByte = ts_node_end_byte(node);
 			    	Trie::Insert(aGlobalTokens,sourceCode.substr(startByte, endByte - startByte));
@@ -1252,7 +1251,7 @@ std::string Editor::GetNearbyLinesString(int aLineNo,int aLineCount) {
 
     // Determine the range of lines to include
     int startLine = std::max(0, aLineNo - aLineCount);                       // One line above (if it exists)
-    int endLine = std::min((int)mLines.size() - 1, aLineNo + aLineCount);   // One line below (if it exists)
+    int endLine = std::min((int)mLines.size() - 1, aLineNo);   // One line below (if it exists)
 
     // Concatenate the lines within the range
     for (int lineIndex = startLine; lineIndex <= endLine; ++lineIndex) {

@@ -1,3 +1,5 @@
+#include "FontAwesome6.h"
+#include "QuickFileSearch.h"
 #include "Timer.h"
 #include "pch.h"
 #include "imgui_internal.h"
@@ -15,6 +17,8 @@
 #include "FileNavigation.h"
 #include "TabsManager.h"
 #include "DirectoryFinder.h"
+#include "QuickFileSearch.h"
+#include <filesystem>
 
 #ifdef min
 	#undef min
@@ -147,8 +151,6 @@ void CoreSystem::RenderDebugInfo()
 	ImageTexture::AsyncImage(&img1, ImVec2(362, 256));
 	ImageTexture::AsyncImage(&img2, ImVec2(362, 256));
 	ImageTexture::AsyncImage(&img3, ImVec2(362, 256));
-	// ImageTexture::AsyncImage(imgs[1],ImVec2(362, 256));
-	// ImageTexture::AsyncImage(imgs[2],ImVec2(362, 256));
 	#endif
 
 
@@ -157,80 +159,9 @@ void CoreSystem::RenderDebugInfo()
 
 #endif
 
-// Function to compute Levenshtein distance
-int LevenshteinDistance(const std::string& s1, const std::string& s2) {
-    size_t len1 = s1.size(), len2 = s2.size();
-    std::vector<std::vector<int>> dp(len1 + 1, std::vector<int>(len2 + 1));
-    
-    for (size_t i = 0; i <= len1; ++i) dp[i][0] = i;
-    for (size_t j = 0; j <= len2; ++j) dp[0][j] = j;
-    
-    for (size_t i = 1; i <= len1; ++i) {
-        for (size_t j = 1; j <= len2; ++j) {
-            int cost = (s1[i - 1] == s2[j - 1]) ? 0 : 1;
-            dp[i][j] = std::min({ dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost });
-        }
-    }
-    return dp[len1][len2];
-}
-
-std::vector<std::string> GetFilesInDirectory(const std::string& directoryPath, int maxDepth = 1, int currentDepth = 0) {
-    std::vector<std::string> files;
-    if (currentDepth > maxDepth) return files;
-    
-    for (const auto& entry : std::filesystem::directory_iterator(directoryPath)) {
-        if (entry.is_regular_file()) {
-        	std::string ext=entry.path().extension().generic_string();
-        	if(ext == ".cpp" || ext == ".h" || ext==".c" || ext==".svg" || ext==".bat" || ext==".txt" || ext==".json" || ext==".md" || ext==".sln" || ext==".scm" )
-            	files.push_back(std::filesystem::relative(entry.path(), directoryPath).generic_u8string());
-        } else if (entry.is_directory()) {
-        	std::string name=entry.path().filename().string();
-        	if( name==".git" || name=="bin" || name==".cache" || name==".vs" )
-        		continue;
-            auto subFiles = GetFilesInDirectory(entry.path().string(), maxDepth, currentDepth + 1);
-            files.insert(files.end(), subFiles.begin(), subFiles.end());
-        }
-    }
-    return files;
-}
 
 
-// File Finder Modal
-void ShowFileFinder(bool& isOpen, std::vector<std::string>& files) {
-    static char searchBuffer[256] = "";
-    static std::vector<std::pair<std::string, int>> matches;
-    
-    if (!isOpen) return;
-    ImGui::OpenPopup("File Finder");
 
-    if (ImGui::BeginPopupModal("File Finder", &isOpen, ImGuiWindowFlags_AlwaysAutoResize)) {
-        if(ImGui::InputText("##search", searchBuffer, sizeof(searchBuffer)))
-        {
-	        matches.clear();
-	        if (strlen(searchBuffer) > 0) {
-	            for (const auto& file : files) {
-	                int distance = LevenshteinDistance(searchBuffer, file);
-	                matches.emplace_back(file, distance);
-	            }
-	            std::sort(matches.begin(), matches.end(), [](auto& a, auto& b) { return a.second < b.second; });
-
-		        if(matches.size()>8)
-	        		matches.erase(matches.begin()+8,matches.end());
-	        }
-        }
-
-        
-        if (!matches.empty()) {
-            for (const auto& match : matches) {
-                if (ImGui::Selectable(match.first.c_str())) {
-                    // Handle file selection
-                    isOpen = false;
-                }
-            }
-        }
-        ImGui::EndPopup();
-    }
-}
 
 
 void CoreSystem::Render()
@@ -334,6 +265,9 @@ void CoreSystem::Render()
 	StatusBarManager::Render(size, viewport);
 	DirectoryFinder::Render();
 	TabsManager::Render();
+
+	QuickFileSearch::Render();
+
 	MultiThreading::ImageLoader::LoadImages();
 
 	if(ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_F))
@@ -341,24 +275,29 @@ void CoreSystem::Render()
 
 	if(ImGui::IsKeyDown(ImGuiKey_ModShift) && ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_S))
 	{
-		auto& folders=FileNavigation::GetFolders();
-		if(!folders.empty())
+		Editor* currEditor=TabsManager::GetCurrentActiveTextEditor();
+		if(currEditor)
 		{
-			DirectoryFinder::Setup(folders[0],false);
-		}	
+			std::string parentDir=std::filesystem::path(currEditor->GetCurrentFilePath()).parent_path().generic_string();
+			if(std::filesystem::exists(parentDir))
+			{
+				DirectoryFinder::Setup(parentDir,false);
+			}
+		}
+		else
+		{
+			auto& folders=FileNavigation::GetFolders();
+			if(!folders.empty())
+			{
+				DirectoryFinder::Setup(folders[0],false);
+			}else{
+				DirectoryFinder::Setup("",false);
+			}
+		}
 	}
 
-	static bool fileFinderOpen=false;
-	static std::vector<std::string> files;
 
-    if (ImGui::IsKeyPressed(ImGuiKey_P) && ImGui::GetIO().KeyCtrl) {
-        fileFinderOpen = true;
-        if(files.empty())
-        	files=GetFilesInDirectory(FileNavigation::GetFolders()[0]);
-
-        GL_INFO(files.size());
-    }
-    ShowFileFinder(fileFinderOpen, files);
+	QuickFileSearch::EventListener();
 }
 
 

@@ -33,7 +33,9 @@ void FileNavigation::Init(){
 
 std::string FileNavigation::GetFileTypeNameFromFilePath(const std::string& aFilePath)
 {
-	std::string extension=std::filesystem::path(aFilePath).extension().string().substr(1);
+	std::string extension=std::filesystem::path(aFilePath).extension().string();
+	if(extension[0]=='.')
+		extension=extension.substr(1);
 	for(auto& [name,iconData]:Get().mIconDatabase)
 	{
 		if(std::find(iconData.extensions.begin(),iconData.extensions.end(),extension)!=iconData.extensions.end())
@@ -124,7 +126,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,6.0f));
         for (int i = 0; i < IM_ARRAYSIZE(options); i++)
         {
-        	if(i==4 || i==0) ImGui::Separator();
+        	if(i==4 || i==1) ImGui::Separator();
             if (ImGui::Selectable(options[i]))
             {
             	selected = i;
@@ -297,9 +299,9 @@ bool FileNavigation::CustomSelectable(std::string& aFileName,bool aIsSelected)
 
     ImU32 col;
     if (aIsSelected && !hovered)
-        col = IM_COL32(50, 50, 50, 255);
+        col = IM_COL32(60, 60, 60, 255);
     else
-        col = ImGui::GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? IM_COL32(40, 40, 40, 255) : ImGuiCol_WindowBg);
+        col = ImGui::GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? IM_COL32(50, 50, 50, 255) : ImGuiCol_WindowBg);
 
 	ImGui::RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
 

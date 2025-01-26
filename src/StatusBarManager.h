@@ -36,6 +36,9 @@ namespace StatusBarManager{
 	static inline bool mIsRegexSearch=false;
 	static inline bool mIsWholeWordSearch=false;
 
+	static inline std::string mGitBranch;
+	std::string GetCurrentGitBranch(const std::string& aDirectory);
+
 	bool IsCaseSensitiveSearch();
 	bool IsRegexSearch();
 	bool IsWholeWordSearch();
@@ -58,4 +61,5 @@ namespace StatusBarManager{
 	void ShowInputPanel(const char* title,void(*callback)(const char*),const char* placeholder=nullptr,bool showButton=false,const char* btnName="Done");
 	void ShowInputPanelEx(const char* title,void(*callback)(const char*,const char*),const char* placeholder=nullptr,bool showButton=false,const char* btnName="Done");
 	inline void CloseInputPanel();
+
 };

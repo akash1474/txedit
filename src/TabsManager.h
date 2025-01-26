@@ -12,6 +12,7 @@ struct FileTab{
 	bool isActive=false;
 	bool isSaved=false;
 	bool isOpen=true;
+	//Use for focusing the editor window when we reopen the same file and the file is already open
 	ImGuiWindow* winPtr=nullptr;
 	std::string id;
 	Editor* editor;

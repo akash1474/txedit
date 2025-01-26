@@ -1,6 +1,8 @@
+#include "FontAwesome6.h"
 #include "pch.h"
 #include "Timer.h"
 #include "imgui.h"
+#include <filesystem>
 #include <mutex>
 #include <regex>
 #include "DirectoryFinder.h"
@@ -13,8 +15,10 @@ void DirectoryFinder::Setup(const std::string& aFolderPath, bool aOpenedFromExpl
 	Get().mOpenedFromExplorer=aOpenedFromExplorer;
 	if(!aFolderPath.empty())
 	{
+		Get().mIsDirectoryPathValid=true;
 		strcpy_s(Get().mDirectoryPath,aFolderPath.c_str());
 	}
+	else Get().mIsDirectoryPathValid=false;
 }
 
 
@@ -27,7 +31,15 @@ bool DirectoryFinder::Render()
 	if (ImGui::Begin("Directory Finder", &Get().mIsWindowOpen, ImGuiWindowFlags_NoSavedSettings))
 	{
 		ImGui::Text("Folder:");ImGui::SameLine();
-		ImGui::InputText("##df_folder", Get().mDirectoryPath, MAX_PATH_LENGTH);
+		bool isDirectoryUpdated=ImGui::InputText("##df_folder", Get().mDirectoryPath, MAX_PATH_LENGTH);
+		if(isDirectoryUpdated)
+		{
+			Get().mIsDirectoryPathValid=std::filesystem::exists(Get().mDirectoryPath) && std::filesystem::is_directory(Get().mDirectoryPath);
+		}
+		ImGui::SameLine(0.0f,5.0f);
+		ImGui::PushStyleColor(ImGuiCol_Text,Get().mIsDirectoryPathValid ? IM_COL32(0, 192, 146, 255): IM_COL32(255, 0, 100, 255));
+		ImGui::Text(Get().mIsDirectoryPathValid ? ICON_FA_CHECK"" : ICON_FA_XMARK"");
+		ImGui::PopStyleColor();
 
 		ImGui::Checkbox("Regular expression", &Get().mRegexEnabled);
 		ImGui::Checkbox("Case sensitive", &Get().mCaseSensitiveEnabled);
@@ -37,7 +49,7 @@ bool DirectoryFinder::Render()
 
 		if (Get().mFinderThread == nullptr)
 		{
-			if ((ImGui::Button("Find") || startSearching) && !std::string(Get().mToFind).empty()){
+			if (Get().mIsDirectoryPathValid && (ImGui::Button("Find") || startSearching) && !std::string(Get().mToFind).empty()){
 				Get().mFinderThread = new std::thread(&DirectoryFinder::Find);
 			}
 		}
