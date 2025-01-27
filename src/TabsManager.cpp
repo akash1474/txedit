@@ -30,10 +30,20 @@ FileTab* TabsManager::GetCurrentActiveTab()
 	return rTab;
 }
 
+Trie::Node* TabsManager::GetTrieRootNode(){
+		if(Get().mTokenSuggestionsRoot)
+			return Get().mTokenSuggestionsRoot;
+		
+		Get().mTokenSuggestionsRoot=new Trie::Node();
+		return Get().mTokenSuggestionsRoot;
+}
+
 TabsManager::~TabsManager(){
 	auto& aTabs=mTabs;
 	for(auto& tab:aTabs)
 		free(tab.editor);
+
+	Trie::Free(mTokenSuggestionsRoot);
 }
 
 TabsManager::TabsManager(){
@@ -49,11 +59,19 @@ bool TabsManager::OpenNewEmptyFile(){
 	return OpenFile("",true);
 }
 
-bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
+void TabsManager::OpenFileWithAtLineNumber(const std::string& aFilePath,int aLineNumber,int aStartIndex,int aEndIndex){
+	FileTab* openedTab=OpenFile(aFilePath);
+	if(openedTab)
+	{
+		Get().mLineNumberToScroll=aLineNumber;
+		openedTab->editor->CreateHighlight(aLineNumber, aStartIndex, aEndIndex);
+	}
+}
+
+FileTab* TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 {
 	GL_INFO("Opening File:{}",aFilePath);
-	// static UUIDv4::UUIDGenerator<std::mt19937_64> mUIDGenerator;
-	// UUIDv4::UUID uuid = mUIDGenerator.getUUID();
+
 	std::filesystem::path path(aFilePath);
 	std::string uuid=path.filename().generic_u8string() + "##" + std::to_string((int)&Get());
 	GL_INFO(uuid);
@@ -64,7 +82,7 @@ bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 		FileTab& aTab=Get().mTabs.back();
 		aTab.editor=new Editor();
 		aTab.editor->LoadFile(aFilePath.c_str());
-		return true;
+		return &aTab;
 	}
 
 
@@ -98,6 +116,7 @@ bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 			aTab.editor=new Editor();
 			aTab.editor->LoadFile(aFilePath.c_str());
 		// }
+		return &aTab;
 
 	}
 	else //Reusing/Reactivating the previous one
@@ -108,11 +127,13 @@ bool TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 
 		it->isActive=true;
 		it->isTemp=false;
+		ImGui::FocusWindow(it->winPtr);
+		return &(*it);
 	}
 
 
 
-	return true;
+	return nullptr;
 }
 
 
@@ -125,11 +146,18 @@ void TabsManager::Render(){
 		ImGui::SetNextWindowDockID(Get().mDockSpaceId, ImGuiCond_FirstUseEver);
 
 		//Rendering the editor and updating the active ptr
-		if(it->editor->Render(&it->isOpen,it->id) && !it->isActive){
+		if(it->editor->Render(&it->isOpen,it->id,it->isTemp) && !it->isActive){
 			for(auto&tab:Get().mTabs) 
 				tab.isActive=false;
 
 			it->isActive=true;
+			FileNavigation::MarkFileAsOpen(it->filepath);
+		}
+
+		//Updating the windowptr
+		if(it->winPtr==nullptr)
+		{
+			it->winPtr=it->editor->GetImGuiWindowPtr();
 		}
 
 		// if(ImGui::IsItemClicked(ImGuiMouseButton_Left) && ImGui::GetIO().MouseDoubleClicked[0])
@@ -143,18 +171,24 @@ void TabsManager::Render(){
 		
 		if(!it->isOpen)
 		{
-			bool wasDetetedTabFocused=it->isActive;
+			bool wasDeletedTabFocused=it->isActive;
 			it=tabs.erase(it);
-			std::vector<FileTab>::iterator currTab=it;
 
-			if(currTab==tabs.end() && currTab!=tabs.begin())
+			if(tabs.size()>0)
 			{
-				currTab=it-1;
-				currTab->isActive=true;
+				auto current=it;
+				size_t idx=std::distance(tabs.begin(),it);
+				if(idx>0)
+				{
+					current=it-1;
+					current->isActive=true;
+				}
+
+				current->isActive=true;
+				if(wasDeletedTabFocused)
+					ImGui::FocusWindow(current->winPtr);
 			}
 
-			if(wasDetetedTabFocused)
-				ImGui::SetNextWindowFocus();
 		}
 		else
 		{
@@ -167,10 +201,12 @@ void TabsManager::Render(){
 
 	ImGuiIO& io = ImGui::GetIO();
 
-	if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_S)))
+	if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_S))
 		SaveFile();
-	else if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_N)))
+	else if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_N))
 		OpenFile("",true);
+	if(ImGui::IsKeyPressed(ImGuiKey_Escape))
+		GetCurrentActiveTextEditor()->ClearSuggestions();
 
 	// static const char* names[] = { 
 	// 	"Close Tabs to the Right", 
@@ -199,6 +235,11 @@ void TabsManager::Render(){
 	// 	ImGui::EndPopup();
 	// }
 	// ImGui::PopStyleVar();
+	if(Get().mLineNumberToScroll>-1)
+	{
+		GetCurrentActiveTextEditor()->ScrollToLineNumber(Get().mLineNumberToScroll);
+		Get().mLineNumberToScroll=-1;
+	}
 
 }
 
@@ -225,7 +266,8 @@ void TabsManager::SaveFile()
 	else
 	{
 		std::ofstream file(currTab->filepath, std::ios::trunc);
-		if (!file.is_open()) {
+		if (!file.is_open()) 
+		{
 			GL_INFO("ERROR SAVING");
 			return;
 		}
@@ -234,5 +276,12 @@ void TabsManager::SaveFile()
 		file.close();
 		StatusBarManager::ShowNotification("Saved",currTab->filepath.c_str(), StatusBarManager::NotificationType::Success);
 		currTab->editor->SetIsBufferModified(false);
+	}
+}
+
+void TabsManager::DisableSearchForAllTabs(){
+	for(auto& aTab:Get().mTabs)
+	{
+		aTab.editor->DisableSearch();
 	}
 }

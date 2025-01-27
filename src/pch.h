@@ -38,10 +38,4 @@
 #include "utils.h"
 #include "Timer.h"
 
-//Icon and Font
-#include "resources/FontAwesomeSolid.embed"
-#include "resources/FontAwesomeRegular.embed"
-#include "resources/RecursiveLinearMedium.embed"
-#include "resources/MonoLisaMedium.embed"
-#include "resources/AppIcon.embed"
 

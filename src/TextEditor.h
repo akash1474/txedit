@@ -6,16 +6,11 @@
 #include "string"
 #include "tree_sitter/api.h"
 #include "vector"
-#include <chrono>
 #include <cstdint>
-#include <map>
 #include <mutex>
-#include <regex>
 #include <stdint.h>
 #include <array>
 #include <thread>
-#include <unordered_map>
-#include <unordered_set>
 
 
 #include "Animation.h"
@@ -191,16 +186,9 @@ public:
 		CurrentLineEdge=(int)PaletteIndex::FG4,
 		Max
 	};
-	struct Identifier {
-		Coordinates mLocation;
-		std::string mDeclaration;
-	};
 
 	typedef std::string String;
-	typedef std::unordered_map<std::string, Identifier> Identifiers;
-	typedef std::unordered_set<std::string> Keywords;
-	typedef std::map<int, std::string> ErrorMarkers;
-	typedef std::unordered_set<int> Breakpoints;
+	// typedef std::unordered_map<int, bool> ErrorMarkers;
 	typedef std::array<ImU32, (unsigned)PaletteIndex::Max> Palette;
 	typedef uint8_t Char;
 
@@ -214,32 +202,7 @@ public:
 	typedef std::vector<Glyph> Line;
 	typedef std::vector<Line> Lines;
 
-	struct LanguageDefinition {
-		typedef std::pair<std::string, PaletteIndex> TokenRegexString;
-		typedef std::vector<TokenRegexString> TokenRegexStrings;
-		typedef bool (*TokenizeCallback)(const char* in_begin, const char* in_end, const char*& out_begin, const char*& out_end,
-		                                 PaletteIndex& paletteIndex);
-
-		std::string mName;
-		Keywords mKeywords;
-		Identifiers mIdentifiers;
-		Identifiers mPreprocIdentifiers;
-		std::string mCommentStart, mCommentEnd, mSingleLineComment;
-		char mPreprocChar;
-		bool mAutoIndentation;
-
-		TokenizeCallback mTokenize;
-
-		TokenRegexStrings mTokenRegexStrings;
-
-		bool mCaseSensitive;
-
-		LanguageDefinition() : mPreprocChar('#'), mAutoIndentation(true), mTokenize(nullptr), mCaseSensitive(true) {}
-
-		static const LanguageDefinition& CPlusPlus();
-		static const LanguageDefinition& C();
-		static const LanguageDefinition& Lua();
-	};
+	struct LanguageDefinition {};
 
 	struct BracketMatch {
 		bool mHasMatch = false;
@@ -252,6 +215,7 @@ public:
 
 	//TreeSitter Experimental
 	TSQuery* mQuery=nullptr;
+	// ErrorMarkers mErrorMarkers;
 
 	TSInputEdit mTSInputEdit;
 	bool mIsSyntaxHighlightingSupportForFile=false;
@@ -264,7 +228,7 @@ public:
 	uint32_t GetLineLengthInBytes(int aLineIdx);
 	void PrintTree(const TSNode &node, const std::string &source_code,std::string& output, int indent = 0);
 
-	std::string GetNearbyLinesString(int aLineNo,int aLineCount=3);
+	std::string GetNearbyLinesString(int aLineNo,int aLineCount=5);
 
 	Coordinates GetCoordinatesFromOffset(uint32_t offset);
 
@@ -350,7 +314,7 @@ private:
 	int mLineHeight{0};
 	float mPaddingLeft{5.0f};
 	int mTabSize{4};
-	float mLineSpacing = 10.f;
+	float mLineSpacing = 8.0f;
 	bool mReadOnly = false;
 
 
@@ -407,8 +371,8 @@ private:
 		std::vector<Coordinates> mFoundPositions;
 		bool mIsGlobal = false;
 		int mIdx = 0;
-		bool IsValid() const { return mWord.length() > 0; }
-		void SetSearchWord(std::string& word){
+		bool IsValid() const { return mWord.length() > 0 && mFoundPositions.size() > 0; }
+		void SetSearchWord(const std::string& word){
 			mWord=word;
 			mWordLen=GetUTF8StringLength(word);
 		}
@@ -423,10 +387,7 @@ private:
 	};
 	SearchState mSearchState;
 
-	void DisableSearch(){
-		if(mSearchState.IsValid())
-			mSearchState.Reset();
-	}
+	void PerformSearch(const std::string& aWord);
 
 	void HighlightCurrentWordInBuffer();
 	void FindAllOccurancesOfWord(std::string word,size_t aStartLineIdx,size_t aEndLineIdx);
@@ -455,18 +416,62 @@ private:
 
 	void DeleteCharacter(Cursor& aCursor,bool aDeletePreviousCharacter,UndoRecord* uRecord=nullptr);
 	void ResetState();
-	void InitFileExtensions();
-	std::map<std::string, std::string> FileExtensions;
 
+	struct Highlight{
+		Coordinates aStart,aEnd;
+		int iStart,iEnd;
+		int lineNo;
+		bool isPresent{0};
+		float startTime;
+	};
 
+	Highlight mHighlight;
+	std::vector<std::string> mSuggestions;
+	size_t iCurrentSuggestion{0};
+
+	void RenderHighlight(const Highlight& aHighlight);
+	void RenderSuggestionBox(const std::vector<std::string>& suggestions, size_t& selectedIndex);
+	void ApplySuggestion(const std::string& aString,Cursor& aCursor);
+
+	std::string mFileTypeName;
 public:
+	inline bool IsHighlightPresent()const
+	{
+		return mHighlight.isPresent;
+	}
+
+	void CreateHighlight(int aLineNumber,int aStartIndex,int aEndIndex);
+	size_t GetCursorCount(){return mState.mCursors.size();}
+
+	std::string GetCurrentlyTypedWord();
+	inline bool HasSuggestions()const{return !mSuggestions.empty();}
+	void ClearSuggestions()
+	{
+		mSuggestions.clear();
+		iCurrentSuggestion=0;
+	}
+
+
+
 	float maxLineWidth{0.0f}; // max horizontal scroll;
-	std::string fileType;
-	void SetBuffer(const std::string& buffer);
+	void SetBuffer(const std::string& aBuffer);
 	void ClearEditor();
+	ImGuiWindow* GetImGuiWindowPtr(){return mEditorWindow;}
 
 	EditorState* GetEditorState() { return &mState; }
 	UndoManager* GetUndoMananger() { return &this->mUndoManager; }
+
+	void ExecuteSearch(const std::string& aWord);
+	void GotoNextMatch();
+	void GotoPreviousMatch();
+	void HighlightAllMatches();
+	void DisableSearch(){
+		if(mSearchState.IsValid())
+			mSearchState.Reset();
+	}
+	bool HasSearchStarted(const std::string& aWord){return mSearchState.mWord==aWord && mSearchState.IsValid() && mSearchState.mIsGlobal;}
+
+	std::string GetSelectedText();
 
 	void EnsureCursorVisible();
 	void UpdateSyntaxHighlighting(int aLineNo,int aLineCount=3);
@@ -474,11 +479,13 @@ public:
 	std::string GetText();
 
 	std::string GetCurrentFilePath() const { return mFilePath; };
-	std::string GetFileType();
+	std::string GetFileTypeName();
+
+
 	void LoadFile(const char* filepath);
 	int GetSelectionMode() const { return (int)mSelectionMode; };
 
-	bool Render(bool* aIsOpen,std::string& aUUID);
+	bool Render(bool* aIsOpen,std::string& aUUID,bool& aIsTemp);
 	bool Draw();
 	void HandleKeyboardInputs();
 	void HandleMouseInputs();

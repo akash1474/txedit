@@ -64,12 +64,17 @@ public:
 	static bool CustomSelectable(std::string& aFileName,bool aIsSelected=false);
 
 	static void AddFolder(std::string aPath);
+	static std::vector<std::string>& GetFolders(){ return Get().mFolders;}
+
 	static void ToggleSideBar(){Get().mIsOpen=!Get().mIsOpen;}
 	static const bool IsOpen(){return Get().mIsOpen;}
-	static std::vector<std::string>& GetFolders(){ return Get().mFolders;}
 
 	static void HandleEvent(DirectoryEvent aEvent,std::wstring& aPayLoad);
 	static void LoadIconData(const std::string& aJsonPath);
 	static std::pair<const std::string,IconData>* GetIconForExtension(const std::string& aExtension);
 
+	static void MarkFileAsOpen(const std::string& aOpenedFilePath);
+
+	// Returns file type name to be displayed in status bar
+	static std::string GetFileTypeNameFromFilePath(const std::string& aFilePath);
 };

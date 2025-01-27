@@ -1,21 +1,27 @@
-#include "DataTypes.h"
-#include "Timer.h"
 #include "pch.h"
-#include "Coordinates.h"
-#include "Log.h"
-#include "UndoManager.h"
-#include "imgui.h"
-#include "TextEditor.h"
-#include "tree_sitter/api.h"
 #include <algorithm>
 #include <cstdint>
-#include <iostream>
-#include <sstream>
-#include <unordered_map>
 #include <winnt.h>
+
+#include "Log.h"
+#include "imgui.h"
+
+#include "DataTypes.h"
+#include "Timer.h"
+#include "Trie.h"
+#include "Coordinates.h"
+#include "UndoManager.h"
+#include "TextEditor.h"
+#include "tree_sitter/api.h"
+#include "TabsManager.h"
 
 void Editor::MoveUp(bool ctrl, bool shift)
 {
+	if(HasSuggestions())
+	{
+		//Handing this movement in Editor::RenderSuggestionBox
+		return;
+	}
 
 	for (auto& aCursor : mState.mCursors) {
 		DisableSearch();
@@ -40,6 +46,13 @@ void Editor::MoveUp(bool ctrl, bool shift)
 
 void Editor::MoveDown(bool ctrl, bool shift)
 {
+
+	if(HasSuggestions())
+	{
+		//Handing this movement in Editor::RenderSuggestionBox
+		return;
+	}
+
 	for (auto& aCursor : mState.mCursors) {
 		DisableSearch();
 
@@ -416,12 +429,16 @@ void Editor::InsertCharacter(char chr){
 	EnsureCursorVisible();
 	DebouncedReparse();
 	SetIsBufferModified(true);
+
+	std::string currentWord=GetCurrentlyTypedWord();
+	GL_INFO("CurrentWord:{}",currentWord);
+
+	ClearSuggestions();
+	if(!currentWord.empty()){
+		Trie::GetSuggestions(TabsManager::GetTrieRootNode(), currentWord, mSuggestions);
+	}
 }
 
-/*
-	- 
-
-*/
 void Editor::MoveTop(bool aShift)
 {
 	DisableSearch();
@@ -803,6 +820,14 @@ void Editor::Backspace()
 	UpdateSyntaxHighlighting(newCursor.mCursorPosition.mLine,0);
 	FindBracketMatch(newCursor.mCursorPosition);
 	DebouncedReparse();
+	
+	std::string currentWord=GetCurrentlyTypedWord();
+	GL_INFO("CurrentWord:{}",currentWord);
+
+	ClearSuggestions();
+	if(!currentWord.empty()){
+		Trie::GetSuggestions(TabsManager::GetTrieRootNode(), currentWord, mSuggestions);
+	}
 }
 
 
@@ -914,6 +939,16 @@ void Editor::InsertTab(bool isShiftPressed)
 
 	UndoRecord uRecord;
 	uRecord.mBefore = mState;
+
+
+	if(HasSuggestions())
+	{
+        for(auto& cursor:mState.mCursors)
+        	ApplySuggestion(mSuggestions[iCurrentSuggestion],cursor);
+
+        ClearSuggestions();
+		return;
+	}
 
 	if (!HasSelection(GetCurrentCursor())) {
 		for (int i = 0; i < mState.mCursors.size(); i++) {

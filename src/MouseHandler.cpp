@@ -2,6 +2,7 @@
 #include "DataTypes.h"
 #include "imgui.h"
 #include "TextEditor.h"
+#include <unordered_set>
 
 
 void Editor::HandleMouseInputs()
@@ -90,6 +91,7 @@ void Editor::HandleMouseInputs()
 
 				DisableSearch();
 				ClearCursors();
+				ClearSuggestions();
 
 				Cursor& aState=GetCurrentCursor();
 
@@ -232,8 +234,8 @@ void Editor::MergeCursorsIfNeeded(){
 void Editor::ClearCursors(){
 	if(mState.mCursors.size()==1) return; 
 
-	Cursor& aCursor=GetCurrentCursor();
-	mState.mCursors[0]=aCursor;
+	Cursor& currentCursor=GetCurrentCursor();
+	mState.mCursors[0]=currentCursor;
 	mState.mCurrentCursorIdx=0;
 
 	mState.mCursors.erase(mState.mCursors.begin()+1,mState.mCursors.end());

@@ -21,6 +21,7 @@ namespace StatusBarManager{
 
 	//Panel
 	static inline bool mIsInputPanelOpen=false;
+	static inline bool mIsFileSearchPanelOpen=false;
 	static inline std::string mPanelTitle="Title";
 	static inline std::string mButtonTitle="Save";
 	static inline std::string mPlaceholder;
@@ -30,13 +31,28 @@ namespace StatusBarManager{
 
 	static inline bool mIsCallbackEx=false;
 	static inline char mInputTextBuffer[1024];
+	static inline char mSearchInputBuffer[1024];
+	static inline bool mIsCaseSensitive=true;
+	static inline bool mIsRegexSearch=false;
+	static inline bool mIsWholeWordSearch=false;
+
+	static inline std::string mGitBranch;
+	std::string GetCurrentGitBranch(const std::string& aDirectory);
+
+	bool IsCaseSensitiveSearch();
+	bool IsRegexSearch();
+	bool IsWholeWordSearch();
 
 
 	void Init();
+	bool IsAnyPanelOpen();
 
 
 	void Render(ImVec2& size,const ImGuiViewport* viewport);
 	void RenderInputPanel(ImVec2& size,const ImGuiViewport* viewport);
+	void RenderFileSearchPanel(ImVec2& size,const ImGuiViewport* viewport);
+	inline void CloseFileSearchPanel();
+	void ShowFileSearchPanel();
 
 	void ShowNotification(const char* title,const char* info,NotificationType type=NotificationType::Info);
 	void SetFileType(const char* filetype);
@@ -44,5 +60,6 @@ namespace StatusBarManager{
 	bool IsInputPanelOpen();
 	void ShowInputPanel(const char* title,void(*callback)(const char*),const char* placeholder=nullptr,bool showButton=false,const char* btnName="Done");
 	void ShowInputPanelEx(const char* title,void(*callback)(const char*,const char*),const char* placeholder=nullptr,bool showButton=false,const char* btnName="Done");
-	void CloseInputPanel();
+	inline void CloseInputPanel();
+
 };

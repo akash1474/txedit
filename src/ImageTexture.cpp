@@ -46,7 +46,7 @@ void ImageTexture::LoadAsync(ImageTexture* img){
 
 void ImageTexture::AsyncImage(ImageTexture* img,const ImVec2& size){
     if(img->IsLoaded()) 
-        ImGui::Image((void*)(intptr_t)img->GetTextureId(),size);
+        ImGui::Image((ImTextureID)(intptr_t)img->GetTextureId(),size);
     else
     {
         ImGuiWindow* window = ImGui::GetCurrentWindow();
@@ -74,7 +74,7 @@ void ImageTexture::AsyncImGuiImage(ImageTexture& img,const ImVec2& size){
         img.BindTexture();
 
     if(img.IsLoaded()){
-        ImGui::Image((void*)(intptr_t)img.GetTextureId(), ImVec2(416, 256));
+        ImGui::Image((ImTextureID)(intptr_t)img.GetTextureId(), ImVec2(416, 256));
     }else{
         ImGui::Text("Loading..");
     }

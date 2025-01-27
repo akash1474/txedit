@@ -425,7 +425,7 @@ void Terminal::Draw()
 
 
 	// Highlight Selections
-	if (mSelectionMode == SelectionMode::Word || mSelectionMode == SelectionMode::Line) {
+	if (ImGui::IsWindowFocused() && (mSelectionMode == SelectionMode::Word || mSelectionMode == SelectionMode::Line)) {
 		Coordinates selectionStart = mState.mSelectionStart;
 		Coordinates selectionEnd = mState.mSelectionEnd;
 
@@ -641,16 +641,7 @@ void Terminal::HandleInputs()
 		if (mState.mSelectionStart > mState.mSelectionEnd)
 			mState.mCursorDirectionChanged = true;
 	}
-
-
-	bool anyKeyPressed = false;
-	for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) {
-		if (io.KeysDown[i]) {
-			anyKeyPressed = true;
-			break;
-		}
-	}
-
+	
 	io.WantCaptureKeyboard = true;
 	io.WantTextInput = true;
 
@@ -668,14 +659,14 @@ void Terminal::HandleInputs()
 		mConPTY.SendInterrupt();
 	}
 	// Left
-	else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_LeftArrow))) {
+	else if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) {
 		if (mSelectionMode != SelectionMode::Normal)
 			ExitSelectionMode();
 		if (cursorPosition.mColumn > 0 && cursorPosition.mColumn <= max)
 			cursorPosition.mColumn--;
 	}
 	// Right
-	else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_RightArrow))) {
+	else if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) {
 		if (mSelectionMode != SelectionMode::Normal)
 			ExitSelectionMode();
 		if (cursorPosition.mColumn >= 0 && cursorPosition.mColumn < max)
@@ -690,7 +681,7 @@ void Terminal::HandleInputs()
 		PushHistoryCommand(false);
 	}
 	// Delete
-	else if (!ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete))) {
+	else if (!ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGuiKey_Delete)) {
 		if (cursorPosition.mColumn >= mReadOnlyCoords.mColumn && cursorPosition.mColumn < max) {
 			auto cindex = GetCharacterIndex(mState.mCursorPosition);
 			auto& line = mLines[mState.mCursorPosition.mLine];
@@ -700,7 +691,7 @@ void Terminal::HandleInputs()
 		}
 	}
 	// Backspace
-	else if (!ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace))) {
+	else if (!ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGuiKey_Backspace)) {
 		if (cursorPosition.mColumn > mReadOnlyCoords.mColumn && cursorPosition.mColumn <= max) {
 			int idx = GetCharacterIndex(cursorPosition);
 			int cidx = idx - 1;
@@ -716,7 +707,7 @@ void Terminal::HandleInputs()
 		}
 	}
 	// Copy
-	else if (ctrl && shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_C))) {
+	else if (ctrl && shift && !alt && ImGui::IsKeyPressed(ImGuiKey_C)) {
 		if (mSelectionMode == SelectionMode::Normal)
 			return;
 
@@ -766,7 +757,7 @@ void Terminal::HandleInputs()
 		}
 	}
 	// Paste
-	else if (ctrl && shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_V))) {
+	else if (ctrl && shift && !alt && ImGui::IsKeyPressed(ImGuiKey_V)) {
 		std::string text{ImGui::GetClipboardText()};
 		if (!text.empty())
 			AppendText(text);

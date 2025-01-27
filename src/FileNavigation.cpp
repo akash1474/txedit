@@ -9,6 +9,7 @@
 #include "TabsManager.h"
 #include <filesystem>
 #include "MultiThreading.h"
+#include "DirectoryFinder.h"
 
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -28,6 +29,22 @@ void FileNavigation::Init(){
 	LoadIconData("./assets/icons.json");
 	Get().mDirectoryMonitor.Start();
 	Get().mAreIconsLoaded=true;
+}
+
+std::string FileNavigation::GetFileTypeNameFromFilePath(const std::string& aFilePath)
+{
+	std::string extension=std::filesystem::path(aFilePath).extension().string();
+	if(extension[0]=='.')
+		extension=extension.substr(1);
+	for(auto& [name,iconData]:Get().mIconDatabase)
+	{
+		if(std::find(iconData.extensions.begin(),iconData.extensions.end(),extension)!=iconData.extensions.end())
+		{
+			return iconData.name;
+		}
+	}
+
+	return "Text (Unknown)";
 }
 
 void FileNavigation::AddFolder(std::string aPath)
@@ -99,25 +116,39 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
 
     if (ImGui::BeginPopup(path.c_str()))
     {
-	    const char* options[] = {ICON_FA_CARET_RIGHT"  New File",ICON_FA_CARET_RIGHT"  Rename",ICON_FA_CARET_RIGHT"  Open Folder",ICON_FA_CARET_RIGHT"  Open Terminal",ICON_FA_CARET_RIGHT"  New Folder",ICON_FA_CARET_RIGHT"  Delete Folder"};
+	    const char* options[] = {ICON_FA_CARET_RIGHT"  Find In Folder",ICON_FA_CARET_RIGHT"  New File",ICON_FA_CARET_RIGHT"  Rename",ICON_FA_CARET_RIGHT"  Open Folder",ICON_FA_CARET_RIGHT"  Open Terminal",ICON_FA_CARET_RIGHT"  New Folder",ICON_FA_CARET_RIGHT"  Delete Folder"};
 	    if(!isFolder)
-	    	options[5]=ICON_FA_CARET_RIGHT"  Delete File";
+	    {
+	    	options[6]=ICON_FA_CARET_RIGHT"  Delete File";
+	    	options[0]=ICON_FA_CARET_RIGHT"  Find in File";
+	    }
 
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,8.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,6.0f));
         for (int i = 0; i < IM_ARRAYSIZE(options); i++)
         {
-        	if(i==4) ImGui::Separator();
+        	if(i==4 || i==1) ImGui::Separator();
             if (ImGui::Selectable(options[i]))
             {
             	selected = i;
                 std::string fpath=path;
             	switch(selected)
             	{
-                	case 0:
+            		case 0:
+            		{
+            			if(isFolder){
+            				DirectoryFinder::Setup(path,true);
+            			}
+            			else
+            			{
+            				StatusBarManager::ShowFileSearchPanel();
+            			}
+            		}
+            		break;
+                	case 1:
                 	{
                 		GL_INFO("New File:{}",path);
                 		if(!std::filesystem::is_directory(fpath)) 
-                			fpath=std::filesystem::path(fpath).parent_path().generic_string();
+                			fpath=std::filesystem::path(fpath).parent_path().generic_string()+"/";
 
 
                 		StatusBarManager::ShowInputPanel(
@@ -135,7 +166,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
                 		);
                 	}
                 		break;
-                	case 1:
+                	case 2:
                 		GL_INFO("Rename");
                 		{
 	                		StatusBarManager::ShowInputPanelEx(
@@ -160,17 +191,19 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
 	                		);
                 		}
                 		break;
-                	case 2:
+                	case 3:
+                		GL_INFO("Rename");
 						if(!std::filesystem::is_directory(path))
 							fpath = (std::filesystem::path(path)).parent_path().generic_string();
 						DirectoryHandler::OpenExplorer(fpath);
                 		break;
-                	case 3:
+                	case 4:
+                		GL_INFO("Open Folder");
 						if(!std::filesystem::is_directory(path))
 							fpath = (std::filesystem::path(path)).parent_path().generic_string();
 						DirectoryHandler::StartTerminal(fpath);
                 		break;
-                	case 4:
+                	case 5:
                 		GL_INFO("New Folder");
                 		{
                 			std::string parentDir=std::filesystem::path(fpath).parent_path().generic_string();
@@ -196,7 +229,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
 
                 		}
                 		break;
-                	case 5:
+                	case 6:
                 		GL_INFO("Delete Folder");
                 		if(!isFolder)
                 		{ 
@@ -266,9 +299,9 @@ bool FileNavigation::CustomSelectable(std::string& aFileName,bool aIsSelected)
 
     ImU32 col;
     if (aIsSelected && !hovered)
-        col = IM_COL32(50, 50, 50, 255);
+        col = IM_COL32(60, 60, 60, 255);
     else
-        col = ImGui::GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? IM_COL32(40, 40, 40, 255) : ImGuiCol_WindowBg);
+        col = ImGui::GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? IM_COL32(50, 50, 50, 255) : ImGuiCol_WindowBg);
 
 	ImGui::RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
 
@@ -277,9 +310,9 @@ bool FileNavigation::CustomSelectable(std::string& aFileName,bool aIsSelected)
 	ImVec2 img_min(pos.x,pos.y+((height-img_size)*0.5f));
 	ImVec2 img_max(img_min.x+img_size,img_min.y+img_size);
 	if(icondata->second.texture.IsLoaded())
-		window->DrawList->AddImage((void*)(intptr_t)icondata->second.texture.GetTextureId(),img_min,img_max);
+		window->DrawList->AddImage((ImTextureID)(intptr_t)icondata->second.texture.GetTextureId(),img_min,img_max);
 
-	const ImVec2 text_min(pos.x+25.0f,pos.y+ImGui::GetStyle().FramePadding.y);
+	const ImVec2 text_min(pos.x+25.0f,pos.y+(height-label_size.y)*0.5f);
     const ImVec2 text_max(text_min.x + label_size.x, text_min.y + label_size.y);
 	ImGui::RenderTextClipped(text_min,text_max,aFileName.c_str(),0,&label_size, ImGui::GetStyle().SelectableTextAlign, &bb);
 
@@ -409,6 +442,20 @@ void FileNavigation::Render(){
 	ImGui::End();
 	ImGui::PopStyleColor(4);
 	ImGui::PopStyleVar();
+}
+
+
+void FileNavigation::MarkFileAsOpen(const std::string &aOpenedFilePath){
+	std::string	directoryPath=std::filesystem::path(aOpenedFilePath).parent_path().generic_string();
+	auto& entities=Get().mDirectoryData[directoryPath];
+
+	if(entities.empty()) return;
+
+	for(auto& entity:entities)
+		if(!entity.is_directory && entity.path==aOpenedFilePath)
+			entity.is_explored=true;
+		else
+			entity.is_explored=false;
 }
 
 

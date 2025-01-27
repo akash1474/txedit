@@ -1,19 +1,24 @@
+#include "FontAwesome6.h"
+#include "QuickFileSearch.h"
+#include "Timer.h"
 #include "pch.h"
+#include "imgui_internal.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
 
 #include "resources/FontAwesomeRegular.embed"
 #include "resources/FontAwesomeSolid.embed"
-#include "resources/MonoLisaRegular.embed"
 #include "resources/JetBrainsMonoNLRegular.embed"
 #include "resources/JetBrainsMonoNLItalic.embed"
 
 #include "CoreSystem.h"
 #include "ImageTexture.h"
 #include "MultiThreading.h"
-#include "Terminal.h"
 #include "FileNavigation.h"
 #include "TabsManager.h"
+#include "DirectoryFinder.h"
+#include "QuickFileSearch.h"
+#include <filesystem>
 
 #ifdef min
 	#undef min
@@ -40,6 +45,7 @@ void ShowFPS()
 	ImGui::Text("FPS: %.1f", fps);
 }
 
+float EaseOutQuadraticFn(float t) { return 1.0f - pow(1.0f - t, 4);}
 
 void CoreSystem::RenderDebugInfo()
 {
@@ -53,13 +59,28 @@ void CoreSystem::RenderDebugInfo()
 	const char* utf8 = "Mastering » Ñandú.txt";
 	ImGui::Text("%s", utf8);
 	ImGui::Text("Length:%d", ImTextCountCharsFromUtf8(utf8, 0));
-	ImGui::Text("Time:%f", glfwGetTime());
+	ImGui::Text("GLFW::Time:%f", glfwGetTime());
+	ImGui::Text("ImGui::Time:%f", (float)ImGui::GetTime());
+	static float add=0.5f,scale=0.5f;
+	static int speed=2;
+	ImGui::SliderInt("Speed", &speed, 1, 10);
+	ImGui::SliderFloat("Added", &add, 0.0f, 1.0f);
+	ImGui::SliderFloat("Scale", &scale, 0.0f, 1.0f);
+	float alpha = add + scale * sin((float)ImGui::GetTime() * speed);
+	float value=EaseOutQuadraticFn(alpha);
+	ImGui::Text("Value:%.2f",alpha);
+	ImGui::SliderFloat("##slider", &alpha, -1.0f, 1.0f);
+	ImGui::SliderFloat("##slider", &value, -1.0f, 1.0f);
+
 
 
 	if(currentEditor)
 	{
+		static char buff[1024]="";
+		static bool isFirst=true;
+
 		ImGui::Text("nCursor:%d", (int)currentEditor->GetEditorState()->mCursors.size());
-		static int LineSpacing = 15.0f;
+		static int LineSpacing = 8.0f;
 		if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
 			currentEditor->SetLineSpacing(LineSpacing);
 		}
@@ -110,7 +131,7 @@ void CoreSystem::RenderDebugInfo()
 		static int v{1};
 		ImGui::Text("Goto Line: ");
 		ImGui::SameLine();
-		if (ImGui::InputInt("##ScrollToLine", &v, 1, 100, ImGuiInputTextFlags_EnterReturnsTrue))
+		if (ImGui::InputInt("##ScrollToLine", &v, 1, 100))
 			currentEditor->ScrollToLineNumber(v);
 
 	}
@@ -130,8 +151,6 @@ void CoreSystem::RenderDebugInfo()
 	ImageTexture::AsyncImage(&img1, ImVec2(362, 256));
 	ImageTexture::AsyncImage(&img2, ImVec2(362, 256));
 	ImageTexture::AsyncImage(&img3, ImVec2(362, 256));
-	// ImageTexture::AsyncImage(imgs[1],ImVec2(362, 256));
-	// ImageTexture::AsyncImage(imgs[2],ImVec2(362, 256));
 	#endif
 
 
@@ -139,6 +158,10 @@ void CoreSystem::RenderDebugInfo()
 }
 
 #endif
+
+
+
+
 
 
 void CoreSystem::Render()
@@ -151,7 +174,7 @@ void CoreSystem::Render()
 
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowPos(viewport->WorkPos);
-	ImVec2 size(viewport->WorkSize.x, StatusBarManager::IsInputPanelOpen()
+	ImVec2 size(viewport->WorkSize.x, StatusBarManager::IsAnyPanelOpen()
 	                                      ? viewport->WorkSize.y - StatusBarManager::StatusBarSize - StatusBarManager::PanelSize
 	                                      : viewport->WorkSize.y - StatusBarManager::StatusBarSize);
 	ImGui::SetNextWindowSize(size);
@@ -183,7 +206,7 @@ void CoreSystem::Render()
 			Get().mRightDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Right, 0.3f, nullptr, &Get().mDockSpaceId);
 			auto dock_id_left_bottom = ImGui::DockBuilderSplitNode(Get().mLeftDockSpaceId, ImGuiDir_Down, 0.3f, nullptr, &Get().mLeftDockSpaceId);
 			ImGui::DockBuilderDockWindow("Project Directory", Get().mLeftDockSpaceId);
-			// ImGui::DockBuilderDockWindow("#editor_container", Get().mRightDockSpaceId);
+			ImGui::DockBuilderDockWindow("Directory Finder", Get().mRightDockSpaceId);
 			ImGui::DockBuilderDockWindow("Terminal", dock_id_left_bottom);
 #ifdef GL_DEBUG
 			ImGui::DockBuilderDockWindow("Dear ImGui Demo", Get().mLeftDockSpaceId);
@@ -192,6 +215,7 @@ void CoreSystem::Render()
 			ImGui::DockBuilderFinish(Get().mDockSpaceId);
 
 			TabsManager::SetNewTabsDockSpaceId(Get().mDockSpaceId);
+			DirectoryFinder::SetDockspaceId(Get().mRightDockSpaceId);
 		}
 	}
 
@@ -202,7 +226,11 @@ void CoreSystem::Render()
 				TabsManager::OpenNewEmptyFile();
 
 			if (ImGui::MenuItem("Open File"))
-				TabsManager::OpenFile(SelectFile().c_str());
+			{
+				std::string path=SelectFile();
+				if(!path.empty())
+					TabsManager::OpenFile(path);
+			}
 
 			if (ImGui::MenuItem("Open Folder")) {
 				std::string path = SelectFolder();
@@ -231,10 +259,45 @@ void CoreSystem::Render()
 
 	if (FileNavigation::IsOpen())
 		FileNavigation::Render();
+
+
 	Get().mTerminal.Render();
 	StatusBarManager::Render(size, viewport);
+	DirectoryFinder::Render();
 	TabsManager::Render();
+
+	QuickFileSearch::Render();
+
 	MultiThreading::ImageLoader::LoadImages();
+
+	if(ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_F))
+		StatusBarManager::ShowFileSearchPanel();
+
+	if(ImGui::IsKeyDown(ImGuiKey_ModShift) && ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_S))
+	{
+		Editor* currEditor=TabsManager::GetCurrentActiveTextEditor();
+		if(currEditor)
+		{
+			std::string parentDir=std::filesystem::path(currEditor->GetCurrentFilePath()).parent_path().generic_string();
+			if(std::filesystem::exists(parentDir))
+			{
+				DirectoryFinder::Setup(parentDir,false);
+			}
+		}
+		else
+		{
+			auto& folders=FileNavigation::GetFolders();
+			if(!folders.empty())
+			{
+				DirectoryFinder::Setup(folders[0],false);
+			}else{
+				DirectoryFinder::Setup("",false);
+			}
+		}
+	}
+
+
+	QuickFileSearch::EventListener();
 }
 
 
@@ -268,14 +331,14 @@ void CoreSystem::InitFonts()
 	font_config.FontDataOwnedByAtlas = false;
 	const float font_size = GetFontSize();
 	// io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf",font_size+3,&font_config);
-	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size + 2, &font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size+2.0f, &font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeSolid, IM_ARRAYSIZE(FontAwesomeSolid), (font_size + 4.0f) * 2.0f / 3.0f, &icon_config,
 	                               icons_ranges);
 
 	// io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeuii.ttf",font_size+3,&font_config);
-	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLItalic, IM_ARRAYSIZE(JetBrainsMonoNLItalic), font_size + 2, &font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLItalic, IM_ARRAYSIZE(JetBrainsMonoNLItalic), font_size + 2.0f, &font_config);
 
-	io.Fonts->AddFontFromMemoryTTF((void*)MonoLisaRegular, IM_ARRAYSIZE(MonoLisaRegular), font_size - 4.0f, &font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size+2.0f, &font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeRegular, IM_ARRAYSIZE(FontAwesomeRegular), (font_size + 4.0f) * 2.0f / 3.0f,
 	                               &icon_config, icons_ranges);
 }
