@@ -445,6 +445,20 @@ void FileNavigation::Render(){
 }
 
 
+void FileNavigation::MarkFileAsOpen(const std::string &aOpenedFilePath){
+	std::string	directoryPath=std::filesystem::path(aOpenedFilePath).parent_path().generic_string();
+	auto& entities=Get().mDirectoryData[directoryPath];
+
+	if(entities.empty()) return;
+
+	for(auto& entity:entities)
+		if(!entity.is_directory && entity.path==aOpenedFilePath)
+			entity.is_explored=true;
+		else
+			entity.is_explored=false;
+}
+
+
 void FileNavigation::ScanDirectory(const std::string& aDirectoryPath){
 	GL_INFO("Updating:{}",aDirectoryPath);
 

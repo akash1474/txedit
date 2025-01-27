@@ -151,6 +151,7 @@ void TabsManager::Render(){
 				tab.isActive=false;
 
 			it->isActive=true;
+			FileNavigation::MarkFileAsOpen(it->filepath);
 		}
 
 		//Updating the windowptr
@@ -170,18 +171,24 @@ void TabsManager::Render(){
 		
 		if(!it->isOpen)
 		{
-			bool wasDetetedTabFocused=it->isActive;
+			bool wasDeletedTabFocused=it->isActive;
 			it=tabs.erase(it);
-			std::vector<FileTab>::iterator currTab=it;
 
-			if(currTab==tabs.end() && currTab!=tabs.begin())
+			if(tabs.size()>0)
 			{
-				currTab=it-1;
-				currTab->isActive=true;
+				auto current=it;
+				size_t idx=std::distance(tabs.begin(),it);
+				if(idx>0)
+				{
+					current=it-1;
+					current->isActive=true;
+				}
+
+				current->isActive=true;
+				if(wasDeletedTabFocused)
+					ImGui::FocusWindow(current->winPtr);
 			}
 
-			if(wasDetetedTabFocused)
-				ImGui::SetNextWindowFocus();
 		}
 		else
 		{
