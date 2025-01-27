@@ -9,6 +9,7 @@
 #include <wingdi.h>
 #include "Application.h"
 #include "TabsManager.h"
+#include "FileNavigation.h"
 
 //Make sure Visual Leak Detector (VLD) is installed
 #ifdef DETECT_MEMORY_LEAKS_VLD

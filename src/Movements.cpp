@@ -6,6 +6,7 @@
 #include "Log.h"
 #include "imgui.h"
 
+#include "TokenType.h"
 #include "DataTypes.h"
 #include "Timer.h"
 #include "Trie.h"
@@ -373,20 +374,20 @@ void Editor::InsertCharacter(char chr){
 		added.mStart = coord;
 
 		for (auto p = buff; *p != '\0'; p++, ++cindex)
-			line.insert(line.begin() + cindex, Glyph(*p, ColorSchemeIdx::Default));
+			line.insert(line.begin() + cindex, Glyph(*p, TxTokenType::TxDefault));
 
 		added.mText = buff;
 
 		if (IsOpeningBracket(chr)) {
 			char closingBracket=GetClosingBracketFor(chr);
-            line.insert(line.begin() + cindex, Glyph(closingBracket, ColorSchemeIdx::Default));
+            line.insert(line.begin() + cindex, Glyph(closingBracket, TxTokenType::TxDefault));
             added.mText+=closingBracket;
             addedQuotesOrBrackets=true;
         }
 
         // if at (line end ) or (next character is not same) -> insert one more chr
         if((chr=='\'' || chr == '\"') && (cindex==line.size() || (cindex < line.size() && line[cindex].mChar!=chr))){
-            line.insert(line.begin() + cindex, Glyph(chr, ColorSchemeIdx::Default));
+            line.insert(line.begin() + cindex, Glyph(chr, TxTokenType::TxDefault));
             added.mText+=chr;
             addedQuotesOrBrackets=true;
         }
@@ -966,7 +967,7 @@ void Editor::InsertTab(bool isShiftPressed)
 			GL_INFO("IDX:", idx);
 
 			// if(idx>0 && line[idx-1].mChar!='\t') continue;
-			line.insert(line.begin() + idx, 1, Glyph('\t',ColorSchemeIdx::Default));
+			line.insert(line.begin() + idx, 1, Glyph('\t',TxTokenType::TxDefault));
 
 			aCursor.mCursorPosition.mColumn += mTabSize;
 
@@ -1014,7 +1015,7 @@ void Editor::InsertTab(bool isShiftPressed)
 					indentValue=0;
 
 			} else {
-				mLines[startLine].insert(mLines[startLine].begin(), 1, Glyph('\t',ColorSchemeIdx::Default));
+				mLines[startLine].insert(mLines[startLine].begin(), 1, Glyph('\t',TxTokenType::TxDefault));
 
 				UndoOperation uAdded;
 				uAdded.mType=UndoOperationType::Add;

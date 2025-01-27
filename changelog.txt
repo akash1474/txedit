@@ -1,5 +1,2 @@
 Features:
-
-BugFixes/Improvements:
-- Fix when last tab is closed then the last second tab is not automatically focused.
-- Update the selected file in FileNavigation to only highlight the file in current tab.
+- Added ThemeManager component for loading of color scheme from json files ensure proper color mapping

@@ -1,6 +1,7 @@
 #pragma once
 
-enum class TokenType {
+enum class TxTokenType {
+    TxDefault=0,
     // Identifiers
     TxVariable,
     TxVariableBuiltin,
@@ -130,5 +131,20 @@ enum class TokenType {
     TxNone,
     TxConceal,
     TxSpell,
-    TxNoSpell
+    TxNoSpell,
+
+    //Globals
+    TxForeground,
+    TxBackground,
+    TxCaret,
+    TxBlockCaret,
+    TxLineHightlight,
+    TxMissSpelling,
+    TxSelection,
+    TxSelectionInActive,
+    TxHighlight,
+    TxFindHighlight,
+    
+
+    TxSize
 };

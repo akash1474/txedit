@@ -30,6 +30,8 @@
 #include "TabsManager.h"
 
 #include "tree_sitter/api.h"
+#include "CoreSystem.h"
+#include "TokenType.h"
 
 #undef min
 #undef max
@@ -44,12 +46,6 @@ bool equals(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2, Bi
 
 	return first1 == last1 && first2 == last2;
 }
-
-void Editor::SetPalette(const Palette & aValue)
-{
-	mPaletteBase = aValue;
-}
-
 void Editor::SetLanguageDefinition(const LanguageDefinition & aLanguageDef)
 {
 	mLanguageDefinition = aLanguageDef;
@@ -58,15 +54,9 @@ void Editor::SetLanguageDefinition(const LanguageDefinition & aLanguageDef)
 Editor::Editor()
 {
 	InitPallet();
-	SetPalette(GetGruvboxPalette());
 	mLines.push_back(Line());
 	workerThread_ = std::thread(&Editor::WorkerThread, this);
 	mState.mCursors.emplace_back(Cursor());
-	for (int i = 0; i < (int)PaletteIndex::Max; ++i) {
-		auto color = ImGui::ColorConvertU32ToFloat4(mPaletteBase[i]);
-		color.w *= 1.0f;
-		mPalette[i] = ImGui::ColorConvertFloat4ToU32(color);
-	}
 }
 Editor::~Editor() {
 	CloseDebounceThread();
@@ -144,7 +134,7 @@ void Editor::SetBuffer(const std::string& aFileBuffer)
 		}
 		else
 		{
-			mLines.back().emplace_back(chr, ColorSchemeIdx::Default);
+			mLines.back().emplace_back(chr, TxTokenType::TxDefault);
 		}
 	}
 
@@ -379,7 +369,7 @@ bool Editor::Draw()
 		ImVec2 textScreenPos = ImVec2(linePosition.x + mLineBarWidth + mPaddingLeft, linePosition.y + (0.5 * mLineSpacing));
 
 		// Render colorized text
-		auto prevColor = line.empty() ? mPalette[(int)ColorSchemeIdx::Default] : GetGlyphColor(line[0]);
+		auto prevColor = line.empty() ? ThemeManager::GetTokenToColorMap()[(int)TxTokenType::TxDefault] : GetGlyphColor(line[0]);
 		ImVec2 bufferOffset;
 
 		for (int i = 0; i < line.size();) {
@@ -906,32 +896,6 @@ Coordinates Editor::FindEndBracket(const Coordinates& coords){
 	return coord;
 }
 
-// Function to set PaletteIndex based on Tree-sitter node type
-Editor::ColorSchemeIdx Editor::GetColorSchemeIndexForNode(const std::string &type)
-{
-    if (type == "type" || type=="keyword" || type=="statement" || type=="function.namespace")
-        return Editor::ColorSchemeIdx::Keyword;
-    else if (type == "type.indentifier")
-        return Editor::ColorSchemeIdx::Identifier;
-    else if (type == "string")
-        return Editor::ColorSchemeIdx::String;
-    else if (type == "primitive_type" || type=="number")
-        return Editor::ColorSchemeIdx::Number;
-    else if (type == "comment")
-        return Editor::ColorSchemeIdx::Comment;
-    else if (type == "assignment")
-        return Editor::ColorSchemeIdx::KnownIdentifier;
-    else if (type == "function")
-        return Editor::ColorSchemeIdx::KnownIdentifier;
-    else if (type == "primitive_type")
-        return Editor::ColorSchemeIdx::Preprocessor;
-    else if (type == "namespace")
-        return Editor::ColorSchemeIdx::String;
-    else if (type == "scope_resolution")
-        return Editor::ColorSchemeIdx::Default;
-    else
-        return Editor::ColorSchemeIdx::Default;
-}
 
 void Editor::ReparseEntireTree(){
 	std::string sourceCode=GetFullText();
@@ -1010,11 +974,11 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 
 	; anything.[captured]
 	(field_expression
-		field:(field_identifier) @assignment)
+		field:(field_identifier) @variable.parameter)
 
 	;array access captured[]
 	(subscript_expression
-		argument:(identifier) @assignment)
+		argument:(identifier) @variable.parameter)
 
 	(number_literal) @number
 	(true) @number
@@ -1025,15 +989,20 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	(this) @number
 	(null "nullptr" @number)
 
-	(type_identifier) @type.indentifier
-	(parameter_declaration
-		(identifier) @scope_resolution) 
+	(type_identifier) @type
+
+
+	;comment
 	(comment) @comment 
-	(string_literal) @string 
+
+
+
+	(string_literal) @string
+	(char_literal) @string
+	(escape_sequence) @string.escape
 	(raw_string_literal) @string
 	(primitive_type) @keyword
 	(function_declarator declarator:(_) @function) 
-	;(namespace_identifier) @namespace
 
 	;Preprocessor
 	(preproc_include (string_literal) @string)
@@ -1041,9 +1010,9 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	(preproc_include) @keyword
 
     (preproc_def) @keyword
-    (preproc_def name:(identifier) @type.indentifier)
+    (preproc_def name:(identifier) @type)
     (preproc_ifdef) @keyword
-    (preproc_ifdef name:(identifier) @type.indentifier)
+    (preproc_ifdef name:(identifier) @type)
     (preproc_else) @keyword
     (preproc_directive) @keyword
 
@@ -1105,7 +1074,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 
 	(function_declarator
 	  (qualified_identifier
-	    name: (identifier) @function.namespace))
+	    name: (identifier) @function.call))
 
 	(function_declarator
 	  (template_function
@@ -1125,8 +1094,8 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	  (template_function
 	    (identifier) @function))
 
-	((namespace_identifier) @namespace
-			(#match? @namespace "^[A-Z]"))
+	((namespace_identifier) @module)
+
 
 	(ERROR) @error
 
@@ -1161,6 +1130,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	// 5. Highlight matching nodes
 	TSQueryMatch match;
 	Trie::Node* aGlobalTokens=TabsManager::GetTrieRootNode();
+	std::unordered_map<std::string, TxTokenType>& captureToToken=ThemeManager::GetCaptureToTokenMap();
 
 	while (ts_query_cursor_next_match(cursor, &match)) {
 		for (unsigned int i = 0; i < match.capture_count; ++i) {
@@ -1194,7 +1164,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 
 		    endPoint.column--;
 
-		    ColorSchemeIdx colorIndex = GetColorSchemeIndexForNode(captureName);
+		    TxTokenType colorIndex = captureToToken[captureName];
 		    // GL_INFO("[{},{}]-[{},{}]:{}--{}",startPoint.row,startPoint.column,endPoint.row,endPoint.column,nodeType,(int)colorIndex);
 
 		    for (unsigned int row = startPoint.row; row < mLines.size() && row <= endPoint.row; ++row)
@@ -1285,8 +1255,9 @@ void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
 	// int end=std::min((int)mLines.size()-1,aLineNo+aLineCount);
 	// for(int row=start;row<=end;row++){
 	// 	for(auto& glyph:mLines[row])
-	// 		glyph.mColorIndex=ColorSchemeIdx::Default;
+	// 		glyph.mColorIndex=TxTokenType::TxDefault;
 	// }
+	std::unordered_map<std::string, TxTokenType> captureToToken=ThemeManager::GetCaptureToTokenMap();
 
 	TSQueryMatch match;
 	while (ts_query_cursor_next_match(cursor, &match)) {
@@ -1305,7 +1276,7 @@ void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
 		    TSPoint endPoint = ts_node_end_point(node);
 		    endPoint.row+=startLine;
 
-		    ColorSchemeIdx colorIndex = GetColorSchemeIndexForNode(captureName);
+		    TxTokenType colorIndex = captureToToken[captureName];
             // GL_INFO("Range:({},{}) -> ({},{})",startPoint.row,startPoint.column,endPoint.row,endPoint.column);
 		    for (unsigned int row = startPoint.row; row < mLines.size() && row <= endPoint.row; ++row)
 		    {
@@ -1323,50 +1294,9 @@ void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
     ts_query_cursor_delete(cursor);
 }
 
-const Editor::Palette& Editor::GetGruvboxPalette()
-{
-	constexpr const static Palette p = {{
-	    IM_COL32(40, 40, 40, 255),    // BG (#282828)
-	    IM_COL32(204, 36, 29, 255),   // RED (#cc241d)
-	    IM_COL32(152, 151, 26, 255),  // GREEN (#98971a)
-	    IM_COL32(215, 153, 33, 255),  // YELLOW (#d79921)
-	    IM_COL32(69, 133, 136, 255),  // BLUE (#458588)
-	    IM_COL32(177, 98, 134, 255),  // PURPLE (#b16286)
-	    IM_COL32(104, 157, 106, 255), // AQUA (#689d6a)
-	    IM_COL32(168, 153, 132, 255), // GRAY (#a89984)
-	    IM_COL32(29, 32, 33, 255),    // BG0_H (#1d2021)
-	    IM_COL32(40, 40, 40, 255),    // BG0 (#282828)
-	    IM_COL32(50, 48, 47, 255),    // BG0_S (#32302f)
-	    IM_COL32(60, 56, 54, 255),    // BG1 (#3c3836)
-	    IM_COL32(80, 73, 69, 255),    // BG2 (#504945)
-	    IM_COL32(102, 92, 84, 255),   // BG3 (#665c54)
-	    IM_COL32(124, 118, 100, 255), // BG4 (#7c6f64)
-	    IM_COL32(235, 219, 178, 255), // FG (#ebdbb2)
-	    IM_COL32(251, 241, 199, 255), // FG0 (#fbf1c7)
-	    IM_COL32(235, 219, 178, 255), // FG1 (#ebdbb2)
-	    IM_COL32(213, 196, 161, 255), // FG2 (#d5c4a1)
-	    IM_COL32(189, 174, 147, 255), // FG3 (#bdae93)
-	    IM_COL32(168, 153, 132, 255), // FG4 (#a89984)
-	    IM_COL32(214, 93, 14, 255),   // ORANGE (#d65d0e)
-	    IM_COL32(251, 73, 52, 255),   // LIGHT_RED (#fb4934)
-	    IM_COL32(184, 187, 38, 255),  // LIGHT_GREEN (#b8bb26)
-	    IM_COL32(131, 165, 152, 255), // LIGHT_BLUE (#83a598)
-	    IM_COL32(211, 134, 155, 255), // LIGHT_PURPLE (#d3869b)
-	    IM_COL32(250, 189, 47, 255),  // LIGHT_YELLOW (#fabd2f)
-	    IM_COL32(142, 192, 124, 255), // LIGHT_AQUA (#8ec07c)
-	    IM_COL32(254, 128, 25, 255),  // BRIGHT_ORANGE (#fe8019)
-	    IM_COL32(168, 153, 132, 255), // FG_HIGHLIGHT (Repeated FG4 #a89984)
-	    IM_COL32(92, 84, 78, 255)     // FG_DARK (#5c544e)
-	}};
-
-	return p;
-}
-
-
-
 ImU32 Editor::GetGlyphColor(const Glyph& aGlyph) const
 {
-	return mPalette[(int)aGlyph.mColorIndex];
+	return ThemeManager::GetTokenToColorMap()[(int)aGlyph.mColorIndex];
 }
 
 
@@ -2194,7 +2124,7 @@ int Editor::InsertTextAt(Coordinates& aWhere, const char* aValue)
 		} else {
 			auto& line = mLines[aWhere.mLine];
 			auto d = UTF8CharLength(*aValue);
-			while (d-- > 0 && *aValue != '\0') line.insert(line.begin() + cindex++, Glyph(*aValue++, ColorSchemeIdx::Default));
+			while (d-- > 0 && *aValue != '\0') line.insert(line.begin() + cindex++, Glyph(*aValue++, TxTokenType::TxDefault));
 			++aWhere.mColumn;
 		}
 

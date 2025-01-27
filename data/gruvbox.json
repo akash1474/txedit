@@ -1,0 +1,178 @@
+{
+    "name": "gruvbox (Dark) (Hard) NDC",
+    "description": "Based on gruvbox for Vim (https://github.com/morhetz/gruvbox)",
+    "variables": {
+        "bg": "#1D2021",
+        "bg0": "#282828",
+        "bg1": "#3C3836",
+        "bg2": "#504945",
+        "bg3": "#665C54",
+        "bg4": "#7C6F64",
+        "gray": "#928374",
+        "fg": "#EBDBB2",
+        "fg0": "#FBF1C7",
+        "fg1": "#EBDBB2",
+        "fg2": "#D5C4A1",
+        "fg3": "#BDAE93",
+        "fg4": "#A89984",
+        "red": "#FB4934",
+        "green": "#B8BB26",
+        "yellow": "#FABD2F",
+        "blue": "#83A598",
+        "purple": "#D3869B",
+        "aqua": "#8EC07C",
+        "orange": "#FE8019"
+    },
+    "globals": {
+        "default":"fg",
+        "background": "bg",
+        "foreground": "fg",
+        "caret": "fg4",
+        "block_caret": "gray",
+        "line_highlight": "bg1",
+        "misspelling": "red",
+        "selection": "bg1",
+        "inactive_selection": "bg1",
+        "highlight": "fg",
+        "find_highlight": "yellow",
+        "find_highlight_foreground": "bg"
+    },
+    "rules": [
+        {
+            "capture": "comment,comment.documentation",
+            "color": "gray"
+        },
+        {
+            "capture": "comment.error",
+            "color": "orange"
+        },
+        {
+            "capture": "comment.warning",
+            "color": "yellow"
+        },
+        {
+            "capture": "comment.todo",
+            "color": "blue"
+        },
+        {
+            "capture": "comment.note",
+            "color": "purple"
+        },
+        {
+            "capture": "variable,variable.builtin,variable.parameter,variable.parameter.builtin,variable.member",
+            "color": "blue"
+        },
+        {
+            "capture": "constant,constant.builtin,constant.macro",
+            "color": "red"
+        },
+        {
+            "capture": "number,boolean,number.float",
+            "color": "purple"
+        },
+        {
+            "capture": "module",
+            "color": "yellow"
+        },
+        {
+            "capture": "module.builtin",
+            "color": "red"
+        },
+        {
+            "capture": "label",
+            "color": "orange"
+        },
+        {
+            "capture": "string,string.documentation,string.special.url,string.special.path",
+            "color": "green"
+        },
+        {
+            "capture": "string.regexp,string.escape,string.special,string.special.symbol",
+            "color": "red"
+        },
+        {
+            "capture": "character,character.special",
+            "color": "aqua"
+        },
+        {
+            "capture": "type,type.builtin,type.definition",
+            "color": "yellow"
+        },
+        {
+            "capture": "attribute,attribute.builtin,property",
+            "color": "orange"
+        },
+        {
+            "capture": "function,function.builtin,function.call,function.macro,function.method,function.method.call,constructor",
+            "color": "aqua"
+        },
+        {
+            "capture": "operator",
+            "color": "fg"
+        },
+        {
+            "capture": "keyword,keyword.coroutine,keyword.function,keyword.operator,keyword.import,keyword.type,keyword.modifier,keyword.repeat,keyword.return,keyword.debug,keyword.exception,keyword.conditional,keyword.conditional.ternary,keyword.directive,keyword.directive.define",
+            "color": "red"
+        },
+        {
+            "capture": "punctuation.delimiter,punctuation.bracket,punctuation.special",
+            "color": "fg4"
+        },
+        {
+            "capture": "markup.strong,markup.italic,markup.strikethrough,markup.underline",
+            "color": "fg1"
+        },
+        {
+            "capture": "markup.heading,markup.heading.1,markup.heading.2,markup.heading.3,markup.heading.4,markup.heading.5,markup.heading.6",
+            "color": "yellow"
+        },
+        {
+            "capture": "markup.quote,markup.math",
+            "color": "aqua"
+        },
+        {
+            "capture": "markup.link,markup.link.label,markup.link.url",
+            "color": "blue"
+        },
+        {
+            "capture": "markup.raw,markup.raw.block",
+            "color": "fg2"
+        },
+        {
+            "capture": "markup.list,markup.list.checked,markup.list.unchecked",
+            "color": "orange"
+        },
+        {
+            "capture": "diff.plus",
+            "color": "green"
+        },
+        {
+            "capture": "diff.minus",
+            "color": "red"
+        },
+        {
+            "capture": "diff.delta",
+            "color": "yellow"
+        },
+        {
+            "capture": "tag,tag.builtin,tag.attribute,tag.delimiter",
+            "color": "blue"
+        },
+        {
+            "capture": "none",
+            "color": "bg"
+        },
+        {
+            "capture": "conceal",
+            "color": "gray"
+        },
+        {
+            "capture": "spell",
+            "color": "red"
+        },
+        {
+            "capture": "nospell",
+            "color": "fg"
+        }
+    ]
+}

@@ -25,6 +25,7 @@
 #endif
 #ifdef GL_DEBUG
 
+
 void ShowFPS()
 {
 	static float previousTime = 0.0f;
@@ -47,6 +48,44 @@ void ShowFPS()
 
 float EaseOutQuadraticFn(float t) { return 1.0f - pow(1.0f - t, 4);}
 
+
+
+void DisplayColorTable(const std::unordered_map<std::string, ImU32>& colorMap) {
+    static char filter[128] = ""; // Input buffer for filtering
+
+    ImGui::InputText("Filter", filter, IM_ARRAYSIZE(filter)); // Input text for search
+
+    if (ImGui::BeginTable("ColorTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+        ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthStretch, 150.0f);  // Fixed width for key column
+        ImGui::TableSetupColumn("Preview", ImGuiTableColumnFlags_WidthFixed, 60.0f); // Set width for color preview
+
+        ImGui::TableHeadersRow();
+
+        for (const auto& [key, color] : colorMap) {
+            if (filter[0] != '\0' && key.find(filter) == std::string::npos) {
+                continue; // Skip items that don't match the filter
+            }
+
+            ImGui::TableNextRow();
+            
+            // Display key name
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextUnformatted(key.c_str());
+            
+            // Display actual color preview as a filled rect
+            ImGui::TableSetColumnIndex(1);
+            ImVec2 pMin = ImGui::GetCursorScreenPos();
+            ImVec2 pMax = { pMin.x + 60, pMin.y + 20 }; // Adjust width accordingly
+            ImGui::GetWindowDrawList()->AddRectFilled(pMin, pMax, color);
+            ImGui::Dummy(ImVec2(60, 20)); // Reserve space for the rectangle
+        }
+        ImGui::EndTable();
+    }
+}
+
+
+
+
 void CoreSystem::RenderDebugInfo()
 {
 	static bool show_demo = true;
@@ -56,6 +95,10 @@ void CoreSystem::RenderDebugInfo()
 	ImGui::SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags_RefreshOnFocus);
 	ImGui::Begin("Project");
 	ShowFPS();
+
+	auto& colorMap=ThemeManager::GetCaptureToColorMap();
+	DisplayColorTable(colorMap);
+
 	const char* utf8 = "Mastering » Ñandú.txt";
 	ImGui::Text("%s", utf8);
 	ImGui::Text("Length:%d", ImTextCountCharsFromUtf8(utf8, 0));
@@ -301,7 +344,9 @@ void CoreSystem::Render()
 }
 
 
-bool CoreSystem::Init() { return true; }
+bool CoreSystem::Init() {
+	return true; 
+}
 
 bool CoreSystem::InitImGui() { return true; }
 
