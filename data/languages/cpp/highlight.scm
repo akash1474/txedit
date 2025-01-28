@@ -1,197 +1,79 @@
-; inherits: c
+[
+  "if" 
+  "else" 
+  "while" 
+  "do" 
+  "for" 
+  "switch" 
+  "case" 
+  "default" 
+  "return" 
+  "break" 
+  "continue"
+  "static"
+  "const"
+] @keyword
 
-((identifier) @variable.member
-  (#lua-match? @variable.member "^m_.*$"))
+(auto) @keyword
 
-(parameter_declaration
-  declarator: (reference_declarator) @variable.parameter)
+; anything.[captured]
+(field_expression
+  field:(field_identifier) @variable.parameter)
 
-; function(Foo ...foo)
-(variadic_parameter_declaration
-  declarator: (variadic_declarator
-    (_) @variable.parameter))
+;array access captured[]
+(subscript_expression
+  argument:(identifier) @variable.parameter)
 
-; int foo = 0
-(optional_parameter_declaration
-  declarator: (_) @variable.parameter)
+(reference_declarator ["&" "&&"] @operator)
+(pointer_declarator "*" @operator)
+(pointer_expression ["*" "&"] @operator)
+(binary_expression 
+  ["<" "<=" ">" ">=" "!=" "==" "&" "&&" "||" "|"] @operator)
+(unary_expression ["!"] @operator)
 
-;(field_expression) @variable.parameter ;; How to highlight this?
-((field_expression
-  (field_identifier) @function.method) @_parent
-  (#has-parent? @_parent template_method function_declarator))
+(assignment_expression
+  ["&=" "|=" "*=" "/=" "+=" "-="] @operator)
+(update_expression ["++" "--"] @operator)
 
-(field_declaration
-  (field_identifier) @variable.member)
 
-(field_initializer
-  (field_identifier) @property)
-
-(function_declarator
-  declarator: (field_identifier) @function.method)
-
-(concept_definition
-  name: (identifier) @type.definition)
-
-(alias_declaration
-  name: (type_identifier) @type.definition)
-
-(auto) @type.builtin
-
-(namespace_identifier) @module
-
-((namespace_identifier) @type
-  (#lua-match? @type "^[%u]"))
-
-(case_statement
-  value: (qualified_identifier
-    (identifier) @constant))
-
-(using_declaration
-  .
-  "using"
-  .
-  "namespace"
-  .
-  [
-    (qualified_identifier)
-    (identifier)
-  ] @module)
-
-(destructor_name
-  (identifier) @function.method)
-
-; functions
-(function_declarator
-  (qualified_identifier
-    (identifier) @function))
-
-(function_declarator
-  (qualified_identifier
-    (qualified_identifier
-      (identifier) @function)))
-
-(function_declarator
-  (qualified_identifier
-    (qualified_identifier
-      (qualified_identifier
-        (identifier) @function))))
-
-((qualified_identifier
-  (qualified_identifier
-    (qualified_identifier
-      (qualified_identifier
-        (identifier) @function)))) @_parent
-  (#has-ancestor? @_parent function_declarator))
-
-(function_declarator
-  (template_function
-    (identifier) @function))
-
-(operator_name) @function
-
-"operator" @function
-
-"static_assert" @function.builtin
-
-(call_expression
-  (qualified_identifier
-    (identifier) @function.call))
-
-(call_expression
-  (qualified_identifier
-    (qualified_identifier
-      (identifier) @function.call)))
-
-(call_expression
-  (qualified_identifier
-    (qualified_identifier
-      (qualified_identifier
-        (identifier) @function.call))))
-
-((qualified_identifier
-  (qualified_identifier
-    (qualified_identifier
-      (qualified_identifier
-        (identifier) @function.call)))) @_parent
-  (#has-ancestor? @_parent call_expression))
-
-(call_expression
-  (template_function
-    (identifier) @function.call))
-
-(call_expression
-  (qualified_identifier
-    (template_function
-      (identifier) @function.call)))
-
-(call_expression
-  (qualified_identifier
-    (qualified_identifier
-      (template_function
-        (identifier) @function.call))))
-
-(call_expression
-  (qualified_identifier
-    (qualified_identifier
-      (qualified_identifier
-        (template_function
-          (identifier) @function.call)))))
-
-((qualified_identifier
-  (qualified_identifier
-    (qualified_identifier
-      (qualified_identifier
-        (template_function
-          (identifier) @function.call))))) @_parent
-  (#has-ancestor? @_parent call_expression))
-
-; methods
-(function_declarator
-  (template_method
-    (field_identifier) @function.method))
-
-(call_expression
-  (field_expression
-    (field_identifier) @function.method.call))
-
-; constructors
-((function_declarator
-  (qualified_identifier
-    (identifier) @constructor))
-  (#lua-match? @constructor "^%u"))
-
-((call_expression
-  function: (identifier) @constructor)
-  (#lua-match? @constructor "^%u"))
-
-((call_expression
-  function: (qualified_identifier
-    name: (identifier) @constructor))
-  (#lua-match? @constructor "^%u"))
-
-((call_expression
-  function: (field_expression
-    field: (field_identifier) @constructor))
-  (#lua-match? @constructor "^%u"))
-
-; constructing a type in an initializer list: Constructor ():  **SuperType (1)**
-((field_initializer
-  (field_identifier) @constructor
-  (argument_list))
-  (#lua-match? @constructor "^%u"))
+(number_literal) @number
+(true) @bool
+(false) @bool
+(auto) @type
 
 ; Constants
-(this) @variable.builtin
+(this) @number
+(null "nullptr" @number)
 
-(null
-  "nullptr" @constant.builtin)
+(type_identifier) @type
 
-(true) @boolean
 
-(false) @boolean
+;comment
+(comment) @comment 
 
-; Literals
+
+
+(string_literal) @string
+(char_literal) @string
+(escape_sequence) @string.escape
 (raw_string_literal) @string
+(primitive_type) @keyword
+(function_declarator declarator:(_) @function) 
+
+;Preprocessor
+(preproc_include (string_literal) @string)
+(preproc_include (system_lib_string) @string)
+(preproc_include) @keyword
+
+  (preproc_def) @keyword
+  (preproc_def name:(identifier) @type)
+  (preproc_ifdef) @keyword
+  (preproc_ifdef name:(identifier) @type)
+  (preproc_else) @keyword
+  (preproc_directive) @keyword
+
+"::" @punctuation.delimiter
+"<=>" @operator
 
 ; Keywords
 [
@@ -219,18 +101,13 @@
   "concept"
 ] @keyword.type
 
+(access_specifier) @keyword.modifier
+
 [
   "co_await"
   "co_yield"
   "co_return"
 ] @keyword.coroutine
-
-[
-  "public"
-  "private"
-  "protected"
-  "final"
-] @keyword.modifier
 
 [
   "new"
@@ -248,20 +125,34 @@
   "or"
 ] @keyword.operator
 
-"<=>" @operator
 
-"::" @punctuation.delimiter
+; functions
+(call_expression
+  function: (identifier) @function)
 
-(template_argument_list
-  [
-    "<"
-    ">"
-  ] @punctuation.bracket)
+(function_declarator
+  (qualified_identifier
+    name: (identifier) @function.call))
 
-(template_parameter_list
-  [
-    "<"
-    ">"
-  ] @punctuation.bracket)
+(function_declarator
+  (template_function
+    (identifier) @function))
 
-(literal_suffix) @operator
+(operator_name) @function
+
+"operator" @function
+
+"static_assert" @function
+
+(call_expression
+  (qualified_identifier
+    (identifier) @function))
+
+(call_expression
+  (template_function
+    (identifier) @function))
+
+((namespace_identifier) @module)
+
+
+(ERROR) @error

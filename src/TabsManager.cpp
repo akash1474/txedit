@@ -185,8 +185,10 @@ void TabsManager::Render(){
 				}
 
 				current->isActive=true;
-				if(wasDeletedTabFocused)
+				if(wasDeletedTabFocused){
 					ImGui::FocusWindow(current->winPtr);
+					FileNavigation::MarkFileAsOpen(current->filepath);
+				}
 			}
 
 		}

@@ -1,2 +1,3 @@
-Features:
-- Added ThemeManager component for loading of color scheme from json files ensure proper color mapping
+BugFix:
+- Fixed: File in navigation being highlighted even after when the tab is closed
+- Improved highlighting capture for cpp language

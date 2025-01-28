@@ -1,3 +1,4 @@
+#include "FileType.h"
 #include "pch.h"
 #include "FileNavigation.h"
 #include "DataTypes.h"
@@ -114,6 +115,8 @@ void Editor::LoadFile(const char* filepath){
 		content.pop_back();
 
 	mFileTypeName=FileNavigation::GetFileTypeNameFromFilePath(filepath);
+	GL_INFO("mFileTypeName:{}",mFileTypeName);
+	// mHighlightType=TxEdit::extensionToHighlightTypeMap[]
 	this->SetBuffer(content);
 	isFileLoaded=true;
 }
@@ -980,9 +983,21 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	(subscript_expression
 		argument:(identifier) @variable.parameter)
 
+	(reference_declarator ["&" "&&"] @operator)
+	(pointer_declarator "*" @operator)
+	(pointer_expression ["*" "&"] @operator)
+	(binary_expression 
+		["<" "<=" ">" ">=" "!=" "==" "&" "&&" "||" "|"] @operator)
+	(unary_expression ["!"] @operator)
+
+	(assignment_expression
+	  ["&=" "|=" "*=" "/=" "+=" "-="] @operator)
+	(update_expression ["++" "--"] @operator)
+
+
 	(number_literal) @number
-	(true) @number
-	(false) @number
+	(true) @bool
+	(false) @bool
 	(auto) @type
 
 	; Constants
@@ -1016,14 +1031,16 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
     (preproc_else) @keyword
     (preproc_directive) @keyword
 
-	"::" @scope_resolution
+	"::" @punctuation.delimiter
+	"<=>" @operator
+
 	; Keywords
 	[
 	  "try"
 	  "catch"
 	  "noexcept"
 	  "throw"
-	] @keyword
+	] @keyword.exception
 
 	[
 	  "decltype"
@@ -1041,15 +1058,15 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	  "template"
 	  "typename"
 	  "concept"
-	] @keyword
+	] @keyword.type
 
-	(access_specifier) @keyword
+	(access_specifier) @keyword.modifier
 
 	[
 	  "co_await"
 	  "co_yield"
 	  "co_return"
-	] @keyword
+	] @keyword.coroutine
 
 	[
 	  "new"
@@ -1065,7 +1082,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	  "not_eq"
 	  "and"
 	  "or"
-	] @keyword
+	] @keyword.operator
 
 
 	; functions
@@ -1095,7 +1112,6 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	    (identifier) @function))
 
 	((namespace_identifier) @module)
-
 
 	(ERROR) @error
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "Coordinates.h"
 #include "DataTypes.h"
+#include "FileType.h"
 #include "TokenType.h"
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -184,9 +185,9 @@ public:
 	void WorkerThread();
 
 private:
+	HighlightType mHighlightType{HighlightType::None};
 
 	ImU32 GetGlyphColor(const Glyph& aGlyph) const;
-
 	void SetLanguageDefinition(const LanguageDefinition& aLanguageDef);
 
 	LanguageDefinition mLanguageDefinition;

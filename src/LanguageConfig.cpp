@@ -6,8 +6,6 @@
 #include <sstream>
 
 LanguageConfig::LanguageConfig() {
-    currentLanguage = "";
-    commentSymbol = "//";
 }
 
 LanguageConfig::~LanguageConfig() {}
