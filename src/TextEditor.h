@@ -1,7 +1,8 @@
 #pragma once
 #include "Coordinates.h"
 #include "DataTypes.h"
-#include "FileType.h"
+#include "HighlightType.h"
+#include "LanguageConfig.h"
 #include "TokenType.h"
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -17,23 +18,8 @@
 #include "Animation.h"
 #include "UndoManager.h"
 
+// Use this when you decide to use dll for each language
 
-#ifndef TREE_SITTER_CPP_H_
-	#define TREE_SITTER_CPP_H_
-
-typedef struct TSLanguage TSLanguage;
-
-	#ifdef __cplusplus
-extern "C" {
-	#endif
-
-	const TSLanguage* tree_sitter_cpp(void);
-
-	#ifdef __cplusplus
-}
-	#endif
-
-#endif // TREE_SITTER_CPP_H_
 
 inline static bool IsUTFSequence(char c) {
     return (c & 0xC0) == 0x80;
@@ -155,11 +141,10 @@ public:
 
 
 	//TreeSitter Experimental
-	TSQuery* mQuery=nullptr;
+	// TSQuery* mQuery=nullptr;
 	// ErrorMarkers mErrorMarkers;
 
 	TSInputEdit mTSInputEdit;
-	bool mIsSyntaxHighlightingSupportForFile=false;
 	void DebugDisplayNearByText();
 	std::string GetFullText();
 
@@ -185,12 +170,14 @@ public:
 	void WorkerThread();
 
 private:
-	HighlightType mHighlightType{HighlightType::None};
+	TxEdit::HighlightType mHighlightType{TxEdit::HighlightType::None};
 
 	ImU32 GetGlyphColor(const Glyph& aGlyph) const;
-	void SetLanguageDefinition(const LanguageDefinition& aLanguageDef);
 
-	LanguageDefinition mLanguageDefinition;
+	LanguageConfig* mLanguageConfig=nullptr;
+	bool mIsSyntaxHighlightingSupportForFile=false;
+
+
 	Animation mScrollAnimation;
 	float mScrollAmount{0.0f};
 	float mInitialScrollY{0.0f};

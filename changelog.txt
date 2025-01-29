@@ -1,3 +1,2 @@
-BugFix:
-- Fixed: File in navigation being highlighted even after when the tab is closed
-- Improved highlighting capture for cpp language
+Feature:
+- Added Highlighting for languages like c,java,json,lua and python

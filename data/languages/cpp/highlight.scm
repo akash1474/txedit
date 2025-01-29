@@ -154,5 +154,4 @@
 
 ((namespace_identifier) @module)
 
-
 (ERROR) @error

@@ -16,7 +16,11 @@ includeDirs["Mini"]="packages/mINI/src/mini"
 includeDirs["LunaSVG"]="packages/lunasvg/include"
 includeDirs["UUID"]="packages/uuid_v4"
 includeDirs["TreeSitter"]="packages/tree-sitter/lib/include"
-includeDirs["TreeSitterCpp"]="packages/tree-sitter-cpp/src"
+-- includeDirs["TreeSitterC"]="packages/tree-sitter-c/src"
+-- includeDirs["TreeSitterCpp"]="packages/tree-sitter-cpp/src"
+-- includeDirs["TreeSitterJava"]="packages/tree-sitter-java/src"
+-- includeDirs["TreeSitterJson"]="packages/tree-sitter-json/src"
+-- includeDirs["TreeSitterPython"]="packages/tree-sitter-python/src"
 includeDirs["nlohmann"]="packages/nlohmann"
 
 
@@ -27,7 +31,12 @@ include "packages/glfw"
 include "packages/imgui"
 include "packages/lunasvg"
 include "packages/tree-sitter"
+include "packages/tree-sitter-c"
 include "packages/tree-sitter-cpp"
+include "packages/tree-sitter-python"
+include "packages/tree-sitter-java"
+include "packages/tree-sitter-json"
+include "packages/tree-sitter-lua"
 
 project "text_editor"
    kind "ConsoleApp"
@@ -38,8 +47,9 @@ project "text_editor"
    pchheader "pch.h"
    pchsource "src/pch.cpp"
 
+   -- libdirs{"D:/Projects/c++/txedit"}
    links {
-      "glfw","ImGui","opengl32","LunaSVG","userenv","Shell32","dwmapi","TreeSitter","TreeSitterCpp"
+      "glfw","ImGui","opengl32","LunaSVG","userenv","Shell32","dwmapi","TreeSitter","TreeSitterC","TreeSitterCpp","TreeSitterJava","TreeSitterJson","TreeSitterLua","TreeSitterPython"
    }
 
    includedirs{
@@ -51,7 +61,6 @@ project "text_editor"
       "%{includeDirs.SpdLog}",
       "%{includeDirs.UUID}",
       "%{includeDirs.TreeSitter}",
-      "%{includeDirs.TreeSitterCpp}",
       "%{includeDirs.nlohmann}"
    }
 
@@ -64,13 +73,13 @@ project "text_editor"
       systemversion "latest"
 
    filter "configurations:Debug"
-      runtime "Debug"
-      symbols "On"
-      staticruntime "On"
-      optimize "Off"
-      characterset ("Unicode") -- Default
-      buildoptions { "/MP","/DEBUG:FULL","/utf-8" } --"/utf-8" - tells compiler to interprete string literals as utf8
-      defines {"GL_DEBUG"} 
+       runtime "Debug"
+       symbols "On"
+       staticruntime "On" -- Ensure static runtime
+       optimize "Off"
+       characterset ("Unicode")
+       buildoptions { "/MP","/DEBUG:FULL","/utf-8"} -- "/MTd"  Use /MTd for Debug static linking
+       defines {"GL_DEBUG"}
 
       -- For Memory Leaks add this flag to defines DETECT_MEMORY_LEAKS_VLD
       -- links{"vld"}

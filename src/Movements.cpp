@@ -15,6 +15,7 @@
 #include "TextEditor.h"
 #include "tree_sitter/api.h"
 #include "TabsManager.h"
+#include "TreesitterLanguage.h"
 
 void Editor::MoveUp(bool ctrl, bool shift)
 {

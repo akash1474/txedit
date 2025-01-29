@@ -36,6 +36,7 @@ std::string FileNavigation::GetFileTypeNameFromFilePath(const std::string& aFile
 	std::string extension=std::filesystem::path(aFilePath).extension().string();
 	if(extension[0]=='.')
 		extension=extension.substr(1);
+	
 	for(auto& [name,iconData]:Get().mIconDatabase)
 	{
 		if(std::find(iconData.extensions.begin(),iconData.extensions.end(),extension)!=iconData.extensions.end())

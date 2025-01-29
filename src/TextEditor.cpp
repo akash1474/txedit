@@ -1,4 +1,3 @@
-#include "FileType.h"
 #include "pch.h"
 #include "FileNavigation.h"
 #include "DataTypes.h"
@@ -9,11 +8,9 @@
 #include "TextEditor.h"
 
 #include <cassert>
-#include <chrono>
 #include <cstdint>
 #include <ctype.h>
 #include <filesystem>
-#include <ios>
 #include <regex>
 #include <stdint.h>
 
@@ -31,8 +28,12 @@
 #include "TabsManager.h"
 
 #include "tree_sitter/api.h"
-#include "CoreSystem.h"
 #include "TokenType.h"
+#include "HighlightType.h"
+#include "LanguageConfigManager.h"
+#include "ThemeManager.h"
+
+#include "TreesitterLanguage.h"
 
 #undef min
 #undef max
@@ -47,10 +48,7 @@ bool equals(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2, Bi
 
 	return first1 == last1 && first2 == last2;
 }
-void Editor::SetLanguageDefinition(const LanguageDefinition & aLanguageDef)
-{
-	mLanguageDefinition = aLanguageDef;
-}
+
 
 Editor::Editor()
 {
@@ -61,7 +59,7 @@ Editor::Editor()
 }
 Editor::~Editor() {
 	CloseDebounceThread();
-	ts_query_delete(mQuery);
+	// ts_query_delete(mQuery);
 }
 
 void Editor::ResetState(){
@@ -88,12 +86,11 @@ void Editor::LoadFile(const char* filepath){
 		return;
 	}
 
-
-
 	if(!std::filesystem::exists(filepath)){
 		StatusBarManager::ShowNotification("Invalid Path",filepath,StatusBarManager::NotificationType::Error);
 		return;
 	}
+
 	GL_INFO("Editor::LoadFile - {}",filepath);
 	this->ResetState();
 
@@ -114,9 +111,12 @@ void Editor::LoadFile(const char* filepath){
 	while(content.size()>0 && content[content.size()-1]==' ')
 		content.pop_back();
 
+
+
 	mFileTypeName=FileNavigation::GetFileTypeNameFromFilePath(filepath);
-	GL_INFO("mFileTypeName:{}",mFileTypeName);
-	// mHighlightType=TxEdit::extensionToHighlightTypeMap[]
+	// GL_INFO("mFileTypeName:{}",mFileTypeName);
+	mHighlightType=TxEdit::GetHighlightType(mFilePath);
+	// GL_INFO("HighLightType:{}",(int)mHighlightType);
 	this->SetBuffer(content);
 	isFileLoaded=true;
 }
@@ -151,13 +151,19 @@ void Editor::SetBuffer(const std::string& aFileBuffer)
 	// mUndoManager.Clear();
 	// GL_INFO("Extension:{}",);
 	std::string ext=std::filesystem::path(mFilePath).extension().generic_string();
-	if(ext==".cpp" || ext==".h" || ext==".hpp" || ext==".c")
-	{
-		mIsSyntaxHighlightingSupportForFile=true;
+	// if(ext==".cpp" || ext==".h" || ext==".hpp" || ext==".c")
+	// // if(ext==".py")
+	// {
+	// 	mIsSyntaxHighlightingSupportForFile=true;
+	// 	ApplySyntaxHighlighting(aFileBuffer);
+	// }
+	// else 
+	// 	mIsSyntaxHighlightingSupportForFile=false;
+
+	mLanguageConfig=LanguageConfigManager::GetLanguageConfig(mHighlightType);
+	mIsSyntaxHighlightingSupportForFile= mLanguageConfig ?  true :false;
+	if(mIsSyntaxHighlightingSupportForFile)
 		ApplySyntaxHighlighting(aFileBuffer);
-	}
-	else 
-		mIsSyntaxHighlightingSupportForFile=false;
 }
 
 
@@ -948,188 +954,30 @@ void Editor::WorkerThread()
 // Function to update Glyphs using Tree-sitter
 void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 {
+
 	if(sourceCode.size() <2  || !mIsSyntaxHighlightingSupportForFile) return;
 	OpenGL::ScopedTimer timer("ApplySyntaxHighlighting");
 	// Initialize Tree-sitter parser
     TSParser* parser= ts_parser_new();
-    ts_parser_set_language(parser,tree_sitter_cpp());
+    ts_parser_set_language(parser,mLanguageConfig->tsLanguage());
 
     TSTree* tree = ts_parser_parse_string(parser, nullptr, sourceCode.c_str(), sourceCode.size());
 
-	static std::string query_string = R"(
-	[
-		"if" 
-		"else" 
-		"while" 
-		"do" 
-		"for" 
-		"switch" 
-		"case" 
-		"default" 
-		"return" 
-		"break" 
-		"continue"
-		"static"
-		"const"
-	] @keyword
-
-	(auto) @keyword
-
-	; anything.[captured]
-	(field_expression
-		field:(field_identifier) @variable.parameter)
-
-	;array access captured[]
-	(subscript_expression
-		argument:(identifier) @variable.parameter)
-
-	(reference_declarator ["&" "&&"] @operator)
-	(pointer_declarator "*" @operator)
-	(pointer_expression ["*" "&"] @operator)
-	(binary_expression 
-		["<" "<=" ">" ">=" "!=" "==" "&" "&&" "||" "|"] @operator)
-	(unary_expression ["!"] @operator)
-
-	(assignment_expression
-	  ["&=" "|=" "*=" "/=" "+=" "-="] @operator)
-	(update_expression ["++" "--"] @operator)
-
-
-	(number_literal) @number
-	(true) @bool
-	(false) @bool
-	(auto) @type
-
-	; Constants
-	(this) @number
-	(null "nullptr" @number)
-
-	(type_identifier) @type
-
-
-	;comment
-	(comment) @comment 
-
-
-
-	(string_literal) @string
-	(char_literal) @string
-	(escape_sequence) @string.escape
-	(raw_string_literal) @string
-	(primitive_type) @keyword
-	(function_declarator declarator:(_) @function) 
-
-	;Preprocessor
-	(preproc_include (string_literal) @string)
-	(preproc_include (system_lib_string) @string)
-	(preproc_include) @keyword
-
-    (preproc_def) @keyword
-    (preproc_def name:(identifier) @type)
-    (preproc_ifdef) @keyword
-    (preproc_ifdef name:(identifier) @type)
-    (preproc_else) @keyword
-    (preproc_directive) @keyword
-
-	"::" @punctuation.delimiter
-	"<=>" @operator
-
-	; Keywords
-	[
-	  "try"
-	  "catch"
-	  "noexcept"
-	  "throw"
-	] @keyword.exception
-
-	[
-	  "decltype"
-	  "explicit"
-	  "friend"
-	  "override"
-	  "using"
-	  "requires"
-	  "constexpr"
-	] @keyword
-
-	[
-	  "class"
-	  "namespace"
-	  "template"
-	  "typename"
-	  "concept"
-	] @keyword.type
-
-	(access_specifier) @keyword.modifier
-
-	[
-	  "co_await"
-	  "co_yield"
-	  "co_return"
-	] @keyword.coroutine
-
-	[
-	  "new"
-	  "delete"
-	  "xor"
-	  "bitand"
-	  "bitor"
-	  "compl"
-	  "not"
-	  "xor_eq"
-	  "and_eq"
-	  "or_eq"
-	  "not_eq"
-	  "and"
-	  "or"
-	] @keyword.operator
-
-
-	; functions
-	(call_expression
-		function: (identifier) @function)
-
-	(function_declarator
-	  (qualified_identifier
-	    name: (identifier) @function.call))
-
-	(function_declarator
-	  (template_function
-	    (identifier) @function))
-
-	(operator_name) @function
-
-	"operator" @function
-
-	"static_assert" @function
-
-	(call_expression
-	  (qualified_identifier
-	    (identifier) @function))
-
-	(call_expression
-	  (template_function
-	    (identifier) @function))
-
-	((namespace_identifier) @module)
-
-	(ERROR) @error
-
-    )";
 
 	// Define a simple query to match syntax elements
     OpenGL::Timer timerx;
 	uint32_t error_offset;
 	TSQueryError error_type;
-	if(!mQuery)
-		mQuery= ts_query_new(tree_sitter_cpp(), query_string.c_str(), query_string.size(), &error_offset, &error_type);
+	
+	if(!mLanguageConfig->pQuery)
+		mLanguageConfig->pQuery= ts_query_new(mLanguageConfig->tsLanguage(), mLanguageConfig->pQueryString.c_str(), mLanguageConfig->pQueryString.size(), &error_offset, &error_type);
 
 	// Check if the query was successfully createD
-	if (!mQuery) {
+	if (!mLanguageConfig->pQuery) {
 		GL_ERROR("Error creating query at offset {}, error type: {}", error_offset, error_type);
 		ts_tree_delete(tree);
 		ts_parser_delete(parser);
-		ts_query_delete(mQuery);
+		ts_query_delete(mLanguageConfig->pQuery);
 		return;
 	}
     char buff[32];
@@ -1137,7 +985,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
     StatusBarManager::ShowNotification("Query Execution:", buff,StatusBarManager::NotificationType::Success);
 
 	TSQueryCursor* cursor = ts_query_cursor_new();
-	ts_query_cursor_exec(cursor, mQuery, ts_tree_root_node(tree));
+	ts_query_cursor_exec(cursor, mLanguageConfig->pQuery, ts_tree_root_node(tree));
     // GL_INFO("Duration:{}",timerx.ElapsedMillis());
     // mErrorMarkers.clear();
 
@@ -1156,7 +1004,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 		    // Get the type of the current node
 		    const char *nodeType = ts_node_type(node);
 		    unsigned int length;
-		    const char *captureName = ts_query_capture_name_for_id(mQuery, capture.index, &length);
+		    const char *captureName = ts_query_capture_name_for_id(mLanguageConfig->pQuery, capture.index, &length);
 			// GL_INFO(match.captures[i].index);
 			// GL_INFO(captureName);
 		    // GL_INFO(nodeType);
@@ -1201,6 +1049,67 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	ts_parser_delete(parser);
 	ts_query_cursor_delete(cursor);
 	//Don't free mQuery as I am reusing it
+}
+
+void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
+{
+	if(!mIsSyntaxHighlightingSupportForFile || !mLanguageConfig->pQuery) return;
+
+
+	OpenGL::ScopedTimer timer("UpdateSyntaxHighlighting");
+	std::string sourceCode=GetNearbyLinesString(aLineNo,aLineCount);
+	if(sourceCode.size() < 2) return;
+
+    TSParser* parser= ts_parser_new();
+    ts_parser_set_language(parser,mLanguageConfig->tsLanguage());
+
+    TSTree* tree = ts_parser_parse_string(parser, nullptr, sourceCode.c_str(), sourceCode.size());
+
+	TSQueryCursor* cursor = ts_query_cursor_new();
+	ts_query_cursor_exec(cursor, mLanguageConfig->pQuery, ts_tree_root_node(tree));
+
+	// Rest Color
+	// int start=std::max(0,aLineNo - aLineCount);
+	// int end=std::min((int)mLines.size()-1,aLineNo+aLineCount);
+	// for(int row=start;row<=end;row++){
+	// 	for(auto& glyph:mLines[row])
+	// 		glyph.mColorIndex=TxTokenType::TxDefault;
+	// }
+	std::unordered_map<std::string, TxTokenType> captureToToken=ThemeManager::GetCaptureToTokenMap();
+
+	TSQueryMatch match;
+	while (ts_query_cursor_next_match(cursor, &match)) {
+		for (unsigned int i = 0; i < match.capture_count; ++i) {
+			TSQueryCapture capture = match.captures[i];
+			TSNode node = capture.node;
+
+		    // Get the type of the current node
+		    const char *nodeType = ts_node_type(node);
+		    unsigned int length;
+		    const char *captureName = ts_query_capture_name_for_id(mLanguageConfig->pQuery, capture.index, &length);
+
+		    int startLine = std::max(0, aLineNo-aLineCount);
+		    TSPoint startPoint = ts_node_start_point(node);
+		    startPoint.row+=startLine;
+		    TSPoint endPoint = ts_node_end_point(node);
+		    endPoint.row+=startLine;
+
+		    TxTokenType colorIndex = captureToToken[captureName];
+            // GL_INFO("Range:({},{}) -> ({},{})",startPoint.row,startPoint.column,endPoint.row,endPoint.column);
+		    for (unsigned int row = startPoint.row; row < mLines.size() && row <= endPoint.row; ++row)
+		    {
+		        for (unsigned int column = (row == startPoint.row ? startPoint.column : 0);
+		             column < mLines[row].size() && (row < endPoint.row || column < endPoint.column); ++column)
+		        {
+		            mLines[row][column].mColorIndex = colorIndex;
+		        }
+		    }
+		}
+	}
+	
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
+    ts_query_cursor_delete(cursor);
 }
 
 
@@ -1250,65 +1159,7 @@ std::string Editor::GetNearbyLinesString(int aLineNo,int aLineCount) {
     return result;
 }
 
-void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
-{
-	if(!mIsSyntaxHighlightingSupportForFile || !mQuery) return;
 
-	OpenGL::ScopedTimer timer("UpdateSyntaxHighlighting");
-	std::string sourceCode=GetNearbyLinesString(aLineNo,aLineCount);
-	if(sourceCode.size() < 2) return;
-
-    TSParser* parser= ts_parser_new();
-    ts_parser_set_language(parser,tree_sitter_cpp());
-
-    TSTree* tree = ts_parser_parse_string(parser, nullptr, sourceCode.c_str(), sourceCode.size());
-
-	TSQueryCursor* cursor = ts_query_cursor_new();
-	ts_query_cursor_exec(cursor, mQuery, ts_tree_root_node(tree));
-
-	// Rest Color
-	// int start=std::max(0,aLineNo - aLineCount);
-	// int end=std::min((int)mLines.size()-1,aLineNo+aLineCount);
-	// for(int row=start;row<=end;row++){
-	// 	for(auto& glyph:mLines[row])
-	// 		glyph.mColorIndex=TxTokenType::TxDefault;
-	// }
-	std::unordered_map<std::string, TxTokenType> captureToToken=ThemeManager::GetCaptureToTokenMap();
-
-	TSQueryMatch match;
-	while (ts_query_cursor_next_match(cursor, &match)) {
-		for (unsigned int i = 0; i < match.capture_count; ++i) {
-			TSQueryCapture capture = match.captures[i];
-			TSNode node = capture.node;
-
-		    // Get the type of the current node
-		    const char *nodeType = ts_node_type(node);
-		    unsigned int length;
-		    const char *captureName = ts_query_capture_name_for_id(mQuery, capture.index, &length);
-
-		    int startLine = std::max(0, aLineNo-aLineCount);
-		    TSPoint startPoint = ts_node_start_point(node);
-		    startPoint.row+=startLine;
-		    TSPoint endPoint = ts_node_end_point(node);
-		    endPoint.row+=startLine;
-
-		    TxTokenType colorIndex = captureToToken[captureName];
-            // GL_INFO("Range:({},{}) -> ({},{})",startPoint.row,startPoint.column,endPoint.row,endPoint.column);
-		    for (unsigned int row = startPoint.row; row < mLines.size() && row <= endPoint.row; ++row)
-		    {
-		        for (unsigned int column = (row == startPoint.row ? startPoint.column : 0);
-		             column < mLines[row].size() && (row < endPoint.row || column < endPoint.column); ++column)
-		        {
-		            mLines[row][column].mColorIndex = colorIndex;
-		        }
-		    }
-		}
-	}
-	
-    ts_tree_delete(tree);
-    ts_parser_delete(parser);
-    ts_query_cursor_delete(cursor);
-}
 
 ImU32 Editor::GetGlyphColor(const Glyph& aGlyph) const
 {
