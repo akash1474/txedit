@@ -63,6 +63,7 @@ int main(int argc, char* argv[])
 
 	FileNavigation::AddFolder("D:/Projects/c++/txedit");
 	TabsManager::OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
+	TabsManager::OpenFile("C:/Program Files/lite-xl/data/core/dirwatch.lua");
 
 	glfwSetWindowFocusCallback(Application::GetGLFWwindow(), WindowFocusCallback);
 	glfwSetWindowIconifyCallback(Application::GetGLFWwindow(), WindowIconifyCallback);

@@ -402,7 +402,6 @@ public:
 	std::string GetCurrentFilePath() const { return mFilePath; };
 	std::string GetFileTypeName();
 
-
 	void LoadFile(const char* filepath);
 	int GetSelectionMode() const { return (int)mSelectionMode; };
 

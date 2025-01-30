@@ -37,8 +37,8 @@
 
 
 (number_literal) @number
-(true) @bool
-(false) @bool
+(true) @boolean
+(false) @boolean
 (auto) @type
 
 ; Constants

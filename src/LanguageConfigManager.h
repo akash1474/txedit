@@ -19,6 +19,8 @@ public:
 
 
 
+
+// private:
 	static LanguageConfig* GetLanguageConfig(TxEdit::HighlightType aType){
 		if(aType==TxEdit::HighlightType::None)
 			return nullptr;
@@ -61,8 +63,6 @@ public:
 
 		return &config;
 	}
-
-private:
 	static bool LoadLanguageQuery(TxEdit::HighlightType aType,std::string& outQuery) {
 	    std::string path;
 	    switch(aType){

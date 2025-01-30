@@ -1,2 +1,2 @@
-Feature:
-- Added Highlighting for languages like c,java,json,lua and python
+BugFix:
+- Fixed FileNavigation folder not opening when a file from that folder is opened using QuickSearch

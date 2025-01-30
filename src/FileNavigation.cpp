@@ -10,10 +10,14 @@
 #include <filesystem>
 #include "MultiThreading.h"
 #include "DirectoryFinder.h"
+#include "tree_sitter/api.h"
 
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <winnt.h>
+
+#include "HighlightType.h"
+#include "LanguageConfigManager.h"
 
 
 FileNavigation::FileNavigation(){};
@@ -422,8 +426,8 @@ void FileNavigation::Render(){
 	ImGui::SetNextWindowSize(ImVec2{250.0f,-1.0f},ImGuiCond_Once);
 	ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(0.764,0.764,0.764,1.000));
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0.0f);
-	ImGui::Begin("Project Directory");
-
+	if(ImGui::Begin("Project Directory"))
+	{
 		Get().mHoveringThisFrame=false;
     	auto& folders=GetFolders();
     	for(const auto& folder:folders)
@@ -439,6 +443,8 @@ void FileNavigation::Render(){
     		if(Get().mHoveringThisFrame && ImGui::IsMouseDown(ImGuiMouseButton_Right))
     			ImGui::OpenPopup(entty->path.c_str());
     	}
+	}
+
 
 	ImGui::End();
 	ImGui::PopStyleColor(4);
@@ -448,6 +454,11 @@ void FileNavigation::Render(){
 
 void FileNavigation::MarkFileAsOpen(const std::string &aOpenedFilePath){
 	std::string	directoryPath=std::filesystem::path(aOpenedFilePath).parent_path().generic_string();
+
+	// scan if parent dir not in mDirectoryData
+	if(Get().mDirectoryData.find(directoryPath)==Get().mDirectoryData.end())
+		ScanDirectory(directoryPath);
+
 	auto& entities=Get().mDirectoryData[directoryPath];
 
 	if(entities.empty()) return;
@@ -497,14 +508,31 @@ void FileNavigation::ScanDirectory(const std::string& aDirectoryPath){
 
 void FileNavigation::HandleEvent(DirectoryEvent aEvent,std::wstring& aPayLoad){
 
+	std::filesystem::path path=std::filesystem::path(aPayLoad);
 	GL_WARN("Event:{}, PayLoad:{}",(int)aEvent,ToUTF8(aPayLoad));
+	if(path.has_extension() && path.extension().generic_string()==".scm"){
+		auto type=TxEdit::GetHighlightType("main.lua");
+		LanguageConfig* config=LanguageConfigManager::GetLanguageConfig(type);
+		if (!config)
+			return;
+		ts_query_delete(config->pQuery);
+		config->pQuery=nullptr;
 
+		std::string queryString;
+		if(LanguageConfigManager::LoadLanguageQuery(type, queryString)){
+			config->pQueryString=queryString;
+		}
+		return;
+	}
 	std::string folderPath=std::filesystem::path(aPayLoad).parent_path().generic_u8string();
 
 	switch(aEvent){
 	case DirectoryEvent::FileAdded:
+		break;
 	case DirectoryEvent::FileRemoved:
+		break;
 	case DirectoryEvent::FileRenamedOldName:
+		break;
 	case DirectoryEvent::FileRenamedNewName:
 		ScanDirectory(folderPath);
 		break;

@@ -957,6 +957,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 
 	if(sourceCode.size() <2  || !mIsSyntaxHighlightingSupportForFile) return;
 	OpenGL::ScopedTimer timer("ApplySyntaxHighlighting");
+	
 	// Initialize Tree-sitter parser
     TSParser* parser= ts_parser_new();
     ts_parser_set_language(parser,mLanguageConfig->tsLanguage());
@@ -1055,7 +1056,6 @@ void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
 {
 	if(!mIsSyntaxHighlightingSupportForFile || !mLanguageConfig->pQuery) return;
 
-
 	OpenGL::ScopedTimer timer("UpdateSyntaxHighlighting");
 	std::string sourceCode=GetNearbyLinesString(aLineNo,aLineCount);
 	if(sourceCode.size() < 2) return;
@@ -1068,13 +1068,6 @@ void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
 	TSQueryCursor* cursor = ts_query_cursor_new();
 	ts_query_cursor_exec(cursor, mLanguageConfig->pQuery, ts_tree_root_node(tree));
 
-	// Rest Color
-	// int start=std::max(0,aLineNo - aLineCount);
-	// int end=std::min((int)mLines.size()-1,aLineNo+aLineCount);
-	// for(int row=start;row<=end;row++){
-	// 	for(auto& glyph:mLines[row])
-	// 		glyph.mColorIndex=TxTokenType::TxDefault;
-	// }
 	std::unordered_map<std::string, TxTokenType> captureToToken=ThemeManager::GetCaptureToTokenMap();
 
 	TSQueryMatch match;
@@ -1095,6 +1088,7 @@ void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
 		    endPoint.row+=startLine;
 
 		    TxTokenType colorIndex = captureToToken[captureName];
+		    if(startPoint.row != aLineNo) continue;
             // GL_INFO("Range:({},{}) -> ({},{})",startPoint.row,startPoint.column,endPoint.row,endPoint.column);
 		    for (unsigned int row = startPoint.row; row < mLines.size() && row <= endPoint.row; ++row)
 		    {

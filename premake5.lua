@@ -16,11 +16,6 @@ includeDirs["Mini"]="packages/mINI/src/mini"
 includeDirs["LunaSVG"]="packages/lunasvg/include"
 includeDirs["UUID"]="packages/uuid_v4"
 includeDirs["TreeSitter"]="packages/tree-sitter/lib/include"
--- includeDirs["TreeSitterC"]="packages/tree-sitter-c/src"
--- includeDirs["TreeSitterCpp"]="packages/tree-sitter-cpp/src"
--- includeDirs["TreeSitterJava"]="packages/tree-sitter-java/src"
--- includeDirs["TreeSitterJson"]="packages/tree-sitter-json/src"
--- includeDirs["TreeSitterPython"]="packages/tree-sitter-python/src"
 includeDirs["nlohmann"]="packages/nlohmann"
 
 
@@ -49,7 +44,21 @@ project "text_editor"
 
    -- libdirs{"D:/Projects/c++/txedit"}
    links {
-      "glfw","ImGui","opengl32","LunaSVG","userenv","Shell32","dwmapi","TreeSitter","TreeSitterC","TreeSitterCpp","TreeSitterJava","TreeSitterJson","TreeSitterLua","TreeSitterPython"
+      "glfw",
+      "ImGui",
+      "opengl32",
+      "LunaSVG",
+      "userenv",
+      "Shell32",
+      "pdh", -- for getting cpu usage pdh.h
+      "dwmapi",
+      "TreeSitter",
+      "TreeSitterC",
+      "TreeSitterCpp",
+      "TreeSitterJava",
+      "TreeSitterJson",
+      "TreeSitterLua",
+      "TreeSitterPython"
    }
 
    includedirs{
