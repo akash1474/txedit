@@ -62,8 +62,10 @@ int main(int argc, char* argv[])
 		Application::HandleArguments(GetCommandLineW());
 
 	FileNavigation::AddFolder("D:/Projects/c++/txedit");
-	TabsManager::OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
-	TabsManager::OpenFile("C:/Program Files/lite-xl/data/core/dirwatch.lua");
+	// TabsManager::OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
+	// TabsManager::OpenFile("C:/Program Files/lite-xl/data/core/dirwatch.lua");
+	// TabsManager::OpenFile("D:/Projects/c++/txedit/test/highlighting/test_python.py");
+	TabsManager::OpenFile("D:/Projects/c++/txedit/test/highlighting/test_java.java");
 
 	glfwSetWindowFocusCallback(Application::GetGLFWwindow(), WindowFocusCallback);
 	glfwSetWindowIconifyCallback(Application::GetGLFWwindow(), WindowIconifyCallback);
@@ -87,6 +89,10 @@ int main(int argc, char* argv[])
 	
 	while (!glfwWindowShouldClose(Application::GetGLFWwindow())) {
 	    auto start = std::chrono::high_resolution_clock::now();
+	    if(!glfwGetWindowAttrib(Application::GetGLFWwindow(), GLFW_FOCUSED) && !glfwGetWindowAttrib(Application::GetGLFWwindow(), GLFW_HOVERED))
+	    	Application::SetFrameRate(10.0f);
+	    else
+	    	Application::SetFrameRate(120.0f);
 
 	#ifdef GL_DEBUG
 		crntTime = glfwGetTime();

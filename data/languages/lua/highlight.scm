@@ -7,8 +7,6 @@
  "local"
 ] @keyword
 
-(label_statement) @label
-
 (break_statement) @keyword
 
 (do_statement
@@ -57,8 +55,9 @@
   "for"
   "do"
   "end"
-] @repeat)
+] @keyword)
 
+;; Function
 (function_declaration
 [
   "function"
@@ -70,6 +69,37 @@
   "function"
   "end"
 ] @keyword)
+
+(function_declaration
+  name:(identifier) @variable)
+(function_call
+  name:(identifier) @variable)
+
+;;function [dirwatch]:[scan](directory, bool)
+(method_index_expression
+    table: (identifier) @variable
+    method: (identifier) @function)
+
+;; function [dirwatch]:[__index](args)
+(dot_index_expression
+    table: (identifier) @variable
+    field: (identifier) @function)
+
+(method_index_expression
+  method:(identifier) @function)
+
+;;local [common] = [require] "core.common"
+(assignment_statement
+      (variable_list
+        name: (identifier) @variable)
+      (expression_list
+        value: (function_call
+          name: (identifier) @function.call)))
+
+;; Table
+(table_constructor
+  (field
+    name: (identifier) @string))
 
 ;; Operators
 
@@ -104,20 +134,7 @@
 ] @operator
 
 
-
-;; Variables
-((identifier) @number
- (#eq? @number "self"))
-
-(variable_list
-  name:(identifier) @label)
-
-;; Function
-(function_declaration
-  name:(identifier) @function)
-
-
-(nil) @constant.builtin
+(nil) @number
 
 [
   (false)
@@ -126,6 +143,7 @@
 
 
 (comment) @comment
+
 (hash_bang_line) @preproc
 (number) @number
 (string) @string

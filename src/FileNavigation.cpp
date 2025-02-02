@@ -510,8 +510,14 @@ void FileNavigation::HandleEvent(DirectoryEvent aEvent,std::wstring& aPayLoad){
 
 	std::filesystem::path path=std::filesystem::path(aPayLoad);
 	GL_WARN("Event:{}, PayLoad:{}",(int)aEvent,ToUTF8(aPayLoad));
+
+	// Using for development purpose only allows for live preview of highlight based on updated query capture
 	if(path.has_extension() && path.extension().generic_string()==".scm"){
-		auto type=TxEdit::GetHighlightType("main.lua");
+		FileTab* tab=TabsManager::GetTabWithFileName("test_java.java");
+		if(!tab)
+			return;
+
+		auto type=TxEdit::GetHighlightType("test_java.java");
 		LanguageConfig* config=LanguageConfigManager::GetLanguageConfig(type);
 		if (!config)
 			return;
@@ -522,8 +528,11 @@ void FileNavigation::HandleEvent(DirectoryEvent aEvent,std::wstring& aPayLoad){
 		if(LanguageConfigManager::LoadLanguageQuery(type, queryString)){
 			config->pQueryString=queryString;
 		}
+		tab->editor->DebouncedReparse();
 		return;
 	}
+
+
 	std::string folderPath=std::filesystem::path(aPayLoad).parent_path().generic_u8string();
 
 	switch(aEvent){

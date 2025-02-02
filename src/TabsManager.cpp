@@ -1,8 +1,10 @@
+#include "Log.h"
 #include "pch.h"
 #include "FontAwesome6.h"
 #include "imgui.h"
 #include "imgui_internal.h"
 #include <cstdint>
+#include <filesystem>
 
 #include "TextEditor.h"
 #include "FileNavigation.h"
@@ -17,6 +19,15 @@ Editor* TabsManager::GetCurrentActiveTextEditor(){
 			editor=tab.editor;
 
 	return editor;
+}
+
+FileTab* TabsManager::GetTabWithFileName(const std::string& aFileName){
+	FileTab* rTab=nullptr;
+	for(auto& tab:Get().mTabs)
+		if(tab.filename==aFileName)
+			rTab=&tab;
+
+	return rTab;
 }
 
 FileTab* TabsManager::GetCurrentActiveTab()
@@ -70,6 +81,11 @@ void TabsManager::OpenFileWithAtLineNumber(const std::string& aFilePath,int aLin
 
 FileTab* TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 {
+	if(!std::filesystem::exists(aFilePath))
+	{
+		GL_CRITICAL("TabsManager::OpenFile::Failed - Path doesn't exist - {}",aFilePath);
+		return nullptr;
+	}
 	GL_INFO("Opening File:{}",aFilePath);
 
 	std::filesystem::path path(aFilePath);

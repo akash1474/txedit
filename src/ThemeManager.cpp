@@ -146,7 +146,6 @@ void ThemeManager::Init(){
 
 	Get().mTokenToColor.resize((size_t)TxTokenType::TxSize);
 	// Populate from JSON
-	// Get().mTokenToColor[(size_t)TxTokenType::TxDefault]=IM_COL32(255,255,255,255);
 	for (auto& [jsonKey, color] : Get().mCaptureToColor) {
 	    if (Get().mCaptureToTokenType.find(jsonKey) != Get().mCaptureToTokenType.end()) {
 	    	size_t idx=(size_t)Get().mCaptureToTokenType[jsonKey];

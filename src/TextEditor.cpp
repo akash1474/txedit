@@ -541,9 +541,9 @@ bool Editor::Draw()
 
 	ImGui::EndChild();
 	ImGui::PopStyleVar();
-// #ifdef GL_DEBUG
-// 	DebugDisplayNearByText();
-// #endif
+#ifdef GL_DEBUG
+	DebugDisplayNearByText();
+#endif
 	return true;
 }
 

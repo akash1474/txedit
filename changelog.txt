@@ -1,2 +1,7 @@
+Feature:
+- FileNavigation added a debug functionality allowing for realtime update in highlighting when updating the query
+- Added Highlighting support for python,lua and java
+- Optimized FPS: By checking if the window was hovered
+
 BugFix:
-- Fixed FileNavigation folder not opening when a file from that folder is opened using QuickSearch
+- TabsManager::OpenFile - added a filepath check before opening
