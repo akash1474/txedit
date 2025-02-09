@@ -424,6 +424,8 @@ public:
 	inline uint8_t GetTabWidth() { return this->mTabSize; }
 
 
+	bool IsOpeningBracket(char aChar);
+	void InsertAroundSelection(char aChar);
 	void InsertCharacter(char newChar);
 	void InsertTab(bool isShiftPressed);
 	void Backspace();

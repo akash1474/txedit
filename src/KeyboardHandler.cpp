@@ -1,3 +1,4 @@
+#include "Coordinates.h"
 #include "pch.h"
 #include "imgui.h"
 #include "TextEditor.h"
@@ -24,9 +25,9 @@ void Editor::HandleKeyboardInputs()
 		io.WantTextInput = true;
 
 		if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGuiKey_Z))
-			mUndoManager.Undo(5, this);
+			mUndoManager.Undo(1, this);
 		else if (!IsReadOnly() && ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGuiKey_Y))
-			mUndoManager.Redo(5, this);
+			mUndoManager.Redo(1, this);
 		else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGuiKey_UpArrow))
 			MoveUp();
 		else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGuiKey_DownArrow))
@@ -97,19 +98,30 @@ void Editor::HandleKeyboardInputs()
 
 			// if (mSearchState.isValid())
 			// 	mSearchState.reset();
-			Cursor& aCursor=GetCurrentCursor();
 
-			if (HasSelection(aCursor))
-				Backspace();
 
-			if (HasSelection(aCursor))
-				DisableSelection();
-
-			auto c = io.InputQueueCharacters[0];
+			auto c =io.InputQueueCharacters[0];
 
 			GL_INFO("{}", (char)c);
 			if (c != 0 && (c == '\n' || c >= 32))
-				InsertCharacter(c);
+			{
+				if(HasSelection(GetCurrentCursor()) && (IsOpeningBracket(c) || c=='\'' || c=='"'))
+				{
+					InsertAroundSelection(c);
+				}
+				else
+				{
+					auto& aCursor=GetCurrentCursor();
+
+					if (HasSelection(GetCurrentCursor()))
+						Backspace();
+
+					if (HasSelection(aCursor))
+						DisableSelection();
+
+					InsertCharacter(c);
+				}
+			}
 
 			io.InputQueueCharacters.resize(0);
 		}

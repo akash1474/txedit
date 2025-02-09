@@ -161,6 +161,26 @@ void Application::BackupDataBeforeCrash()
 	// }
 }
 
+void Application::HandleFPSCooldown(){
+    static auto last_scroll_time = std::chrono::high_resolution_clock::now();
+
+    if (Get().mEnableRunAtMaxRefreshRate) {
+        last_scroll_time = std::chrono::high_resolution_clock::now();
+        GL_INFO("MAXJKl");
+        Get().mRunAtMaxRefreshRate=true;
+        Get().mEnableRunAtMaxRefreshRate=false;
+        glfwSwapInterval(1);
+    }
+
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::high_resolution_clock::now() - last_scroll_time);
+
+    if (elapsed.count() > 500) { // 200ms after last scroll
+    	Get().mRunAtMaxRefreshRate=false;
+        glfwSwapInterval(0);
+    }
+}
+
 
 
 void Application::Draw()
@@ -184,6 +204,8 @@ void Application::Draw()
 
     // Render application UI
     Application::GetCoreSystem()->Render();
+	if(ImGui::GetIO().MouseWheel != 0.0f)
+		EnableHighFPS();
     ImGui::Render();
 
     // Get framebuffer size only if needed (avoid unnecessary calls)
@@ -203,6 +225,7 @@ void Application::Draw()
 #else
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 #endif
+
 
     glfwSwapBuffers(Get().mWindow);
 }

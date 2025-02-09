@@ -33,8 +33,6 @@
 #include "LanguageConfigManager.h"
 #include "ThemeManager.h"
 
-#include "TreesitterLanguage.h"
-
 #undef min
 #undef max
 
@@ -541,9 +539,9 @@ bool Editor::Draw()
 
 	ImGui::EndChild();
 	ImGui::PopStyleVar();
-#ifdef GL_DEBUG
-	DebugDisplayNearByText();
-#endif
+// #ifdef GL_DEBUG
+// 	DebugDisplayNearByText();
+// #endif
 	return true;
 }
 
@@ -1088,7 +1086,7 @@ void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
 		    endPoint.row+=startLine;
 
 		    TxTokenType colorIndex = captureToToken[captureName];
-		    if(startPoint.row != aLineNo) continue;
+		    // if(startPoint.row != aLineNo) continue;
             // GL_INFO("Range:({},{}) -> ({},{})",startPoint.row,startPoint.column,endPoint.row,endPoint.column);
 		    for (unsigned int row = startPoint.row; row < mLines.size() && row <= endPoint.row; ++row)
 		    {

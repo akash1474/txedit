@@ -336,7 +336,7 @@ uint32_t Editor::GetLineLengthInBytes(int aLineIdx){
 	return mLines[aLineIdx].size();
 }
 
-bool IsOpeningBracket(char aChar){
+bool Editor::IsOpeningBracket(char aChar){
 	return aChar == '(' || aChar == '{' || aChar == '[';
 }
 
@@ -350,8 +350,94 @@ char GetClosingBracketFor(char x)
 	return x;
 }
 
+void Editor::InsertAroundSelection(char aChar){
+
+	UndoRecord u;
+	u.mBefore = mState;
+
+	for(size_t i=0;i<mState.mCursors.size();i++)
+	{
+		auto& aCursor=mState.mCursors[i];
+
+		// Insertion at SelectionStart
+		UndoOperation added;
+		added.mType = UndoOperationType::Add;
+		added.mStart = aCursor.mSelectionStart;
+
+		std::string chr;
+		chr+=aChar;
+		InsertTextAt(aCursor.mSelectionStart,chr.c_str());
+		added.mText = chr;
+		added.mEnd = aCursor.mSelectionStart;
+		u.mOperations.push_back(added);
+
+
+
+		//Insertion at SelectionEnd
+		Coordinates endPosition(aCursor.mSelectionEnd);
+
+		bool selectionOnSameLine=aCursor.mSelectionStart.mLine==aCursor.mSelectionEnd.mLine;
+		if(selectionOnSameLine)
+			endPosition={aCursor.mSelectionEnd.mLine,aCursor.mSelectionEnd.mColumn+1};
+
+		added.mStart = endPosition;
+		if(IsOpeningBracket(aChar))
+		{
+			char c=GetClosingBracketFor(aChar);
+			chr.clear();
+			chr+=c;
+		}
+
+		InsertTextAt(endPosition,chr.c_str());
+		added.mText = chr;
+		if(selectionOnSameLine)
+		{
+			aCursor.mSelectionEnd.mColumn++;
+			aCursor.mCursorPosition.mColumn++;
+		}
+
+		// Handling multiple cursors on sameline
+		for(size_t j=i+1;j<mState.mCursors.size();j++){
+			auto& aNextCursor=mState.mCursors[j];
+			if(aNextCursor.mCursorPosition.mLine==aCursor.mCursorPosition.mLine)
+			{
+				aNextCursor.mCursorPosition.mColumn+=2;
+				aNextCursor.mSelectionStart.mColumn+=2;
+				aNextCursor.mSelectionEnd.mColumn+=2;
+			}else break;
+		}
+
+		added.mEnd = endPosition;
+
+		u.mOperations.push_back(added);
+	}
+
+	bool selectionOnSameLine=GetCurrentCursor().mSelectionStart.mLine==GetCurrentCursor().mSelectionEnd.mLine;
+	if(!selectionOnSameLine)
+		DebouncedReparse();
+	else
+	{
+		bool hasMultipleCursors=mState.mCursors.size()>1;
+		for(auto& aCursor:mState.mCursors){
+			if(hasMultipleCursors)
+				UpdateSyntaxHighlighting(aCursor.mCursorPosition.mLine,2);
+			else{
+				UpdateSyntaxHighlighting(aCursor.mCursorPosition.mLine,10);
+				FindBracketMatch(aCursor.mCursorPosition);
+			}
+		}
+	}
+
+
+
+
+	u.mAfter = mState;
+	mUndoManager.AddUndo(u);
+}
+
 void Editor::InsertCharacter(char chr){
 	DisableSearch();
+
 
 	uint8_t aChar=chr;
 	UndoRecord u;

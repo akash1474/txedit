@@ -1,7 +1,4 @@
 Feature:
-- FileNavigation added a debug functionality allowing for realtime update in highlighting when updating the query
-- Added Highlighting support for python,lua and java
-- Optimized FPS: By checking if the window was hovered
+- Added support for adding quotes and brackets around the selected text
 
 BugFix:
-- TabsManager::OpenFile - added a filepath check before opening

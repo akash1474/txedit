@@ -1,6 +1,5 @@
 #include "FontAwesome6.h"
 #include "QuickFileSearch.h"
-#include "Timer.h"
 #include "pch.h"
 #include "imgui_internal.h"
 #include "GLFW/glfw3.h"
@@ -117,7 +116,7 @@ void CoreSystem::RenderDebugInfo()
 	{
 
 		ShowFPS();
-		ImGui::Text("CPU Usage:%.2f",GetCPUUsage());
+		// ImGui::Text("CPU Usage:%.2f",GetCPUUsage());
 
 		auto& colorMap=ThemeManager::GetCaptureToColorMap();
 		DisplayColorTable(colorMap);
@@ -363,6 +362,7 @@ void CoreSystem::Render()
 
 
 	QuickFileSearch::EventListener();
+
 }
 
 

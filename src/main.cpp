@@ -43,6 +43,39 @@ void WindowMaximizeCallback(GLFWwindow* window, int maximized) {
     }
 }
 
+void SleepForFPS(int target_fps) {
+    static auto last_time = std::chrono::high_resolution_clock::now();
+    auto frame_time = std::chrono::milliseconds(1000 / target_fps);
+
+    auto current_time = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_time);
+
+    if (elapsed < frame_time) {
+        std::this_thread::sleep_for(frame_time - elapsed);
+    }
+
+    last_time = std::chrono::high_resolution_clock::now();
+}
+
+int GetTargetFPS(GLFWwindow* window) {
+	if(Application::RunAtMaxRefreshRate()) 
+		return 300;
+
+	if(!glfwGetWindowAttrib(Application::GetGLFWwindow(), GLFW_FOCUSED) && !glfwGetWindowAttrib(Application::GetGLFWwindow(), GLFW_HOVERED))
+		Application::SetFrameRate(10.0f);
+	else 
+    	Application::SetFrameRate(60.0f);
+
+    
+    if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) {
+        return 1;  // Minimized window: very low FPS
+    }
+    if (glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
+        return 60; // Focused window: High FPS
+    }
+    return 30;  // Unfocused but visible window: Moderate FPS
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -62,14 +95,14 @@ int main(int argc, char* argv[])
 		Application::HandleArguments(GetCommandLineW());
 
 	FileNavigation::AddFolder("D:/Projects/c++/txedit");
-	// TabsManager::OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
+	TabsManager::OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
 	// TabsManager::OpenFile("C:/Program Files/lite-xl/data/core/dirwatch.lua");
 	// TabsManager::OpenFile("D:/Projects/c++/txedit/test/highlighting/test_python.py");
-	TabsManager::OpenFile("D:/Projects/c++/txedit/test/highlighting/test_java.java");
+	// TabsManager::OpenFile("D:/Projects/c++/txedit/test/highlighting/test_java.java");
 
-	glfwSetWindowFocusCallback(Application::GetGLFWwindow(), WindowFocusCallback);
-	glfwSetWindowIconifyCallback(Application::GetGLFWwindow(), WindowIconifyCallback);
-	glfwSetWindowMaximizeCallback(Application::GetGLFWwindow(), WindowMaximizeCallback);
+	// glfwSetWindowFocusCallback(Application::GetGLFWwindow(), WindowFocusCallback);
+	// glfwSetWindowIconifyCallback(Application::GetGLFWwindow(), WindowIconifyCallback);
+	// glfwSetWindowMaximizeCallback(Application::GetGLFWwindow(), WindowMaximizeCallback);
 
 	GL_WARN("BootUp Time: {}ms", timer.ElapsedMillis());
 	Application::SetWindowIsFocused(true);
@@ -88,11 +121,6 @@ int main(int argc, char* argv[])
 	// GL_INFO("File:{}.png,Name:{}",key,icondata.name);
 	
 	while (!glfwWindowShouldClose(Application::GetGLFWwindow())) {
-	    auto start = std::chrono::high_resolution_clock::now();
-	    if(!glfwGetWindowAttrib(Application::GetGLFWwindow(), GLFW_FOCUSED) && !glfwGetWindowAttrib(Application::GetGLFWwindow(), GLFW_HOVERED))
-	    	Application::SetFrameRate(10.0f);
-	    else
-	    	Application::SetFrameRate(120.0f);
 
 	#ifdef GL_DEBUG
 		crntTime = glfwGetTime();
@@ -110,23 +138,17 @@ int main(int argc, char* argv[])
 			counter = 0;
 		}
 	#endif
-
+		Application::HandleFPSCooldown();
+		int target_fps = GetTargetFPS(Application::GetGLFWwindow());
 	    // Log the current ImGui-reported frame rate
 
-	    // Only draw if the window is focused
-	    Application::Draw();
+		if(target_fps>1){
+		    // Only draw if the window is focused
+		    Application::Draw();
+		}
 
-	    auto end = std::chrono::high_resolution_clock::now();
-	    std::chrono::duration<double> frameTime = end - start;
-
-	    // Ensure frame time meets the target
-	    while (frameTime.count() < Application::GetFrameTime()) {
-	        auto sleepStart = std::chrono::high_resolution_clock::now();
-	        std::this_thread::sleep_for(std::chrono::duration<double>(Application::GetFrameTime() - frameTime.count()));
-	        auto sleepEnd = std::chrono::high_resolution_clock::now();
-
-	        frameTime += sleepEnd - sleepStart;
-	    }
+		if(!Application::RunAtMaxRefreshRate())
+	    	SleepForFPS(target_fps);
 	}
 
 	Application::Destroy();
