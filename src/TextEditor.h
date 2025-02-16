@@ -1,7 +1,7 @@
 #pragma once
 #include "Coordinates.h"
 #include "DataTypes.h"
-#include "HighlightType.h"
+#include "Language.h"
 #include "LanguageConfig.h"
 #include "TokenType.h"
 #include "imgui.h"
@@ -153,7 +153,8 @@ public:
 	uint32_t GetLineLengthInBytes(int aLineIdx);
 	void PrintTree(const TSNode &node, const std::string &source_code,std::string& output, int indent = 0);
 
-	std::string GetNearbyLinesString(int aLineNo,int aLineCount=5);
+	// Gets current line and above `aLineCount` lines as context when determining the syntax highlighting
+	std::string GetAboveLines(int aLineNo,int aLineCount=5);
 
 	Coordinates GetCoordinatesFromOffset(uint32_t offset);
 
@@ -170,7 +171,7 @@ public:
 	void WorkerThread();
 
 private:
-	TxEdit::HighlightType mHighlightType{TxEdit::HighlightType::None};
+	TxEdit::Language mHighlightType{TxEdit::Language::None};
 
 	ImU32 GetGlyphColor(const Glyph& aGlyph) const;
 
@@ -396,6 +397,7 @@ public:
 
 	void EnsureCursorVisible();
 	void UpdateSyntaxHighlighting(int aLineNo,int aLineCount=3);
+	void UpdateSyntaxHighlightingForRange(int aLineStart,int aLineEnd);
 	int InsertTextAt(Coordinates& aWhere, const char* aValue);
 	std::string GetText();
 
@@ -424,6 +426,8 @@ public:
 	inline uint8_t GetTabWidth() { return this->mTabSize; }
 
 
+	void ToggleComments();
+	bool IsAlreadyCommented(int aStart,int aEnd,const std::string& commentStr);
 	bool IsOpeningBracket(char aChar);
 	void InsertAroundSelection(char aChar);
 	void InsertCharacter(char newChar);
@@ -447,10 +451,16 @@ public:
 	int GetLineMaxColumn(int currLineIndex) const;
 	int GetCurrentLineMaxColumn();
 
+
+
 	Editor();
 	~Editor();
 };
 
+struct KeyBindingState {
+    bool firstKeyPressed = false;
+    std::chrono::steady_clock::time_point firstKeyTime;
+};
 
 
 

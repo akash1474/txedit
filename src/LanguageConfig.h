@@ -1,10 +1,8 @@
 #pragma once
 
 #include <string>
-#include "HighlightType.h"
-#include "tree_sitter/api.h"
+#include "Language.h"
 
-typedef TSLanguage* (*TSLanguageFunc)(); // Define function pointer type
 
 
 
@@ -15,7 +13,7 @@ public:
         ts_query_delete(pQuery);
     };
 
-    void LoadLanguageQuery(TxEdit::HighlightType aType);
+    void LoadLanguageQuery(TxEdit::Language aType);
     std::string GetCommentSymbol() const;
 
     std::string commentSymbol;

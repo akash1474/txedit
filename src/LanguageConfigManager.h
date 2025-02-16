@@ -1,13 +1,14 @@
 #pragma once
 #include <unordered_map>
-#include "HighlightType.h"
+#include "Language.h"
 #include "LanguageConfig.h"
 #include "Log.h"
-#include "TreesitterLanguage.h"
+#include "nlohmann/json.hpp"
 
 class LanguageConfigManager{
-	std::unordered_map<TxEdit::HighlightType, LanguageConfig> mLoadedLanguages;
+	std::unordered_map<TxEdit::Language, LanguageConfig> mLoadedLanguages;
 public:
+	std::string mLanguageDir="./data/languages";
 	LanguageConfigManager(){}
 	~LanguageConfigManager(){}
 
@@ -17,79 +18,41 @@ public:
 		return instance;
 	}
 
-
-
-
 // private:
-	static LanguageConfig* GetLanguageConfig(TxEdit::HighlightType aType){
-		if(aType==TxEdit::HighlightType::None)
+	static LanguageConfig* GetLanguageConfig(TxEdit::Language aLanguage){
+		if(aLanguage==TxEdit::Language::None)
 			return nullptr;
 
-		if(Get().mLoadedLanguages.find(aType)!=Get().mLoadedLanguages.end())
-			return &Get().mLoadedLanguages[aType];
+		if(Get().mLoadedLanguages.find(aLanguage)!=Get().mLoadedLanguages.end())
+			return &Get().mLoadedLanguages[aLanguage];
 
 		std::string queryString;
-		if(!LoadLanguageQuery(aType, queryString))
+		if(!LoadLanguageQuery(aLanguage, queryString))
 			return nullptr;
 
-		LanguageConfig& config=Get().mLoadedLanguages[aType];
+		LanguageConfig& config=Get().mLoadedLanguages[aLanguage];
 		config.pQueryString=queryString;
+		config.tsLanguage=TxEdit::languageToTreeSitterLanguage[aLanguage];
 
-		switch(aType){
-			case TxEdit::HighlightType::None:
-				break;
-			case TxEdit::HighlightType::CPP:
-				config.tsLanguage=tree_sitter_cpp;
-				break;
-			case TxEdit::HighlightType::C:
-				config.tsLanguage=tree_sitter_c;
-				break;
-			case TxEdit::HighlightType::Python:
-				config.tsLanguage=tree_sitter_python;
-				break;
-			case TxEdit::HighlightType::Lua:
-				config.tsLanguage=tree_sitter_lua;
-				break;
-			case TxEdit::HighlightType::Java:
-				config.tsLanguage=tree_sitter_java;
-				break;
-			// case TxEdit::HighlightType::JavaScript:
-			// 	config.tsLanguage=tree_sitter_javascript;
-			// 	break;
-			case TxEdit::HighlightType::Json:
-				config.tsLanguage=tree_sitter_json;
-				break;
+		const std::string jsonFilePath=TxEdit::GetLanguageDataDirectoryPath(aLanguage)+"/config.json";
+		std::ifstream file(jsonFilePath);
+		if(!file.good()){
+
+			return nullptr;
 		}
+
+		nlohmann::json configInfo;
+		configInfo << file;
+		GL_INFO(configInfo["commentString"]);
+		config.commentSymbol=configInfo["commentString"];
 
 		return &config;
 	}
-	static bool LoadLanguageQuery(TxEdit::HighlightType aType,std::string& outQuery) {
-	    std::string path;
-	    switch(aType){
-	    case TxEdit::HighlightType::C:
-	        path="./data/languages/c/highlight.scm";
-	        break;
-	    case TxEdit::HighlightType::CPP:
-	        path="./data/languages/cpp/highlight.scm";
-	        break;
-	    case TxEdit::HighlightType::Python:
-	        path="./data/languages/python/highlight.scm";
-	        break;
-	    case TxEdit::HighlightType::Lua:
-	        path="./data/languages/lua/highlight.scm";
-	        break;
-	    case TxEdit::HighlightType::Java:
-	        path="./data/languages/java/highlight.scm";
-	        break;
-	    case TxEdit::HighlightType::Json:
-	        path="./data/languages/json/highlight.scm";
-	        break;
-	    // case TxEdit::HighlightType::JavaScript:
-	    //     path="./data/languages/javascript/highlight.scm";
-	    //     break;
-		case TxEdit::HighlightType::None:
-			break;
-		}
+
+
+
+	static bool LoadLanguageQuery(TxEdit::Language aLanguage,std::string& outQuery) {
+	    std::string path=TxEdit::GetLanguageDataDirectoryPath(aLanguage)+"/highlight.scm";
 
 	    if(!std::filesystem::exists(path)){
 	        GL_CRITICAL("Invalid Path:{}",path);

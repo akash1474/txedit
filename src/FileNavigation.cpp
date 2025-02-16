@@ -16,7 +16,7 @@
 #include <fstream>
 #include <winnt.h>
 
-#include "HighlightType.h"
+#include "Language.h"
 #include "LanguageConfigManager.h"
 
 
@@ -513,11 +513,11 @@ void FileNavigation::HandleEvent(DirectoryEvent aEvent,std::wstring& aPayLoad){
 
 	// Using for development purpose only allows for live preview of highlight based on updated query capture
 	if(path.has_extension() && path.extension().generic_string()==".scm"){
-		FileTab* tab=TabsManager::GetTabWithFileName("test_java.java");
+		FileTab* tab=TabsManager::GetTabWithFileName("TextEditor.cpp");
 		if(!tab)
 			return;
 
-		auto type=TxEdit::GetHighlightType("test_java.java");
+		auto type=TxEdit::GetHighlightType("TextEditor.cpp");
 		LanguageConfig* config=LanguageConfigManager::GetLanguageConfig(type);
 		if (!config)
 			return;

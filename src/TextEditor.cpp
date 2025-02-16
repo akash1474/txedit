@@ -29,7 +29,7 @@
 
 #include "tree_sitter/api.h"
 #include "TokenType.h"
-#include "HighlightType.h"
+#include "Language.h"
 #include "LanguageConfigManager.h"
 #include "ThemeManager.h"
 
@@ -218,9 +218,48 @@ ImVec2 Editor::GetLinePosition(const Coordinates& aCoords){
 	return {ImGui::GetWindowPos().x-ImGui::GetScrollX(),ImGui::GetWindowPos().y+(aCoords.mLine*mLineHeight)-ImGui::GetScrollY()};
 }
 
+
+
+void HandleKeyBindings() {
+    static const int timeoutMs = 150;  // Max time allowed between key presses
+    static 	KeyBindingState keyBindingState;
+
+    if (ImGui::IsKeyPressed(ImGuiKey_J, false)) { 
+        keyBindingState.firstKeyPressed = true;
+        keyBindingState.firstKeyTime = std::chrono::steady_clock::now();
+    }
+
+    if (keyBindingState.firstKeyPressed && ImGui::IsKeyPressed(ImGuiKey_K, false)) {
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - keyBindingState.firstKeyTime
+        ).count();
+
+        if (elapsed < timeoutMs) {
+            // Combo detected: "jk"
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - keyBindingState.firstKeyTime
+        	).count();
+            GL_INFO("Combo 'jk' activated! --- {}ms",elapsed);
+        }
+
+        // Reset state
+        keyBindingState.firstKeyPressed = false;
+    }
+
+    // Reset state if timeout expires
+    if (keyBindingState.firstKeyPressed) {
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - keyBindingState.firstKeyTime
+        ).count();
+        if (elapsed > timeoutMs) {
+            keyBindingState.firstKeyPressed = false;
+        }
+    }
+}
+
 bool Editor::Draw()
 {
-
+	HandleKeyBindings();
 	// OpenGL::ScopedTimer timer("Editor::Draw");
 	if(!isFileLoaded) return false;
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
@@ -1050,12 +1089,74 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	//Don't free mQuery as I am reusing it
 }
 
+void Editor::UpdateSyntaxHighlightingForRange(int aLineStart,int aLineEnd){
+	if(!mIsSyntaxHighlightingSupportForFile || !mLanguageConfig->pQuery) return;
+	OpenGL::ScopedTimer timer("UpdateSyntaxHighlightingForRange");
+
+	Coordinates start(aLineStart,0);
+	Coordinates end(aLineEnd,GetLineMaxColumn(aLineEnd));
+
+	std::string sourceCode=GetText(start,end);
+	if(sourceCode.empty())
+		return;
+
+    TSParser* parser= ts_parser_new();
+    ts_parser_set_language(parser,mLanguageConfig->tsLanguage());
+
+    TSTree* tree = ts_parser_parse_string(parser, nullptr, sourceCode.c_str(), sourceCode.size());
+
+	TSQueryCursor* cursor = ts_query_cursor_new();
+	ts_query_cursor_exec(cursor, mLanguageConfig->pQuery, ts_tree_root_node(tree));
+
+	std::unordered_map<std::string, TxTokenType> captureToToken=ThemeManager::GetCaptureToTokenMap();
+
+	for(size_t lineNo=aLineStart;lineNo<=aLineEnd;lineNo++){
+		for(auto& glyph:mLines[lineNo])
+			glyph.mColorIndex=TxTokenType::TxDefault;
+	}
+
+	TSQueryMatch match;
+	while (ts_query_cursor_next_match(cursor, &match)) {
+		for (unsigned int i = 0; i < match.capture_count; ++i) {
+			TSQueryCapture capture = match.captures[i];
+			TSNode node = capture.node;
+
+		    // Get the type of the current node
+		    const char *nodeType = ts_node_type(node);
+		    unsigned int length;
+		    const char *captureName = ts_query_capture_name_for_id(mLanguageConfig->pQuery, capture.index, &length);
+
+		    int startLine = std::max(0, aLineStart);
+		    TSPoint startPoint = ts_node_start_point(node);
+		    startPoint.row+=startLine;
+		    TSPoint endPoint = ts_node_end_point(node);
+		    endPoint.row+=startLine;
+
+		    TxTokenType colorIndex = captureToToken[captureName];
+            // GL_INFO("Range:({},{}) -> ({},{})",startPoint.row,startPoint.column,endPoint.row,endPoint.column);
+		    for (unsigned int row = startPoint.row; row < mLines.size() && row <= endPoint.row; ++row)
+		    {
+		        for (unsigned int column = (row == startPoint.row ? startPoint.column : 0);
+		             column < mLines[row].size() && (row < endPoint.row || column < endPoint.column); ++column)
+		        {
+		            mLines[row][column].mColorIndex = colorIndex;
+		        }
+		    }
+		}
+	}
+	
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
+    ts_query_cursor_delete(cursor);	
+
+}
+
 void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
 {
 	if(!mIsSyntaxHighlightingSupportForFile || !mLanguageConfig->pQuery) return;
 
 	OpenGL::ScopedTimer timer("UpdateSyntaxHighlighting");
-	std::string sourceCode=GetNearbyLinesString(aLineNo,aLineCount);
+	std::string sourceCode=GetAboveLines(aLineNo,aLineCount);
 	if(sourceCode.size() < 2) return;
 
     TSParser* parser= ts_parser_new();
@@ -1133,14 +1234,12 @@ void Editor::PrintTree(const TSNode &node, const std::string &source_code,std::s
 }
 
 
-std::string Editor::GetNearbyLinesString(int aLineNo,int aLineCount) {
+std::string Editor::GetAboveLines(int aLineNo,int aLineCount) {
     std::string result;
 
-    // Determine the range of lines to include
-    int startLine = std::max(0, aLineNo - aLineCount);                       // One line above (if it exists)
-    int endLine = std::min((int)mLines.size() - 1, aLineNo);   // One line below (if it exists)
+    int startLine = std::max(0, aLineNo - aLineCount);
+    int endLine = std::min((int)mLines.size() - 1, aLineNo);
 
-    // Concatenate the lines within the range
     for (int lineIndex = startLine; lineIndex <= endLine; ++lineIndex) {
         for (const Glyph& glyph : mLines[lineIndex]) {
             result += (char)glyph.mChar;
@@ -1828,6 +1927,8 @@ void Editor::Paste(){
 
 
 		if(HasSelection(aCursor)){
+			if(aCursor.mSelectionStart > aCursor.mSelectionEnd)
+				std::swap(aCursor.mSelectionStart,aCursor.mSelectionEnd);
 			uRecord.mOperations.push_back({ GetSelectedText(aCursor), aCursor.mSelectionStart, aCursor.mSelectionEnd, UndoOperationType::Delete });
 			DeleteSelection(aCursor);
 		}
