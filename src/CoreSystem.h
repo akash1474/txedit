@@ -3,6 +3,7 @@
 #include "DirectoryHandler.h"
 #include "StatusBarManager.h"
 #include "Terminal.h"
+#include "ThemeManager.h"
 
 
 class CoreSystem{
@@ -17,6 +18,8 @@ public:
 	static ImGuiID GetMainDockSpaceID(){ return Get().mDockSpaceId;}
 	static ImGuiID GetLeftMainDockSpaceID(){ return Get().mLeftDockSpaceId;}
 	static ImGuiID GetRightMainDockSpaceID(){ return Get().mRightDockSpaceId;}
+
+
 	CoreSystem(const CoreSystem&)=delete;
 
 	static CoreSystem& Get(){
@@ -41,6 +44,7 @@ public:
 
 private:
 	CoreSystem(){ 
+		ThemeManager::Init();
 		StatusBarManager::Init();
 	}
 

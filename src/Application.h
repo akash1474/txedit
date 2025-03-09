@@ -1,6 +1,5 @@
 #include "GLFW/glfw3.h"
 #include "CoreSystem.h"
-#include <future>
 
 class Application
 {
@@ -12,6 +11,8 @@ private:
 	float mFrameRate;
 	double mFrameTime;
 	bool mIsFocused;
+	bool mRunAtMaxRefreshRate=false;
+	bool mEnableRunAtMaxRefreshRate=false;
 
 public:
 	Application(const Application&) = delete;
@@ -34,6 +35,9 @@ public:
 	static bool IsWindowFocused(){return Get().mIsFocused;}
 	static void SetWindowIsFocused(bool aIsFocused=false) {Get().mIsFocused=aIsFocused;}
 
+	static void HandleFPSCooldown();
+	static void EnableHighFPS(){Get().mEnableRunAtMaxRefreshRate=true;}
+	static bool RunAtMaxRefreshRate(){return Get().mRunAtMaxRefreshRate;}
 
 	static void Draw();
 	static bool Init();

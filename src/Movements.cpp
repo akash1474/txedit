@@ -6,6 +6,7 @@
 #include "Log.h"
 #include "imgui.h"
 
+#include "TokenType.h"
 #include "DataTypes.h"
 #include "Timer.h"
 #include "Trie.h"
@@ -14,6 +15,7 @@
 #include "TextEditor.h"
 #include "tree_sitter/api.h"
 #include "TabsManager.h"
+#include "TreesitterLanguage.h"
 
 void Editor::MoveUp(bool ctrl, bool shift)
 {
@@ -310,7 +312,7 @@ std::string Editor::GetFullText() {
 
 void Editor::DebugDisplayNearByText(){
 
-	std::string buffer=GetNearbyLinesString(GetCurrentCursor().mCursorPosition.mLine,1);
+	std::string buffer=GetAboveLines(GetCurrentCursor().mCursorPosition.mLine,1);
 
     TSParser* parser= ts_parser_new();
     ts_parser_set_language(parser,tree_sitter_cpp());
@@ -334,7 +336,7 @@ uint32_t Editor::GetLineLengthInBytes(int aLineIdx){
 	return mLines[aLineIdx].size();
 }
 
-bool IsOpeningBracket(char aChar){
+bool Editor::IsOpeningBracket(char aChar){
 	return aChar == '(' || aChar == '{' || aChar == '[';
 }
 
@@ -348,8 +350,227 @@ char GetClosingBracketFor(char x)
 	return x;
 }
 
+bool Editor::IsAlreadyCommented(int aStart,int aEnd,const std::string& commentStr){
+	int commentLen=(int)commentStr.size();
+
+	bool isCommented=true;
+	for(int i=aStart;i<=aEnd;i++){
+		auto& line=mLines[aStart];
+		if(line.empty() || line.size()<commentLen)
+			continue;
+
+		bool isCommentStr=true;
+		for(int j=0;j<commentLen;j++){
+			if(line[j].mChar!=commentStr[j])
+			{
+				isCommentStr=false;
+				break;
+			}
+		}
+
+		if(!isCommentStr){
+			isCommented=false;
+			break;
+		}
+	}
+
+	return isCommented;
+}
+
+void Editor::ToggleComments(){
+	std::string aCommentStr=mLanguageConfig->commentSymbol;
+
+
+	// Ignore toggle if multiple cursors and any one has selection
+	if(mState.mCursors.size()>1){
+		for(auto& aCursor:mState.mCursors){
+			if(HasSelection(aCursor))
+				return;
+		}
+	}
+
+	UndoRecord uRecord;
+	uRecord.mBefore=mState;
+
+	for(size_t i=0;i<mState.mCursors.size();i++)
+	{
+		auto& aCursor=mState.mCursors[i];
+
+		int lStart,lEnd;
+		lStart=lEnd=aCursor.mCursorPosition.mLine;
+		if(HasSelection(aCursor))
+		{
+			lStart=aCursor.mSelectionStart.mLine;
+			lEnd=aCursor.mSelectionEnd.mLine;
+			if(lStart>lEnd)
+				std::swap(lStart,lEnd);
+		}
+
+		bool removingComment=IsAlreadyCommented(lStart,lEnd,aCommentStr);
+
+		//Undo Operation
+		UndoOperation operation;
+		operation.mText=aCommentStr;
+		operation.mType= removingComment ? UndoOperationType::Delete : UndoOperationType::Add;
+
+
+		if(removingComment)
+		{
+			for(int lineNo=lStart;lineNo<=lEnd;lineNo++)
+			{
+				if(mLines[lineNo].empty())
+					continue;
+
+				Coordinates deleteStart(lineNo,0);
+				Coordinates deleteEnd(lineNo,2);
+				DeleteRange(deleteStart, deleteEnd);
+				operation.mStart=deleteStart;
+				operation.mEnd=deleteEnd;
+
+				if(aCursor.mSelectionStart.mLine==lineNo)
+					aCursor.mSelectionStart.mColumn-=2;
+				if(aCursor.mCursorPosition.mLine==lineNo)
+					aCursor.mCursorPosition.mColumn-=2;
+				if(aCursor.mSelectionEnd.mLine==lineNo)
+					aCursor.mSelectionEnd.mColumn-=2;
+
+				
+				uRecord.mOperations.push_back(operation);
+			}
+		}
+		else
+		{
+
+			for(int lineNo=lStart;lineNo<=lEnd;lineNo++)
+			{
+				if(mLines[lineNo].empty())
+					continue;
+				Coordinates location(lineNo,0);
+				operation.mStart=location;
+				InsertTextAt(location, "//");
+				operation.mEnd=location;
+
+				if(aCursor.mSelectionStart.mLine==lineNo)
+					aCursor.mSelectionStart.mColumn+=2;
+
+				if(aCursor.mCursorPosition.mLine==lineNo)
+					aCursor.mCursorPosition.mColumn+=2;
+
+				if(aCursor.mSelectionEnd.mLine==lineNo)
+					aCursor.mSelectionEnd.mColumn+=2;
+				
+
+				uRecord.mOperations.push_back(operation);
+			}
+		}
+		UpdateSyntaxHighlightingForRange(lStart,lEnd);
+
+
+		for(size_t j=i+1;j<mState.mCursors.size();j++){
+			auto& cursor=mState.mCursors[j];
+			if(cursor.mCursorPosition.mLine==aCursor.mCursorPosition.mLine){
+				int diff=removingComment ? -2 : +2;
+				cursor.mCursorPosition.mColumn+=diff;
+				i++;
+			}else break;
+		}
+
+	}
+	uRecord.mAfter=mState;
+	mUndoManager.AddUndo(uRecord);
+}
+
+
+void Editor::InsertAroundSelection(char aChar){
+
+	UndoRecord u;
+	u.mBefore = mState;
+
+	for(size_t i=0;i<mState.mCursors.size();i++)
+	{
+		auto& aCursor=mState.mCursors[i];
+		if(aCursor.mSelectionStart > aCursor.mSelectionEnd)
+			std::swap(aCursor.mSelectionStart,aCursor.mSelectionEnd);
+
+		// Insertion at SelectionStart
+		UndoOperation added;
+		added.mType = UndoOperationType::Add;
+		added.mStart = aCursor.mSelectionStart;
+
+		std::string chr;
+		chr+=aChar;
+		InsertTextAt(aCursor.mSelectionStart,chr.c_str());
+		added.mText = chr;
+		added.mEnd = aCursor.mSelectionStart;
+		u.mOperations.push_back(added);
+
+
+
+		//Insertion at SelectionEnd
+		Coordinates endPosition(aCursor.mSelectionEnd);
+
+		bool selectionOnSameLine=aCursor.mSelectionStart.mLine==aCursor.mSelectionEnd.mLine;
+		if(selectionOnSameLine)
+			endPosition={aCursor.mSelectionEnd.mLine,aCursor.mSelectionEnd.mColumn+1};
+
+		added.mStart = endPosition;
+		if(IsOpeningBracket(aChar))
+		{
+			char c=GetClosingBracketFor(aChar);
+			chr.clear();
+			chr+=c;
+		}
+
+		InsertTextAt(endPosition,chr.c_str());
+		added.mText = chr;
+		if(selectionOnSameLine)
+		{
+			aCursor.mSelectionEnd.mColumn++;
+			aCursor.mCursorPosition.mColumn++;
+		}
+
+		// Handling multiple cursors on sameline
+		for(size_t j=i+1;j<mState.mCursors.size();j++){
+			auto& aNextCursor=mState.mCursors[j];
+			if(aNextCursor.mCursorPosition.mLine==aCursor.mCursorPosition.mLine)
+			{
+				aNextCursor.mCursorPosition.mColumn+=2;
+				aNextCursor.mSelectionStart.mColumn+=2;
+				aNextCursor.mSelectionEnd.mColumn+=2;
+			}else break;
+		}
+
+		added.mEnd = endPosition;
+
+		u.mOperations.push_back(added);
+	}
+
+	bool selectionOnSameLine=GetCurrentCursor().mSelectionStart.mLine==GetCurrentCursor().mSelectionEnd.mLine;
+	if(!selectionOnSameLine)
+		DebouncedReparse();
+	else
+	{
+		bool hasMultipleCursors=mState.mCursors.size()>1;
+		for(auto& aCursor:mState.mCursors){
+			if(hasMultipleCursors)
+				UpdateSyntaxHighlighting(aCursor.mCursorPosition.mLine,2);
+			else{
+				UpdateSyntaxHighlighting(aCursor.mCursorPosition.mLine,10);
+				FindBracketMatch(aCursor.mCursorPosition);
+			}
+		}
+	}
+
+
+
+
+	u.mAfter = mState;
+	mUndoManager.AddUndo(u);
+}
+
 void Editor::InsertCharacter(char chr){
 	DisableSearch();
+
 
 	uint8_t aChar=chr;
 	UndoRecord u;
@@ -373,20 +594,20 @@ void Editor::InsertCharacter(char chr){
 		added.mStart = coord;
 
 		for (auto p = buff; *p != '\0'; p++, ++cindex)
-			line.insert(line.begin() + cindex, Glyph(*p, ColorSchemeIdx::Default));
+			line.insert(line.begin() + cindex, Glyph(*p, TxTokenType::TxDefault));
 
 		added.mText = buff;
 
 		if (IsOpeningBracket(chr)) {
 			char closingBracket=GetClosingBracketFor(chr);
-            line.insert(line.begin() + cindex, Glyph(closingBracket, ColorSchemeIdx::Default));
+            line.insert(line.begin() + cindex, Glyph(closingBracket, TxTokenType::TxDefault));
             added.mText+=closingBracket;
             addedQuotesOrBrackets=true;
         }
 
         // if at (line end ) or (next character is not same) -> insert one more chr
         if((chr=='\'' || chr == '\"') && (cindex==line.size() || (cindex < line.size() && line[cindex].mChar!=chr))){
-            line.insert(line.begin() + cindex, Glyph(chr, ColorSchemeIdx::Default));
+            line.insert(line.begin() + cindex, Glyph(chr, TxTokenType::TxDefault));
             added.mText+=chr;
             addedQuotesOrBrackets=true;
         }
@@ -966,7 +1187,7 @@ void Editor::InsertTab(bool isShiftPressed)
 			GL_INFO("IDX:", idx);
 
 			// if(idx>0 && line[idx-1].mChar!='\t') continue;
-			line.insert(line.begin() + idx, 1, Glyph('\t',ColorSchemeIdx::Default));
+			line.insert(line.begin() + idx, 1, Glyph('\t',TxTokenType::TxDefault));
 
 			aCursor.mCursorPosition.mColumn += mTabSize;
 
@@ -1014,7 +1235,7 @@ void Editor::InsertTab(bool isShiftPressed)
 					indentValue=0;
 
 			} else {
-				mLines[startLine].insert(mLines[startLine].begin(), 1, Glyph('\t',ColorSchemeIdx::Default));
+				mLines[startLine].insert(mLines[startLine].begin(), 1, Glyph('\t',TxTokenType::TxDefault));
 
 				UndoOperation uAdded;
 				uAdded.mType=UndoOperationType::Add;

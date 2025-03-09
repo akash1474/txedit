@@ -1,8 +1,8 @@
-#include "FileNavigation.h"
+#pragma once
 #include "imgui.h"
 #include "string"
 #include "Coordinates.h"
-#include "TextEditor.h"
+#include "Animation.h"
 
 namespace StatusBarManager{
 

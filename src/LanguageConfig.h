@@ -1,28 +1,26 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
-#include <vector>
+#include "Language.h"
+
+
+
 
 class LanguageConfig {
 public:
-    LanguageConfig();
-    ~LanguageConfig();
+    LanguageConfig(){};
+    ~LanguageConfig(){
+        ts_query_delete(pQuery);
+    };
 
-    bool LoadLanguageConfig(const std::string& language);
-
-    std::string GetHighlightColor(const std::string& tokenType) const;
-
+    void LoadLanguageQuery(TxEdit::Language aType);
     std::string GetCommentSymbol() const;
 
-    const std::vector<std::string>& GetKeywords() const;
-
-private:
-    std::string currentLanguage;
-    std::unordered_map<std::string, std::string> syntaxColors; // Token type -> color
-    std::vector<std::string> keywords;
     std::string commentSymbol;
+    TSLanguageFunc tsLanguage;
+    std::string pQueryString;
+    TSQuery* pQuery=nullptr;
 
-    // Helper function to parse a language configuration file
-    void ParseConfigFile(const std::string& filePath);
+
+    // void ParseConfigFile(const std::string& filePath);
 };

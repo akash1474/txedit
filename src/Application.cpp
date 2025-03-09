@@ -161,45 +161,73 @@ void Application::BackupDataBeforeCrash()
 	// }
 }
 
+void Application::HandleFPSCooldown(){
+    static auto last_scroll_time = std::chrono::high_resolution_clock::now();
+
+    if (Get().mEnableRunAtMaxRefreshRate) {
+        last_scroll_time = std::chrono::high_resolution_clock::now();
+        GL_INFO("MAXJKl");
+        Get().mRunAtMaxRefreshRate=true;
+        Get().mEnableRunAtMaxRefreshRate=false;
+        glfwSwapInterval(1);
+    }
+
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::high_resolution_clock::now() - last_scroll_time);
+
+    if (elapsed.count() > 500) { // 200ms after last scroll
+    	Get().mRunAtMaxRefreshRate=false;
+        glfwSwapInterval(0);
+    }
+}
+
 
 
 void Application::Draw()
 {
-	glfwPollEvents();
-	if(!Application::IsWindowFocused()) return;
-#ifdef GL_BUILD_OPENGL2
-	ImGui_ImplOpenGL2_NewFrame();
-#else
-	ImGui_ImplOpenGL3_NewFrame();
-#endif
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
+    // Process window events
+    glfwPollEvents();
 
+    // Skip rendering if window is minimized
+    if (glfwGetWindowAttrib(Get().mWindow, GLFW_ICONIFIED)) return;
 
-
-	Application::GetCoreSystem()->Render();
-	ImGui::Render();
-	int display_w, display_h;
-	glfwGetFramebufferSize(Get().mWindow, &display_w, &display_h);
-	glViewport(0, 0, display_w, display_h);
-	glClearColor(0.11f, 0.11f, 0.11f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // Skip rendering if the window is not focused (but still process events)
+    // if (!Application::IsWindowFocused()) return; -- freezes the ui no updates seen
 
 #ifdef GL_BUILD_OPENGL2
-	ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplOpenGL2_NewFrame();
 #else
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplOpenGL3_NewFrame();
+#endif
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    // Render application UI
+    Application::GetCoreSystem()->Render();
+	if(ImGui::GetIO().MouseWheel != 0.0f)
+		EnableHighFPS();
+    ImGui::Render();
+
+    // Get framebuffer size only if needed (avoid unnecessary calls)
+    int display_w, display_h;
+    glfwGetFramebufferSize(Get().mWindow, &display_w, &display_h);
+    if (display_w > 0 && display_h > 0) {
+        glViewport(0, 0, display_w, display_h);
+    }
+
+    // Clear screen (minimize state check prevents unnecessary clearing)
+    glClearColor(0.11f, 0.11f, 0.11f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Render ImGui draw data
+#ifdef GL_BUILD_OPENGL2
+    ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+#else
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 #endif
 
-	// if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-	// 	GLFWwindow* backup_current_context = glfwGetCurrentContext();
-	// 	ImGui::UpdatePlatformWindows();
-	// 	ImGui::RenderPlatformWindowsDefault();
-	// 	glfwMakeContextCurrent(backup_current_context);
-	// }
 
-	// glfwMakeContextCurrent(Get().mWindow);
-	glfwSwapBuffers(Get().mWindow);
+    glfwSwapBuffers(Get().mWindow);
 }
 
 

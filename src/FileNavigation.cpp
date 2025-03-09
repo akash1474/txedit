@@ -10,10 +10,14 @@
 #include <filesystem>
 #include "MultiThreading.h"
 #include "DirectoryFinder.h"
+#include "tree_sitter/api.h"
 
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <winnt.h>
+
+#include "Language.h"
+#include "LanguageConfigManager.h"
 
 
 FileNavigation::FileNavigation(){};
@@ -36,6 +40,7 @@ std::string FileNavigation::GetFileTypeNameFromFilePath(const std::string& aFile
 	std::string extension=std::filesystem::path(aFilePath).extension().string();
 	if(extension[0]=='.')
 		extension=extension.substr(1);
+	
 	for(auto& [name,iconData]:Get().mIconDatabase)
 	{
 		if(std::find(iconData.extensions.begin(),iconData.extensions.end(),extension)!=iconData.extensions.end())
@@ -206,7 +211,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
                 	case 5:
                 		GL_INFO("New Folder");
                 		{
-                			std::string parentDir=std::filesystem::path(fpath).parent_path().generic_string();
+                			std::string parentDir=isFolder ? fpath: std::filesystem::path(fpath).parent_path().generic_string();
 	                		StatusBarManager::ShowInputPanel(
 	                			"FolderName:",
 	                			[](const char* folderPath)
@@ -421,8 +426,8 @@ void FileNavigation::Render(){
 	ImGui::SetNextWindowSize(ImVec2{250.0f,-1.0f},ImGuiCond_Once);
 	ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(0.764,0.764,0.764,1.000));
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0.0f);
-	ImGui::Begin("Project Directory");
-
+	if(ImGui::Begin("Project Directory"))
+	{
 		Get().mHoveringThisFrame=false;
     	auto& folders=GetFolders();
     	for(const auto& folder:folders)
@@ -438,6 +443,8 @@ void FileNavigation::Render(){
     		if(Get().mHoveringThisFrame && ImGui::IsMouseDown(ImGuiMouseButton_Right))
     			ImGui::OpenPopup(entty->path.c_str());
     	}
+	}
+
 
 	ImGui::End();
 	ImGui::PopStyleColor(4);
@@ -447,6 +454,11 @@ void FileNavigation::Render(){
 
 void FileNavigation::MarkFileAsOpen(const std::string &aOpenedFilePath){
 	std::string	directoryPath=std::filesystem::path(aOpenedFilePath).parent_path().generic_string();
+
+	// scan if parent dir not in mDirectoryData
+	if(Get().mDirectoryData.find(directoryPath)==Get().mDirectoryData.end())
+		ScanDirectory(directoryPath);
+
 	auto& entities=Get().mDirectoryData[directoryPath];
 
 	if(entities.empty()) return;
@@ -496,14 +508,40 @@ void FileNavigation::ScanDirectory(const std::string& aDirectoryPath){
 
 void FileNavigation::HandleEvent(DirectoryEvent aEvent,std::wstring& aPayLoad){
 
+	std::filesystem::path path=std::filesystem::path(aPayLoad);
 	GL_WARN("Event:{}, PayLoad:{}",(int)aEvent,ToUTF8(aPayLoad));
+
+	// Using for development purpose only allows for live preview of highlight based on updated query capture
+	if(path.has_extension() && path.extension().generic_string()==".scm"){
+		FileTab* tab=TabsManager::GetTabWithFileName("TextEditor.cpp");
+		if(!tab)
+			return;
+
+		auto type=TxEdit::GetHighlightType("TextEditor.cpp");
+		LanguageConfig* config=LanguageConfigManager::GetLanguageConfig(type);
+		if (!config)
+			return;
+		ts_query_delete(config->pQuery);
+		config->pQuery=nullptr;
+
+		std::string queryString;
+		if(LanguageConfigManager::LoadLanguageQuery(type, queryString)){
+			config->pQueryString=queryString;
+		}
+		tab->editor->DebouncedReparse();
+		return;
+	}
+
 
 	std::string folderPath=std::filesystem::path(aPayLoad).parent_path().generic_u8string();
 
 	switch(aEvent){
 	case DirectoryEvent::FileAdded:
+		break;
 	case DirectoryEvent::FileRemoved:
+		break;
 	case DirectoryEvent::FileRenamedOldName:
+		break;
 	case DirectoryEvent::FileRenamedNewName:
 		ScanDirectory(folderPath);
 		break;

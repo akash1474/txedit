@@ -39,6 +39,7 @@ public:
 
 	static Editor* GetCurrentActiveTextEditor();
 	static FileTab* GetCurrentActiveTab();
+	static FileTab* GetTabWithFileName(const std::string& aName);
 
 	static void SetNewTabsDockSpaceId(ImGuiID aMainDockSpaceId);
 	static FileTab* OpenFile(std::string filepath,bool isTemp=true);

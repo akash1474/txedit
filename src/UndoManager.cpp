@@ -24,20 +24,20 @@ void UndoRecord::Undo(Editor* aEditor)
 		{
 			switch (operation.mType)
 			{
-			case UndoOperationType::Delete:
-			{
-				auto start = operation.mStart;
-				aEditor->InsertTextAt(start, operation.mText.c_str());
-				aEditor->UpdateSyntaxHighlighting(operation.mStart.mLine - 1, operation.mEnd.mLine - operation.mStart.mLine + 2);
-				break;
+				case UndoOperationType::Delete:
+				{
+					auto start = operation.mStart;
+					aEditor->InsertTextAt(start, operation.mText.c_str());
+					break;
+				}
+				case UndoOperationType::Add:
+				{
+					aEditor->DeleteRange(operation.mStart, operation.mEnd);
+					break;
+				}
 			}
-			case UndoOperationType::Add:
-			{
-				aEditor->DeleteRange(operation.mStart, operation.mEnd);
-				aEditor->UpdateSyntaxHighlighting(operation.mStart.mLine - 1, operation.mEnd.mLine - operation.mStart.mLine + 2);
-				break;
-			}
-			}
+			
+			aEditor->UpdateSyntaxHighlightingForRange(operation.mStart.mLine, operation.mEnd.mLine);
 		}
 	}
 
@@ -58,17 +58,16 @@ void UndoRecord::Redo(Editor* aEditor)
 			case UndoOperationType::Delete:
 			{
 				aEditor->DeleteRange(operation.mStart, operation.mEnd);
-				aEditor->UpdateSyntaxHighlighting(operation.mStart.mLine - 1, operation.mEnd.mLine - operation.mStart.mLine + 1);
 				break;
 			}
 			case UndoOperationType::Add:
 			{
 				auto start = operation.mStart;
 				aEditor->InsertTextAt(start, operation.mText.c_str());
-				aEditor->UpdateSyntaxHighlighting(operation.mStart.mLine - 1, operation.mEnd.mLine - operation.mStart.mLine + 1);
 				break;
 			}
 			}
+			aEditor->UpdateSyntaxHighlightingForRange(operation.mStart.mLine, operation.mEnd.mLine);
 		}
 	}
 

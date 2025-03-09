@@ -7,9 +7,10 @@
 
 #include "StatusBarManager.h"
 #include "TabsManager.h"
+#include "FileNavigation.h"
 
 
-void StatusBarManager::Init(){ 
+void StatusBarManager::Init(){
 	mNotificationAnimation.SetDuration(2.0f);
 }
 

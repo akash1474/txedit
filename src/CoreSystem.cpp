@@ -1,6 +1,5 @@
 #include "FontAwesome6.h"
 #include "QuickFileSearch.h"
-#include "Timer.h"
 #include "pch.h"
 #include "imgui_internal.h"
 #include "GLFW/glfw3.h"
@@ -20,10 +19,31 @@
 #include "QuickFileSearch.h"
 #include <filesystem>
 
+#include <windows.h>
+#include <pdh.h>
+
+double GetCPUUsage() {
+    PDH_FMT_COUNTERVALUE counterVal;
+    static PDH_HQUERY cpuQuery;
+    static PDH_HCOUNTER cpuTotal;
+
+    if (!cpuQuery) {
+        PdhOpenQuery(NULL, 0, &cpuQuery);
+        PdhAddCounterW(cpuQuery, L"\\Processor(_Total)\\% Processor Time", 0, &cpuTotal);
+        PdhCollectQueryData(cpuQuery);
+    }
+
+    PdhCollectQueryData(cpuQuery);
+    PdhGetFormattedCounterValue(cpuTotal, PDH_FMT_DOUBLE, NULL, &counterVal);
+
+    return counterVal.doubleValue;
+}
+
 #ifdef min
 	#undef min
 #endif
 #ifdef GL_DEBUG
+
 
 void ShowFPS()
 {
@@ -47,113 +67,157 @@ void ShowFPS()
 
 float EaseOutQuadraticFn(float t) { return 1.0f - pow(1.0f - t, 4);}
 
+
+
+void DisplayColorTable(const std::unordered_map<std::string, ImU32>& colorMap) {
+    static char filter[128] = ""; // Input buffer for filtering
+
+    ImGui::InputText("Filter", filter, IM_ARRAYSIZE(filter)); // Input text for search
+
+    if (ImGui::BeginTable("ColorTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+        ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthStretch, 150.0f);  // Fixed width for key column
+        ImGui::TableSetupColumn("Preview", ImGuiTableColumnFlags_WidthFixed, 60.0f); // Set width for color preview
+
+        ImGui::TableHeadersRow();
+
+        for (const auto& [key, color] : colorMap) {
+            if (filter[0] != '\0' && key.find(filter) == std::string::npos) {
+                continue; // Skip items that don't match the filter
+            }
+
+            ImGui::TableNextRow();
+            
+            // Display key name
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextUnformatted(key.c_str());
+            
+            // Display actual color preview as a filled rect
+            ImGui::TableSetColumnIndex(1);
+            ImVec2 pMin = ImGui::GetCursorScreenPos();
+            ImVec2 pMax = { pMin.x + 60, pMin.y + 20 }; // Adjust width accordingly
+            ImGui::GetWindowDrawList()->AddRectFilled(pMin, pMax, color);
+            ImGui::Dummy(ImVec2(60, 20)); // Reserve space for the rectangle
+        }
+        ImGui::EndTable();
+    }
+}
+
+
+
+
 void CoreSystem::RenderDebugInfo()
 {
 	static bool show_demo = true;
 	ImGui::ShowDemoWindow(&show_demo);
 	Editor* currentEditor=TabsManager::GetCurrentActiveTextEditor();
 
-	ImGui::SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags_RefreshOnFocus);
-	ImGui::Begin("Project");
-	ShowFPS();
-	const char* utf8 = "Mastering » Ñandú.txt";
-	ImGui::Text("%s", utf8);
-	ImGui::Text("Length:%d", ImTextCountCharsFromUtf8(utf8, 0));
-	ImGui::Text("GLFW::Time:%f", glfwGetTime());
-	ImGui::Text("ImGui::Time:%f", (float)ImGui::GetTime());
-	static float add=0.5f,scale=0.5f;
-	static int speed=2;
-	ImGui::SliderInt("Speed", &speed, 1, 10);
-	ImGui::SliderFloat("Added", &add, 0.0f, 1.0f);
-	ImGui::SliderFloat("Scale", &scale, 0.0f, 1.0f);
-	float alpha = add + scale * sin((float)ImGui::GetTime() * speed);
-	float value=EaseOutQuadraticFn(alpha);
-	ImGui::Text("Value:%.2f",alpha);
-	ImGui::SliderFloat("##slider", &alpha, -1.0f, 1.0f);
-	ImGui::SliderFloat("##slider", &value, -1.0f, 1.0f);
-
-
-
-	if(currentEditor)
+	ImGui::SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags_RefreshOnHover);
+	if(ImGui::Begin("Project"))
 	{
-		static char buff[1024]="";
-		static bool isFirst=true;
 
-		ImGui::Text("nCursor:%d", (int)currentEditor->GetEditorState()->mCursors.size());
-		static int LineSpacing = 8.0f;
-		if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
-			currentEditor->SetLineSpacing(LineSpacing);
+		ShowFPS();
+		// ImGui::Text("CPU Usage:%.2f",GetCPUUsage());
+
+		auto& colorMap=ThemeManager::GetCaptureToColorMap();
+		DisplayColorTable(colorMap);
+
+		const char* utf8 = "Mastering » Ñandú.txt";
+		ImGui::Text("%s", utf8);
+		ImGui::Text("Length:%d", ImTextCountCharsFromUtf8(utf8, 0));
+		ImGui::Text("GLFW::Time:%f", glfwGetTime());
+		ImGui::Text("ImGui::Time:%f", (float)ImGui::GetTime());
+		static float add=0.5f,scale=0.5f;
+		static int speed=2;
+		ImGui::SliderInt("Speed", &speed, 1, 10);
+		ImGui::SliderFloat("Added", &add, 0.0f, 1.0f);
+		ImGui::SliderFloat("Scale", &scale, 0.0f, 1.0f);
+		float alpha = add + scale * sin((float)ImGui::GetTime() * speed);
+		float value=EaseOutQuadraticFn(alpha);
+		ImGui::Text("Value:%.2f",alpha);
+		ImGui::SliderFloat("##slider", &alpha, -1.0f, 1.0f);
+		ImGui::SliderFloat("##slider", &value, -1.0f, 1.0f);
+
+
+
+		if(currentEditor)
+		{
+			static char buff[1024]="";
+			static bool isFirst=true;
+
+			ImGui::Text("nCursor:%d", (int)currentEditor->GetEditorState()->mCursors.size());
+			static int LineSpacing = 8.0f;
+			if (ImGui::SliderInt("LineSpacing", &LineSpacing, 0, 20)) {
+				currentEditor->SetLineSpacing(LineSpacing);
+			}
+
+
+			ImGui::Spacing();
+			ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
+			ImGui::Spacing();
+			ImGui::Text("mCursorPosition: X:%d  Y:%d", currentEditor->GetCurrentCursor().mCursorPosition.mColumn,
+			            currentEditor->GetCurrentCursor().mCursorPosition.mLine);
+			ImGui::Text("mSelectionStart: X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionStart.mColumn,
+			            currentEditor->GetCurrentCursor().mSelectionStart.mLine);
+			ImGui::Text("mSelectionEnd:   X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionEnd.mColumn,
+			            currentEditor->GetCurrentCursor().mSelectionEnd.mLine);
+			ImGui::Text("mUndoManagerTop:   X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionEnd.mColumn,
+			            currentEditor->GetCurrentCursor().mSelectionEnd.mLine);
+
+			ImGui::Spacing();
+			currentEditor->GetUndoMananger()->DisplayUndoStack();
+
+			ImGui::Spacing();
+			ImGui::Spacing();
+			static std::string mode;
+			ImColor color;
+			switch (currentEditor->GetSelectionMode()) {
+				case 0:
+					mode = "Normal";
+					color = ImColor(50, 206, 187, 255);
+					break;
+				case 1:
+					mode = "Word";
+					color = ImColor(233, 196, 106, 255);
+					break;
+				case 2:
+					mode = "Line";
+					color = ImColor(231, 111, 81, 255);
+					break;
+			}
+			ImGui::Text("SelectionMode: ");
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, color.Value);
+			ImGui::Text("%s", mode.c_str());
+			ImGui::PopStyleColor();
+
+
+			ImGui::Spacing();
+			ImGui::Spacing();
+			static int v{1};
+			ImGui::Text("Goto Line: ");
+			ImGui::SameLine();
+			if (ImGui::InputInt("##ScrollToLine", &v, 1, 100))
+				currentEditor->ScrollToLineNumber(v);
+
 		}
+		#ifdef GL_DEBUG
 
-
-		ImGui::Spacing();
-		ImGui::Text("PositionY:%.2f", ImGui::GetMousePos().y);
-		ImGui::Spacing();
-		ImGui::Text("mCursorPosition: X:%d  Y:%d", currentEditor->GetCurrentCursor().mCursorPosition.mColumn,
-		            currentEditor->GetCurrentCursor().mCursorPosition.mLine);
-		ImGui::Text("mSelectionStart: X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionStart.mColumn,
-		            currentEditor->GetCurrentCursor().mSelectionStart.mLine);
-		ImGui::Text("mSelectionEnd:   X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionEnd.mColumn,
-		            currentEditor->GetCurrentCursor().mSelectionEnd.mLine);
-		ImGui::Text("mUndoManagerTop:   X:%d  Y:%d", currentEditor->GetCurrentCursor().mSelectionEnd.mColumn,
-		            currentEditor->GetCurrentCursor().mSelectionEnd.mLine);
-
-		ImGui::Spacing();
-		currentEditor->GetUndoMananger()->DisplayUndoStack();
-
-		ImGui::Spacing();
-		ImGui::Spacing();
-		static std::string mode;
-		ImColor color;
-		switch (currentEditor->GetSelectionMode()) {
-			case 0:
-				mode = "Normal";
-				color = ImColor(50, 206, 187, 255);
-				break;
-			case 1:
-				mode = "Word";
-				color = ImColor(233, 196, 106, 255);
-				break;
-			case 2:
-				mode = "Line";
-				color = ImColor(231, 111, 81, 255);
-				break;
+		static ImageTexture img1("./assets/screenshots/editor.png");
+		static ImageTexture img2("./assets/screenshots/multi_cursor.png");
+		static ImageTexture img3("./assets/screenshots/selection.png");
+		static bool pushed = false;
+		if (!pushed) {
+			MultiThreading::ImageLoader::PushImageToQueue(&img1);
+			MultiThreading::ImageLoader::PushImageToQueue(&img2);
+			MultiThreading::ImageLoader::PushImageToQueue(&img3);
+			pushed = true;
 		}
-		ImGui::Text("SelectionMode: ");
-		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_Text, color.Value);
-		ImGui::Text("%s", mode.c_str());
-		ImGui::PopStyleColor();
-
-
-		ImGui::Spacing();
-		ImGui::Spacing();
-		static int v{1};
-		ImGui::Text("Goto Line: ");
-		ImGui::SameLine();
-		if (ImGui::InputInt("##ScrollToLine", &v, 1, 100))
-			currentEditor->ScrollToLineNumber(v);
-
+		
+		ImageTexture::AsyncImage(&img1, ImVec2(362, 256));
+		ImageTexture::AsyncImage(&img2, ImVec2(362, 256));
+		ImageTexture::AsyncImage(&img3, ImVec2(362, 256));
+		#endif
 	}
-	#ifdef GL_DEBUG
-
-	static ImageTexture img1("./assets/screenshots/editor.png");
-	static ImageTexture img2("./assets/screenshots/multi_cursor.png");
-	static ImageTexture img3("./assets/screenshots/selection.png");
-	static bool pushed = false;
-	if (!pushed) {
-		MultiThreading::ImageLoader::PushImageToQueue(&img1);
-		MultiThreading::ImageLoader::PushImageToQueue(&img2);
-		MultiThreading::ImageLoader::PushImageToQueue(&img3);
-		pushed = true;
-	}
-	
-	ImageTexture::AsyncImage(&img1, ImVec2(362, 256));
-	ImageTexture::AsyncImage(&img2, ImVec2(362, 256));
-	ImageTexture::AsyncImage(&img3, ImVec2(362, 256));
-	#endif
-
-
 	ImGui::End();
 }
 
@@ -298,10 +362,13 @@ void CoreSystem::Render()
 
 
 	QuickFileSearch::EventListener();
+
 }
 
 
-bool CoreSystem::Init() { return true; }
+bool CoreSystem::Init() {
+	return true; 
+}
 
 bool CoreSystem::InitImGui() { return true; }
 
@@ -331,14 +398,14 @@ void CoreSystem::InitFonts()
 	font_config.FontDataOwnedByAtlas = false;
 	const float font_size = GetFontSize();
 	// io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf",font_size+3,&font_config);
-	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size+2.0f, &font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size, &font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeSolid, IM_ARRAYSIZE(FontAwesomeSolid), (font_size + 4.0f) * 2.0f / 3.0f, &icon_config,
 	                               icons_ranges);
 
 	// io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeuii.ttf",font_size+3,&font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLItalic, IM_ARRAYSIZE(JetBrainsMonoNLItalic), font_size + 2.0f, &font_config);
 
-	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size+2.0f, &font_config);
+	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size, &font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeRegular, IM_ARRAYSIZE(FontAwesomeRegular), (font_size + 4.0f) * 2.0f / 3.0f,
 	                               &icon_config, icons_ranges);
 }

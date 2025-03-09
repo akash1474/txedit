@@ -1,5 +1,12 @@
-Features:
+Feature:
+- Added support for adding quotes and brackets around the selected text
+- Added support to toggle/add comment to a line using ctrl+/
 
-BugFixes/Improvements:
-- Fix when last tab is closed then the last second tab is not automatically focused.
-- Update the selected file in FileNavigation to only highlight the file in current tab.
+BugFix:
+- Fixed Crash: when pasting from clipboard while text is selected
+
+Changes:
+- Changed `HighlightType` to `Language` as it made more sense
+- Added `languageToTreeSitterLanguage` for Language to tree_sitter_language mapping
+- Added `languageToDirName` for Language to data directory mapping for that language
+- Moved all the concerns related to language inside `Language.h`
