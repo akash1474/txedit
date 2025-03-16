@@ -5,6 +5,7 @@
 #include "filesystem"
 
 #include "tree_sitter/api.h"
+#include "utils.h"
 typedef TSLanguage* (*TSLanguageFunc)(); // Define function pointer type
 
 
@@ -68,10 +69,19 @@ namespace TxEdit{
 	}
 
 
-	static inline const std::string mDataDirectory="./data";
-	static inline const std::string mLanguageDirectory=mDataDirectory+"/languages";
+	static inline const std::filesystem::path GetDataDirectory(){
+		static std::filesystem::path dir(GetExecutableDirectoryPath()/"data");
+		GL_INFO("DataDirectory:{}",dir.generic_string());
+		return dir;
+
+	}
+	static inline const std::filesystem::path GetLanguageDirectory(){
+		auto dir=GetDataDirectory()/"languages";
+		GL_INFO("LanguageDirectory:{}",dir.generic_string());
+		return dir;
+	}
 
 	static inline const std::string GetLanguageDataDirectoryPath(Language aLanguage){
-		return std::move(mLanguageDirectory+"/"+languageToDirName[aLanguage]);
+		return std::move((GetLanguageDirectory()/languageToDirName[aLanguage]).generic_string());
 	}
 }

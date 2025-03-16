@@ -1,3 +1,4 @@
+#pragma once
 #include "Log.h"
 #include "imgui.h"
 #include "string"
@@ -14,6 +15,7 @@ enum class Fonts{
     MonoLisaRegular,
     MonoLisaMedium,
 };
+
 
 
 inline ImColor darkerShade(ImVec4 color, float multiplier = 0.1428)
@@ -417,3 +419,24 @@ inline std::string GetUserDirectory(const char* app_folder=nullptr){
 //     }
 //     return "None";
 // }
+
+inline std::filesystem::path GetExecutableDirectoryPath()
+{
+    char path[MAX_PATH];
+    GetModuleFileNameA(NULL, path, MAX_PATH);
+    // path contains txedit.exe so we do parent_path to get the directory
+    std::filesystem::path executablePath = std::filesystem::path(path).parent_path();
+#ifdef GL_DEBUG
+    // as in debug the executable is located inside the bin dir
+    return executablePath.parent_path(); 
+#else
+    GL_INFO("DataDirectory:{}",executablePath.generic_string());
+    // const char* msg=executablePath.generic_string().c_str();
+    // ShowMessage("ExecutableDir",msg);
+    return executablePath;
+#endif
+}
+
+inline std::filesystem::path GetCurrentWorkingDirectoryPath(){
+    return std::filesystem::current_path();
+}

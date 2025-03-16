@@ -380,7 +380,6 @@ bool Editor::IsAlreadyCommented(int aStart,int aEnd,const std::string& commentSt
 void Editor::ToggleComments(){
 	std::string aCommentStr=mLanguageConfig->commentSymbol;
 
-
 	// Ignore toggle if multiple cursors and any one has selection
 	if(mState.mCursors.size()>1){
 		for(auto& aCursor:mState.mCursors){
@@ -422,17 +421,17 @@ void Editor::ToggleComments(){
 					continue;
 
 				Coordinates deleteStart(lineNo,0);
-				Coordinates deleteEnd(lineNo,2);
+				Coordinates deleteEnd(lineNo,aCommentStr.size());
 				DeleteRange(deleteStart, deleteEnd);
 				operation.mStart=deleteStart;
 				operation.mEnd=deleteEnd;
 
 				if(aCursor.mSelectionStart.mLine==lineNo)
-					aCursor.mSelectionStart.mColumn-=2;
+					aCursor.mSelectionStart.mColumn-=aCommentStr.size();
 				if(aCursor.mCursorPosition.mLine==lineNo)
-					aCursor.mCursorPosition.mColumn-=2;
+					aCursor.mCursorPosition.mColumn-=aCommentStr.size();
 				if(aCursor.mSelectionEnd.mLine==lineNo)
-					aCursor.mSelectionEnd.mColumn-=2;
+					aCursor.mSelectionEnd.mColumn-=aCommentStr.size();
 
 				
 				uRecord.mOperations.push_back(operation);
@@ -447,17 +446,17 @@ void Editor::ToggleComments(){
 					continue;
 				Coordinates location(lineNo,0);
 				operation.mStart=location;
-				InsertTextAt(location, "//");
+				InsertTextAt(location, aCommentStr.c_str());
 				operation.mEnd=location;
 
 				if(aCursor.mSelectionStart.mLine==lineNo)
-					aCursor.mSelectionStart.mColumn+=2;
+					aCursor.mSelectionStart.mColumn+=aCommentStr.size();
 
 				if(aCursor.mCursorPosition.mLine==lineNo)
-					aCursor.mCursorPosition.mColumn+=2;
+					aCursor.mCursorPosition.mColumn+=aCommentStr.size();
 
 				if(aCursor.mSelectionEnd.mLine==lineNo)
-					aCursor.mSelectionEnd.mColumn+=2;
+					aCursor.mSelectionEnd.mColumn+=aCommentStr.size();
 				
 
 				uRecord.mOperations.push_back(operation);
@@ -469,7 +468,7 @@ void Editor::ToggleComments(){
 		for(size_t j=i+1;j<mState.mCursors.size();j++){
 			auto& cursor=mState.mCursors[j];
 			if(cursor.mCursorPosition.mLine==aCursor.mCursorPosition.mLine){
-				int diff=removingComment ? -2 : +2;
+				int diff=removingComment ? -aCommentStr.size() : +aCommentStr.size();
 				cursor.mCursorPosition.mColumn+=diff;
 				i++;
 			}else break;

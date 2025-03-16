@@ -1,4 +1,5 @@
 #include "Log.h"
+#include "Trie.h"
 #include "pch.h"
 #include "FontAwesome6.h"
 #include "imgui.h"
@@ -89,7 +90,8 @@ FileTab* TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 	GL_INFO("Opening File:{}",aFilePath);
 
 	std::filesystem::path path(aFilePath);
-	std::string uuid=path.filename().generic_u8string() + "##" + std::to_string((int)&Get());
+	auto now = std::chrono::steady_clock::now().time_since_epoch().count();
+	std::string uuid=path.filename().generic_u8string() + "##" +std::to_string(now);
 	GL_INFO(uuid);
 
 	if(aFilePath.empty())

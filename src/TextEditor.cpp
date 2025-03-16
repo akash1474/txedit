@@ -112,9 +112,9 @@ void Editor::LoadFile(const char* filepath){
 
 
 	mFileTypeName=FileNavigation::GetFileTypeNameFromFilePath(filepath);
-	// GL_INFO("mFileTypeName:{}",mFileTypeName);
+	GL_INFO("mFileTypeName:{}",mFileTypeName);
 	mHighlightType=TxEdit::GetHighlightType(mFilePath);
-	// GL_INFO("HighLightType:{}",(int)mHighlightType);
+	GL_INFO("HighLightType:{}",(int)mHighlightType);
 	this->SetBuffer(content);
 	isFileLoaded=true;
 }
@@ -554,14 +554,14 @@ bool Editor::Draw()
 		float linePosX=mEditorPosition.x + mLineBarPadding + (mLineBarMaxCountWidth-GetNumberWidth(lineNo+1))*mCharacterSize.x;
 
 		// //Error Highlighting
-		// if(mErrorMarkers[lineNo])
-		// {
-		// 	mEditorWindow->DrawList->AddRectFilled(
-		// 		{mEditorPosition.x,mEditorPosition.y+(lineNo*mLineHeight)-scrollY},
-		// 		{mEditorPosition.x+mLineBarWidth, mEditorPosition.y+(lineNo*mLineHeight)-scrollY + mLineHeight},
-		// 		mPalette[(size_t)PaletteIndex::RED]
-		// 	); // Code
-		// }
+		if(mErrorMarkers[lineNo])
+		{
+			mEditorWindow->DrawList->AddRectFilled(
+				{mEditorPosition.x,mEditorPosition.y+(lineNo*mLineHeight)-scrollY},
+				{mEditorPosition.x+mLineBarWidth, mEditorPosition.y+(lineNo*mLineHeight)-scrollY + mLineHeight},
+				IM_COL32(255, 25, 0, 100)
+			); // Code
+		}
 
 		//Line Number
 		mEditorWindow->DrawList->AddText({linePosX, linePosY}, (lineNo==aCursor.mCursorPosition.mLine) ? mGruvboxPalletDark[(size_t)Pallet::Text] : mGruvboxPalletDark[(size_t)Pallet::Comment], std::to_string(lineNo + 1).c_str());
@@ -1025,7 +1025,15 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	TSQueryCursor* cursor = ts_query_cursor_new();
 	ts_query_cursor_exec(cursor, mLanguageConfig->pQuery, ts_tree_root_node(tree));
     // GL_INFO("Duration:{}",timerx.ElapsedMillis());
-    // mErrorMarkers.clear();
+    mErrorMarkers.clear();
+
+    // const size_t start=0;
+    // const size_t end=std::max((size_t)0,mLines.size());
+
+	// for(size_t lineNo=start;lineNo<end;lineNo++){
+	// 	for(auto& glyph:mLines[lineNo])
+	// 		glyph.mColorIndex=TxTokenType::TxDefault;
+	// }
 
     // mSuggestions.clear();
 	static bool isFirst=true;
@@ -1051,18 +1059,19 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 		    TSPoint endPoint = ts_node_end_point(node);
 
 		    if(isFirst){
-			    if(std::string(captureName)=="type.indentifier" || std::string(captureName)=="function.namespace" || std::string(captureName)=="function"){
+			    if(std::string(captureName)=="type.indentifier" || std::string(captureName)=="function.namespace"){
 		    	    uint32_t startByte = ts_node_start_byte(node);
 				    uint32_t endByte = ts_node_end_byte(node);
 			    	Trie::Insert(aGlobalTokens,sourceCode.substr(startByte, endByte - startByte));
 			    }
 		    }
-		    // {
-		    // 	for(int i=startPoint.row;i<=endPoint.row;i++)
-		    // 		mErrorMarkers[i]=true;
+		    if (std::string(ts_node_type(node)) == "ERROR" || std::string(ts_node_type(node)) == "MISSING")
+		    {
+		    	for(int i=startPoint.row;i<=endPoint.row;i++)
+		    		mErrorMarkers[i]=true;
 		    	
-		    // 	continue;
-		    // }
+		    	continue;
+		    }
 
 		    endPoint.column--;
 
@@ -1185,6 +1194,10 @@ void Editor::UpdateSyntaxHighlighting(int aLineNo,int aLineCount)
 		    startPoint.row+=startLine;
 		    TSPoint endPoint = ts_node_end_point(node);
 		    endPoint.row+=startLine;
+		    // for(size_t lineNo=startPoint.row;lineNo<=endPoint.row;lineNo++){
+			// 	for(auto& glyph:mLines[lineNo])
+			// 		glyph.mColorIndex=TxTokenType::TxDefault;
+			// }
 
 		    TxTokenType colorIndex = captureToToken[captureName];
 		    // if(startPoint.row != aLineNo) continue;

@@ -17,6 +17,10 @@ includeDirs["LunaSVG"]="packages/lunasvg/include"
 includeDirs["UUID"]="packages/uuid_v4"
 includeDirs["TreeSitter"]="packages/tree-sitter/lib/include"
 includeDirs["nlohmann"]="packages/nlohmann"
+includeDirs["md4c"]="packages/md4c/src"
+includeDirs["ImGuiMD"]="packages/imgui_md"
+includeDirs["cpr"]="packages/cpr/include"
+includeDirs["curl"]="packages/curl/include"
 
 
 -- /MP -- Multithreaded build 
@@ -32,6 +36,9 @@ include "packages/tree-sitter-python"
 include "packages/tree-sitter-java"
 include "packages/tree-sitter-json"
 include "packages/tree-sitter-lua"
+include "packages/md4c"
+include "packages/imgui_md"
+include "packages/cpr"
 
 project "text_editor"
    kind "ConsoleApp"
@@ -58,7 +65,15 @@ project "text_editor"
       "TreeSitterJava",
       "TreeSitterJson",
       "TreeSitterLua",
-      "TreeSitterPython"
+      "TreeSitterPython",
+      "md4c",
+      "ImGuiMD",
+      "CPR",
+      "cURL",
+      "ws2_32",
+      "crypt32",
+      "wldap32",
+      "normaliz"
    }
 
    includedirs{
@@ -70,7 +85,11 @@ project "text_editor"
       "%{includeDirs.SpdLog}",
       "%{includeDirs.UUID}",
       "%{includeDirs.TreeSitter}",
-      "%{includeDirs.nlohmann}"
+      "%{includeDirs.nlohmann}",
+      "%{includeDirs.md4c}",
+      "%{includeDirs.curl}",
+      "%{includeDirs.cpr}",
+      "%{includeDirs.ImGuiMD}",
    }
 
    files { 

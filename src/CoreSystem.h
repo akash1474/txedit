@@ -4,6 +4,7 @@
 #include "StatusBarManager.h"
 #include "Terminal.h"
 #include "ThemeManager.h"
+#include "ChatWindow.h"
 
 
 class CoreSystem{
@@ -13,6 +14,8 @@ class CoreSystem{
 	ImGuiID mLeftDockSpaceId=-1;
 	ImGuiID mRightDockSpaceId=-1;
 	ImGuiID mDockSpaceId=-1;
+	ChatWindow mChatWindow;
+	bool mShowChatWindow=false;
 
 public:
 	static ImGuiID GetMainDockSpaceID(){ return Get().mDockSpaceId;}

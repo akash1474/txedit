@@ -16,4 +16,4 @@ packages/mINI
 *.user
 .vs
 *.log
-
+__pycache__

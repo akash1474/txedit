@@ -17,6 +17,7 @@
 #include "TabsManager.h"
 #include "DirectoryFinder.h"
 #include "QuickFileSearch.h"
+#include "Application.h"
 #include <filesystem>
 
 #include <windows.h>
@@ -201,10 +202,12 @@ void CoreSystem::RenderDebugInfo()
 
 		}
 		#ifdef GL_DEBUG
+		std::filesystem::path appDir=GetExecutableDirectoryPath();
+		appDir=appDir/"assets/screenshots";
 
-		static ImageTexture img1("./assets/screenshots/editor.png");
-		static ImageTexture img2("./assets/screenshots/multi_cursor.png");
-		static ImageTexture img3("./assets/screenshots/selection.png");
+		static ImageTexture img1((appDir/"editor.png").generic_string().c_str());
+		static ImageTexture img2((appDir/"multi_cursor.png").generic_string().c_str());
+		static ImageTexture img3((appDir/"selection.png").generic_string().c_str());
 		static bool pushed = false;
 		if (!pushed) {
 			MultiThreading::ImageLoader::PushImageToQueue(&img1);
@@ -270,6 +273,7 @@ void CoreSystem::Render()
 			Get().mRightDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Right, 0.3f, nullptr, &Get().mDockSpaceId);
 			auto dock_id_left_bottom = ImGui::DockBuilderSplitNode(Get().mLeftDockSpaceId, ImGuiDir_Down, 0.3f, nullptr, &Get().mLeftDockSpaceId);
 			ImGui::DockBuilderDockWindow("Project Directory", Get().mLeftDockSpaceId);
+			ImGui::DockBuilderDockWindow("Chat Window", Get().mLeftDockSpaceId);
 			ImGui::DockBuilderDockWindow("Directory Finder", Get().mRightDockSpaceId);
 			ImGui::DockBuilderDockWindow("Terminal", dock_id_left_bottom);
 #ifdef GL_DEBUG
@@ -311,6 +315,11 @@ void CoreSystem::Render()
 			ImGui::MenuItem("Paste");
 			ImGui::EndMenu();
 		}
+		if (ImGui::BeginMenu("View")) {
+			ImGui::MenuItem("Chat Window",0,&Get().mShowChatWindow);
+			ImGui::MenuItem("Semantic Errors");
+			ImGui::EndMenu();
+		}
 		ImGui::EndMenuBar();
 	}
 
@@ -324,6 +333,9 @@ void CoreSystem::Render()
 	if (FileNavigation::IsOpen())
 		FileNavigation::Render();
 
+
+	if(Get().mShowChatWindow)
+		Get().mChatWindow.Render();
 
 	Get().mTerminal.Render();
 	StatusBarManager::Render(size, viewport);
@@ -408,4 +420,14 @@ void CoreSystem::InitFonts()
 	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size, &font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeRegular, IM_ARRAYSIZE(FontAwesomeRegular), (font_size + 4.0f) * 2.0f / 3.0f,
 	                               &icon_config, icons_ranges);
+	
+	std::filesystem::path appDir=GetExecutableDirectoryPath();
+	std::string fontDir=(appDir/"assets/fonts").generic_string();
+    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Regular.ttf").c_str(), 24 );
+    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Bold.ttf").c_str(), 28 );
+    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Bold.ttf").c_str(), 36 );
+    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Bold.ttf").c_str(), 32 );
+    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Medium.ttf").c_str(), 24 );
+
+	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size, &font_config);
 }

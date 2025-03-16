@@ -94,8 +94,10 @@ int main(int argc, char* argv[])
 	if (argc > 1)
 		Application::HandleArguments(GetCommandLineW());
 
+#ifdef GL_DEBUG
 	FileNavigation::AddFolder("D:/Projects/c++/txedit");
 	TabsManager::OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
+#endif
 	// TabsManager::OpenFile("C:/Program Files/lite-xl/data/core/dirwatch.lua");
 	// TabsManager::OpenFile("D:/Projects/c++/txedit/test/highlighting/test_python.py");
 	// TabsManager::OpenFile("D:/Projects/c++/txedit/test/highlighting/test_java.java");
@@ -114,12 +116,6 @@ int main(int argc, char* argv[])
 	unsigned int counter = 0;
 #endif
 
-	// std::string jsonPath="./assets/icons.json";
-	// std::unordered_map<std::string, IconData> iconData= loadIconData(jsonPath);
-	// std::string extension="cpp";
-	// auto[key,icondata]=getIconForFile(extension, iconData);
-	// GL_INFO("File:{}.png,Name:{}",key,icondata.name);
-	
 	while (!glfwWindowShouldClose(Application::GetGLFWwindow())) {
 
 	#ifdef GL_DEBUG

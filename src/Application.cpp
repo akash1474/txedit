@@ -1,3 +1,4 @@
+#include "Language.h"
 #include "pch.h"
 #include "FileNavigation.h"
 #include "TabsManager.h"
@@ -69,7 +70,6 @@ bool Application::Init()
 	BOOL USE_DARK_MODE = true;
 	BOOL SET_IMMERSIVE_DARK_MODE_SUCCESS =
 	    SUCCEEDED(DwmSetWindowAttribute(WinHwnd, DWMWINDOWATTRIBUTE::DWMWA_USE_IMMERSIVE_DARK_MODE, &USE_DARK_MODE, sizeof(USE_DARK_MODE)));
-
 
 	glfwSetDropCallback(Get().mWindow, drop_callback);
 	glfwSetFramebufferSizeCallback(Get().mWindow, framebuffer_size_callback);

@@ -57,8 +57,6 @@ public:
 	static void HandleArguments(std::wstring args);
 	static void CenterWindowOnScreen();
 	static GLFWwindow* GetGLFWwindow() { return Get().mWindow; }
-
-
 private:
 	Application() { mCoreSystem = &CoreSystem::Get(); };
 };

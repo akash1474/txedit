@@ -116,7 +116,7 @@ public:
 
 
 	typedef std::string String;
-	// typedef std::unordered_map<int, bool> ErrorMarkers;
+	typedef std::unordered_map<int, bool> ErrorMarkers;
 	typedef uint8_t Char;
 
 	struct Glyph
@@ -142,7 +142,7 @@ public:
 
 	//TreeSitter Experimental
 	// TSQuery* mQuery=nullptr;
-	// ErrorMarkers mErrorMarkers;
+	ErrorMarkers mErrorMarkers;
 
 	TSInputEdit mTSInputEdit;
 	void DebugDisplayNearByText();

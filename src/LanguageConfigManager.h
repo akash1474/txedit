@@ -8,7 +8,6 @@
 class LanguageConfigManager{
 	std::unordered_map<TxEdit::Language, LanguageConfig> mLoadedLanguages;
 public:
-	std::string mLanguageDir="./data/languages";
 	LanguageConfigManager(){}
 	~LanguageConfigManager(){}
 
@@ -73,6 +72,7 @@ public:
 
 
 	    outQuery=std::move(content);
+	    GL_INFO("QueryString: Loaded");
 	    return true;
 	}
 

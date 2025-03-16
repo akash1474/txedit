@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Language.h"
 #include "TokenType.h"
 #include "ThemeManager.h"
 #include "nlohmann/json.hpp"
@@ -142,7 +143,8 @@ void ThemeManager::Init(){
 	    {"findhighlight", TxTokenType::TxFindHighlight}
 	};
 	OpenGL::ScopedTimer timer("CoreSystem::Init");
-	Get().mCaptureToColor=LoadGruvboxColors("./data/gruvbox.json");
+	const auto& path=TxEdit::GetDataDirectory()/"gruvbox.json";
+	Get().mCaptureToColor=LoadGruvboxColors(path.generic_string());
 
 	Get().mTokenToColor.resize((size_t)TxTokenType::TxSize);
 	// Populate from JSON

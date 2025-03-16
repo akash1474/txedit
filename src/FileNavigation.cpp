@@ -11,6 +11,7 @@
 #include "MultiThreading.h"
 #include "DirectoryFinder.h"
 #include "tree_sitter/api.h"
+#include "Application.h"
 
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -30,7 +31,9 @@ FileNavigation::~FileNavigation(){
 
 void FileNavigation::Init(){
 	GL_INFO("FileNavigation::Init");
-	LoadIconData("./assets/icons.json");
+	std::filesystem::path appDir=GetExecutableDirectoryPath();
+	appDir=appDir/"assets/icons.json";
+	LoadIconData(appDir.generic_string());
 	Get().mDirectoryMonitor.Start();
 	Get().mAreIconsLoaded=true;
 }
@@ -65,7 +68,7 @@ void FileNavigation::AddFolder(std::string aPath)
 
 // Load JSON and parse icon data
 void FileNavigation::LoadIconData(const std::string& aJsonPath){
-    OpenGL::ScopedTimer timer("IconData Preparation");
+    OpenGL::ScopedTimer timer("FileNavigation::LoadIconData Preparation");
     std::ifstream file(aJsonPath);
     nlohmann::json json;
     file >> json;
@@ -81,7 +84,10 @@ void FileNavigation::LoadIconData(const std::string& aJsonPath){
 	    if (value.contains("name"))
 	        data.name = value["name"];
 
-	    std::string filePath="./assets/icons/"+key+".png";
+
+		std::filesystem::path appDir=GetExecutableDirectoryPath();
+		std::string filePath=(appDir/"assets/icons/").generic_string()+key+".png";
+	    // std::string filePath="./assets/icons/"+key+".png";
 	    data.texture.SetPath(filePath);
 	}
 }
@@ -512,25 +518,25 @@ void FileNavigation::HandleEvent(DirectoryEvent aEvent,std::wstring& aPayLoad){
 	GL_WARN("Event:{}, PayLoad:{}",(int)aEvent,ToUTF8(aPayLoad));
 
 	// Using for development purpose only allows for live preview of highlight based on updated query capture
-	if(path.has_extension() && path.extension().generic_string()==".scm"){
-		FileTab* tab=TabsManager::GetTabWithFileName("TextEditor.cpp");
-		if(!tab)
-			return;
+	// if(path.has_extension() && path.extension().generic_string()==".scm"){
+	// 	FileTab* tab=TabsManager::GetTabWithFileName("TextEditor.cpp");
+	// 	if(!tab)
+	// 		return;
 
-		auto type=TxEdit::GetHighlightType("TextEditor.cpp");
-		LanguageConfig* config=LanguageConfigManager::GetLanguageConfig(type);
-		if (!config)
-			return;
-		ts_query_delete(config->pQuery);
-		config->pQuery=nullptr;
+	// 	auto type=TxEdit::GetHighlightType("TextEditor.cpp");
+	// 	LanguageConfig* config=LanguageConfigManager::GetLanguageConfig(type);
+	// 	if (!config)
+	// 		return;
+	// 	ts_query_delete(config->pQuery);
+	// 	config->pQuery=nullptr;
 
-		std::string queryString;
-		if(LanguageConfigManager::LoadLanguageQuery(type, queryString)){
-			config->pQueryString=queryString;
-		}
-		tab->editor->DebouncedReparse();
-		return;
-	}
+	// 	std::string queryString;
+	// 	if(LanguageConfigManager::LoadLanguageQuery(type, queryString)){
+	// 		config->pQueryString=queryString;
+	// 	}
+	// 	tab->editor->DebouncedReparse();
+	// 	return;
+	// }
 
 
 	std::string folderPath=std::filesystem::path(aPayLoad).parent_path().generic_u8string();

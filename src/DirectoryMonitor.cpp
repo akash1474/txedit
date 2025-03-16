@@ -1,6 +1,5 @@
 #include "pch.h"
 #include <chrono>
-#include <ratio>
 #include <thread>
 #include <winnt.h>
 #include "DirectoryMonitor.h"
