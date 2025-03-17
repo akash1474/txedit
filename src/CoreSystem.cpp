@@ -317,7 +317,8 @@ void CoreSystem::Render()
 		}
 		if (ImGui::BeginMenu("View")) {
 			ImGui::MenuItem("Chat Window",0,&Get().mShowChatWindow);
-			ImGui::MenuItem("Semantic Errors");
+			ImGui::MenuItem("Terminal",0,&Get().mShowTerminal);
+			ImGui::MenuItem("Show Syntactic Error",0,&Get().mShowSyntacticError);
 			ImGui::EndMenu();
 		}
 		ImGui::EndMenuBar();
@@ -337,7 +338,9 @@ void CoreSystem::Render()
 	if(Get().mShowChatWindow)
 		Get().mChatWindow.Render();
 
-	Get().mTerminal.Render();
+	if(Get().mShowTerminal)
+		Get().mTerminal.Render();
+	
 	StatusBarManager::Render(size, viewport);
 	DirectoryFinder::Render();
 	TabsManager::Render();

@@ -1,5 +1,5 @@
-#include "Language.h"
 #include "pch.h"
+#include "Language.h"
 #include "FileNavigation.h"
 #include "TabsManager.h"
 #include "GLFW/glfw3.h"
@@ -262,12 +262,16 @@ void Application::HandleArguments(std::wstring commands)
 
 	for (int i = 1; i < nArgs; ++i) {
 		fs::path path(wArgList[i]);
+		path = fs::absolute(path);
 		if (fs::exists(path)) {
 			if (fs::is_regular_file(path)) {
 				GL_INFO("FILE:{}", path.generic_string());
+				Get().mCoreSystem->SetShowTerminal(false);
+				FileNavigation::ToggleSideBar();
 				TabsManager::OpenFile(path.generic_string());
 				// core->GetTextEditor()->LoadFile(path.generic_string().c_str());
 			} else if (fs::is_directory(path)) {
+				ShowMessage("PassedDir",path.generic_string().c_str());
 				GL_INFO("FOLDER:{}", path.generic_string());
 				FileNavigation::AddFolder(path.generic_string());
 			} else {

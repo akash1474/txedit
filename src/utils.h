@@ -431,8 +431,6 @@ inline std::filesystem::path GetExecutableDirectoryPath()
     return executablePath.parent_path(); 
 #else
     GL_INFO("DataDirectory:{}",executablePath.generic_string());
-    // const char* msg=executablePath.generic_string().c_str();
-    // ShowMessage("ExecutableDir",msg);
     return executablePath;
 #endif
 }

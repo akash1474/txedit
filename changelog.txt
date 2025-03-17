@@ -1,12 +1,7 @@
 Feature:
-- Added support for adding quotes and brackets around the selected text
-- Added support to toggle/add comment to a line using ctrl+/
++ Added MenuBar option to toggle visibility of terminal
+
 
 BugFix:
-- Fixed Crash: when pasting from clipboard while text is selected
+- Fixed: when passing current folder from cli eg "txedit ."
 
-Changes:
-- Changed `HighlightType` to `Language` as it made more sense
-- Added `languageToTreeSitterLanguage` for Language to tree_sitter_language mapping
-- Added `languageToDirName` for Language to data directory mapping for that language
-- Moved all the concerns related to language inside `Language.h`

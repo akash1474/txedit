@@ -16,11 +16,14 @@ class CoreSystem{
 	ImGuiID mDockSpaceId=-1;
 	ChatWindow mChatWindow;
 	bool mShowChatWindow=false;
+	bool mShowTerminal=true;
+	bool mShowSyntacticError=true;
 
 public:
 	static ImGuiID GetMainDockSpaceID(){ return Get().mDockSpaceId;}
 	static ImGuiID GetLeftMainDockSpaceID(){ return Get().mLeftDockSpaceId;}
 	static ImGuiID GetRightMainDockSpaceID(){ return Get().mRightDockSpaceId;}
+	static void SetShowTerminal(bool value){Get().mShowTerminal=value;}
 
 
 	CoreSystem(const CoreSystem&)=delete;

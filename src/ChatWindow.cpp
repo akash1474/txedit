@@ -283,13 +283,6 @@ void ChatWindow::Render() {
     // ImGui::TextWrapped("%s", markdownRenderer.get_parsed_text().c_str());
     // ImGui::End();
 #endif
-    static bool initialized = [&] {
-        GL_INFO("Initialized");
-        // std::thread server_thread(&ChatWindow::StartServer,this);
-        // server_thread.detach();
-        mFuture=std::async(std::launch::async,&ChatWindow::MakeRequest,this,std::string("INIT"));
-        return true;
-    }();
 
 
     // ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
@@ -297,6 +290,13 @@ void ChatWindow::Render() {
     if (ImGui::Begin("Chat Window", 0, ImGuiWindowFlags_NoDecoration))
     {
 
+        static bool initialized = [&] {
+            GL_INFO("Initialized");
+            std::thread server_thread(&ChatWindow::StartServer,this);
+            server_thread.detach();
+            mFuture=std::async(std::launch::async,&ChatWindow::MakeRequest,this,std::string("INIT"));
+            return true;
+        }();
 
 
         if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows) && ImGuiIO().MouseWheel != 0.0f) {
@@ -499,8 +499,8 @@ void ChatWindow::StopServer(){
         TerminateProcess(mServerProcessInfo.hProcess, 0);
         CloseHandle(mServerProcessInfo.hProcess);
         CloseHandle(mServerProcessInfo.hThread);
-        atexit([]() {
-            system("taskkill /F /IM python.exe /T");
-        });
+        // atexit([]() {
+        //     system("taskkill /F /IM python.exe /T");
+        // });
     }
 }

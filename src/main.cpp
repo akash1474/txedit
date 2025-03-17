@@ -10,6 +10,7 @@
 #include "Application.h"
 #include "TabsManager.h"
 #include "FileNavigation.h"
+#include "SubProcess.h"
 
 //Make sure Visual Leak Detector (VLD) is installed
 #ifdef DETECT_MEMORY_LEAKS_VLD
@@ -75,6 +76,7 @@ int GetTargetFPS(GLFWwindow* window) {
     }
     return 30;  // Unfocused but visible window: Moderate FPS
 }
+
 
 
 int main(int argc, char* argv[])

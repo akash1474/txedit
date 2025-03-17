@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "Coordinates.h"
 #include "DataTypes.h"
 #include "GLFW/glfw3.h"
@@ -5,7 +6,6 @@
 #include "Timer.h"
 #include "imgui.h"
 #include "imgui_internal.h"
-#include "pch.h"
 #include <handleapi.h>
 #include <mutex>
 #include "Terminal.h"
