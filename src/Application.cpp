@@ -128,9 +128,15 @@ bool Application::InitImGui()
 	// const std::string app_dir = GetUserDirectory("txedit");
 	// io.IniFilename = app_dir.c_str();
 	// io.LogFilename = nullptr;
+	std::string folderPath=(GetCurrentWorkingDirectoryPath()/".cache").generic_string();
+	if(!std::filesystem::exists(folderPath))
+		DirectoryHandler::CreateFolder(folderPath);
+
+	// Due to some reason it has a memory leak due to which other cpp/header files are being overwritten
+	io.IniFilename=NULL; 
 	std::string layoutConfigPath=(GetCurrentWorkingDirectoryPath()/".cache/layout.ini").generic_string();
 	GL_INFO("LayoutConfigPath:{}",layoutConfigPath);
-	io.IniFilename="layout.ini";
+	ImGui::LoadIniSettingsFromDisk(layoutConfigPath.c_str());
 // #endif
 
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -265,6 +271,8 @@ void Application::Draw()
 void Application::Destroy()
 {
 	CoreSystem::CacheDockingLayout();
+	std::string layoutConfigPath=(GetCurrentWorkingDirectoryPath()/".cache/layout.ini").generic_string();
+	ImGui::SaveIniSettingsToDisk(layoutConfigPath.c_str());
 
 #ifdef GL_BUILD_OPENGL2
 	ImGui_ImplOpenGL2_Shutdown();

@@ -1062,9 +1062,10 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 		    TSPoint endPoint = ts_node_end_point(node);
 
 		    if(isFirst){
-			    if(std::string(captureName)=="type.indentifier" || std::string(captureName)=="function.namespace"){
+			    if(std::string(captureName)=="type.indentifier" || std::string(captureName)=="function.namespace" || std::string(captureName)=="function.call"){
 		    	    uint32_t startByte = ts_node_start_byte(node);
 				    uint32_t endByte = ts_node_end_byte(node);
+				    GL_INFO("Inserting:{}",std::string(captureName));
 			    	Trie::Insert(aGlobalTokens,sourceCode.substr(startByte, endByte - startByte));
 			    }
 		    }

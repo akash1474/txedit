@@ -255,7 +255,7 @@ void CoreSystem::Render()
 		if (setupRequired) {
 			setupRequired = false;
 			std::filesystem::path layoutConfigPath=GetCurrentWorkingDirectoryPath()/".cache/layout.ini";
-			if(!std::filesystem::exists("layout.ini"))
+			if(!std::filesystem::exists(layoutConfigPath))
 			{
 				ImGui::DockBuilderRemoveNode(Get().mDockSpaceId); // clear any previous layout
 				ImGui::DockBuilderAddNode(Get().mDockSpaceId, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
