@@ -245,7 +245,6 @@ private:
 	void MoveDown(bool ctrl = false, bool shift = false);
 	void MoveLeft(bool ctrl = false, bool shift = false);
 	void MoveRight(bool ctrl = false, bool shift = false);
-	void SwapLines(bool up = true);
 
 	/*
 		Returns pixel `ImVec2(x,y)` coordinates on screen at which `aCoords` line is located
@@ -254,12 +253,6 @@ private:
 	ImVec2 GetLinePosition(const Coordinates& aCoords);
 
 
-	// Utility
-	void Copy();
-	void Paste();
-	void Cut();
-	void Delete();
-	void SelectAll();
 
 	Coordinates GetActualCursorCoordinates() const;
 	void SetCursorPosition(const Coordinates& aPosition);
@@ -357,6 +350,14 @@ private:
 
 	std::string mFileTypeName;
 public:
+	// Utility
+	void Delete();
+	void Copy();
+	void Paste();
+	void Cut();
+	void SelectAll();
+	void SwapLines(bool up = true);
+	
 	inline bool IsHighlightPresent()const
 	{
 		return mHighlight.isPresent;

@@ -233,9 +233,11 @@ bool Button(const char* aTitle,const char* aTooltip,ImVec2 aFramePadding,const I
 
 void StatusBarManager::ShowFileSearchPanel()
 {
-	mIsFileSearchPanelOpen=true;
 	Editor* cEditor=TabsManager::GetCurrentActiveTextEditor();
+	if(!cEditor) return;
 	
+	mIsFileSearchPanelOpen=true;
+
 	std::string selectedText=cEditor->GetSelectedText();	
 	if(!selectedText.empty())
 	{

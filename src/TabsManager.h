@@ -40,8 +40,10 @@ public:
 	static Editor* GetCurrentActiveTextEditor();
 	static FileTab* GetCurrentActiveTab();
 	static FileTab* GetTabWithFileName(const std::string& aName);
+	static std::vector<FileTab> GetAllTabs(){return Get().mTabs;}
 
 	static void SetNewTabsDockSpaceId(ImGuiID aMainDockSpaceId);
+	static void InitializeTabFromCache(std::string aWindowId,std::string aFilePath);
 	static FileTab* OpenFile(std::string filepath,bool isTemp=true);
 	static void OpenFileWithAtLineNumber(const std::string& aFilePath,int aLineNumber,int aStartIndex,int aEndIndex);
 	//Call when creating a new file

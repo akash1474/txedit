@@ -1,7 +1,7 @@
 Feature:
-+ Added MenuBar option to toggle visibility of terminal
++ Added different menu bar items
 
 
 BugFix:
-- Fixed: when passing current folder from cli eg "txedit ."
+- Fixed MenuBar "Open File" function
 

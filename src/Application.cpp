@@ -9,8 +9,10 @@
 #include "Application.h"
 #include "CoreSystem.h"
 #include "MultiThreading.h"
+#include "utils.h"
 #include <csignal>
 #include <filesystem>
+#include <gl/gl.h>
 #include <shellapi.h>
 #include <stdio.h>
 #include <winuser.h>
@@ -39,8 +41,11 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
-	glViewport(0, 0, width, height);
 	Application::Get().Draw();
+}
+
+void Application::Close(){
+	glfwSetWindowShouldClose(Get().mWindow, GLFW_TRUE);
 }
 
 bool Application::Init()
@@ -86,6 +91,27 @@ void Application::SetApplicationIcon(unsigned char* logo_img, int length)
 	stbi_image_free(images[0].pixels);
 }
 
+void Application::ToggleFullScreen() {
+    GLFWwindow* window = Get().mWindow;
+    if (!Get().mIsFullScreenEnabled) {
+        // Save current window state
+        glfwGetWindowPos(window, &Get().winPosX, &Get().winPosY);
+        glfwGetWindowSize(window, &Get().width, &Get().height);
+        GL_INFO("Saving Pos({} {}), Size({} {})", Get().winPosX, Get().winPosY, Get().width, Get().height);
+
+        // Go fullscreen
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+        glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+    } else {
+        // Return to windowed mode
+        glfwSetWindowMonitor(window, nullptr, Get().winPosX, Get().winPosY, Get().width, Get().height, 0);
+        glfwSetWindowPos(window, Get().winPosX, Get().winPosY); // ensure correct positioning
+    }
+    Get().mIsFullScreenEnabled = !Get().mIsFullScreenEnabled;
+}
+
+
 
 bool Application::InitImGui()
 {
@@ -102,7 +128,9 @@ bool Application::InitImGui()
 	// const std::string app_dir = GetUserDirectory("txedit");
 	// io.IniFilename = app_dir.c_str();
 	// io.LogFilename = nullptr;
-	io.IniFilename=nullptr;
+	std::string layoutConfigPath=(GetCurrentWorkingDirectoryPath()/".cache/layout.ini").generic_string();
+	GL_INFO("LayoutConfigPath:{}",layoutConfigPath);
+	io.IniFilename="layout.ini";
 // #endif
 
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -190,6 +218,9 @@ void Application::Draw()
 
     // Skip rendering if window is minimized
     if (glfwGetWindowAttrib(Get().mWindow, GLFW_ICONIFIED)) return;
+	if (glfwGetKey(Get().mWindow, GLFW_KEY_F11) == GLFW_PRESS) {
+	    ToggleFullScreen();
+	}
 
     // Skip rendering if the window is not focused (but still process events)
     // if (!Application::IsWindowFocused()) return; -- freezes the ui no updates seen
@@ -233,6 +264,8 @@ void Application::Draw()
 
 void Application::Destroy()
 {
+	CoreSystem::CacheDockingLayout();
+
 #ifdef GL_BUILD_OPENGL2
 	ImGui_ImplOpenGL2_Shutdown();
 #else

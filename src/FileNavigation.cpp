@@ -151,6 +151,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
             			}
             			else
             			{
+            				TabsManager::OpenFile(path);
             				StatusBarManager::ShowFileSearchPanel();
             			}
             		}
@@ -341,11 +342,11 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 
 		if(ImGui::TreeNodeEx(folderName.c_str(),ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			// ShowContextMenu(path,true);
+			ShowContextMenu(path,true);
     		RenderFolderItems(path);
     		ImGui::TreePop();
     	}
-		ShowContextMenu(path,true);
+//		ShowContextMenu(path,true);
     	ImGui::PopStyleVar(2);
 
     	return;

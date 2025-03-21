@@ -1,9 +1,12 @@
+#include "Timer.h"
+#include "UndoManager.h"
+#include "pch.h"
 #include "FontAwesome6.h"
 #include "QuickFileSearch.h"
-#include "pch.h"
 #include "imgui_internal.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
+#include "nlohmann/json.hpp"
 
 #include "resources/FontAwesomeRegular.embed"
 #include "resources/FontAwesomeSolid.embed"
@@ -18,27 +21,12 @@
 #include "DirectoryFinder.h"
 #include "QuickFileSearch.h"
 #include "Application.h"
+#include "utils.h"
 #include <filesystem>
 
 #include <windows.h>
 #include <pdh.h>
 
-double GetCPUUsage() {
-    PDH_FMT_COUNTERVALUE counterVal;
-    static PDH_HQUERY cpuQuery;
-    static PDH_HCOUNTER cpuTotal;
-
-    if (!cpuQuery) {
-        PdhOpenQuery(NULL, 0, &cpuQuery);
-        PdhAddCounterW(cpuQuery, L"\\Processor(_Total)\\% Processor Time", 0, &cpuTotal);
-        PdhCollectQueryData(cpuQuery);
-    }
-
-    PdhCollectQueryData(cpuQuery);
-    PdhGetFormattedCounterValue(cpuTotal, PDH_FMT_DOUBLE, NULL, &counterVal);
-
-    return counterVal.doubleValue;
-}
 
 #ifdef min
 	#undef min
@@ -236,7 +224,7 @@ void CoreSystem::Render()
 
 	static const ImGuiIO& io = ImGui::GetIO();
 	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
-	static ImGuiWindowFlags window_flags = ImGuiWindowFlags_None | ImGuiWindowFlags_MenuBar ;
+	static ImGuiWindowFlags window_flags = ImGuiWindowFlags_None | ImGuiWindowFlags_MenuBar;
 
 
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -253,6 +241,7 @@ void CoreSystem::Render()
 	if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
 		window_flags |= ImGuiWindowFlags_NoBackground;
 
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::Begin("Container", nullptr, window_flags | ImGuiWindowFlags_NoResize);
 	ImGui::PopStyleVar(3);
@@ -265,64 +254,67 @@ void CoreSystem::Render()
 		static bool setupRequired = true;
 		if (setupRequired) {
 			setupRequired = false;
-			ImGui::DockBuilderRemoveNode(Get().mDockSpaceId); // clear any previous layout
-			ImGui::DockBuilderAddNode(Get().mDockSpaceId, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
-			ImGui::DockBuilderSetNodeSize(Get().mDockSpaceId, size);
+			std::filesystem::path layoutConfigPath=GetCurrentWorkingDirectoryPath()/".cache/layout.ini";
+			if(!std::filesystem::exists("layout.ini"))
+			{
+				ImGui::DockBuilderRemoveNode(Get().mDockSpaceId); // clear any previous layout
+				ImGui::DockBuilderAddNode(Get().mDockSpaceId, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+				ImGui::DockBuilderSetNodeSize(Get().mDockSpaceId, size);
 
-			Get().mLeftDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Left, 0.3f, nullptr, &Get().mDockSpaceId);
-			Get().mRightDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Right, 0.3f, nullptr, &Get().mDockSpaceId);
-			auto dock_id_left_bottom = ImGui::DockBuilderSplitNode(Get().mLeftDockSpaceId, ImGuiDir_Down, 0.3f, nullptr, &Get().mLeftDockSpaceId);
-			ImGui::DockBuilderDockWindow("Project Directory", Get().mLeftDockSpaceId);
-			ImGui::DockBuilderDockWindow("Chat Window", Get().mLeftDockSpaceId);
-			ImGui::DockBuilderDockWindow("Directory Finder", Get().mRightDockSpaceId);
-			ImGui::DockBuilderDockWindow("Terminal", dock_id_left_bottom);
+				Get().mLeftDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Left, 0.3f, nullptr, &Get().mDockSpaceId);
+				Get().mRightDockSpaceId = ImGui::DockBuilderSplitNode(Get().mDockSpaceId, ImGuiDir_Right, 0.3f, nullptr, &Get().mDockSpaceId);
+				auto dock_id_left_bottom = ImGui::DockBuilderSplitNode(Get().mLeftDockSpaceId, ImGuiDir_Down, 0.3f, nullptr, &Get().mLeftDockSpaceId);
+				ImGui::DockBuilderDockWindow("Project Directory", Get().mLeftDockSpaceId);
+				ImGui::DockBuilderDockWindow("Chat Window", Get().mLeftDockSpaceId);
+				ImGui::DockBuilderDockWindow("Directory Finder", Get().mRightDockSpaceId);
+				ImGui::DockBuilderDockWindow("Terminal", dock_id_left_bottom);
 #ifdef GL_DEBUG
-			ImGui::DockBuilderDockWindow("Dear ImGui Demo", Get().mLeftDockSpaceId);
-			ImGui::DockBuilderDockWindow("Project", Get().mLeftDockSpaceId);
+				ImGui::DockBuilderDockWindow("Dear ImGui Demo", Get().mLeftDockSpaceId);
+				ImGui::DockBuilderDockWindow("Project", Get().mLeftDockSpaceId);
 #endif
-			ImGui::DockBuilderFinish(Get().mDockSpaceId);
-
+				ImGui::DockBuilderFinish(Get().mDockSpaceId);
+			}
+			// ImGui::LoadIniSettingsFromDisk("layout.ini");
 			TabsManager::SetNewTabsDockSpaceId(Get().mDockSpaceId);
 			DirectoryFinder::SetDockspaceId(Get().mRightDockSpaceId);
+			LoadDockingLayoutCache();
 		}
 	}
 
 
-	if (ImGui::BeginMenuBar()) {
-		if (ImGui::BeginMenu("File")) {
-			if(ImGui::MenuItem("New File"))
-				TabsManager::OpenNewEmptyFile();
+	RenderMenuBar();
 
-			if (ImGui::MenuItem("Open File"))
-			{
-				std::string path=SelectFile();
-				if(!path.empty())
-					TabsManager::OpenFile(path);
-			}
+    // if (ImGui::BeginPopup("TxEdit"))
+    // {
+    //     ImGui::Begin("TxEdit: Minimalistic Text Editor");
+    //     ImGui::Text("TxEdit: Minimalistic Text Editor");
+    //     ImGui::Text("Built using C/C++, inspired by SublimeText.");
+    //     ImGui::Text("Purpose: Provide an IDE-like coding experience.");
+    //     ImGui::Text("Features:");
+    //     ImGui::BulletText("Advanced Key Bindings (Inspired by Sublime Text)");
+    //     ImGui::BulletText("Minimal UI with directory tree and text editor pane");
+    //     ImGui::BulletText("Copy-Paste support");
+    //     ImGui::BulletText("Multi-cursor support (Ctrl+D to select multiple instances)");
 
-			if (ImGui::MenuItem("Open Folder")) {
-				std::string path = SelectFolder();
-				if (!path.empty())
-					FileNavigation::AddFolder(path.c_str());
-			}
+    //     // Display a warning for the current development state
+    //     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: Still under development, may contain bugs!");
 
-			ImGui::EndMenu();
-		}
+    //     ImGui::Separator();
 
-		if (ImGui::BeginMenu("Edit")) {
-			ImGui::MenuItem("Cut");
-			ImGui::MenuItem("Copy");
-			ImGui::MenuItem("Paste");
-			ImGui::EndMenu();
-		}
-		if (ImGui::BeginMenu("View")) {
-			ImGui::MenuItem("Chat Window",0,&Get().mShowChatWindow);
-			ImGui::MenuItem("Terminal",0,&Get().mShowTerminal);
-			ImGui::MenuItem("Show Syntactic Error",0,&Get().mShowSyntacticError);
-			ImGui::EndMenu();
-		}
-		ImGui::EndMenuBar();
-	}
+    //     // More information
+    //     ImGui::Text("License: MIT License");
+    //     ImGui::Text("Development Branch: 'dev'");
+
+    //     // Close the popup
+    //     if (ImGui::Button("Close"))
+    //     {
+    //         ImGui::CloseCurrentPopup();
+    //     }
+
+    //     ImGui::End();
+    //     ImGui::EndPopup();  // End popup
+    // }
+
 
 	ImGui::End();
 
@@ -340,7 +332,7 @@ void CoreSystem::Render()
 
 	if(Get().mShowTerminal)
 		Get().mTerminal.Render();
-	
+
 	StatusBarManager::Render(size, viewport);
 	DirectoryFinder::Render();
 	TabsManager::Render();
@@ -354,31 +346,202 @@ void CoreSystem::Render()
 
 	if(ImGui::IsKeyDown(ImGuiKey_ModShift) && ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_S))
 	{
-		Editor* currEditor=TabsManager::GetCurrentActiveTextEditor();
-		if(currEditor)
-		{
-			std::string parentDir=std::filesystem::path(currEditor->GetCurrentFilePath()).parent_path().generic_string();
-			if(std::filesystem::exists(parentDir))
-			{
-				DirectoryFinder::Setup(parentDir,false);
-			}
-		}
-		else
-		{
-			auto& folders=FileNavigation::GetFolders();
-			if(!folders.empty())
-			{
-				DirectoryFinder::Setup(folders[0],false);
-			}else{
-				DirectoryFinder::Setup("",false);
-			}
-		}
+		DirectoryFinder::Show();
 	}
 
 
 	QuickFileSearch::EventListener();
 
 }
+
+
+void CoreSystem::RenderMenuBar(){
+    if (ImGui::BeginMenuBar())
+    {
+        // File Menu
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("New File"))
+				TabsManager::OpenNewEmptyFile();
+            if (ImGui::MenuItem("Open File...", "Ctrl+O")) {
+				std::string path=SelectFile();
+				if(!path.empty())
+					TabsManager::OpenFile(path);
+            }
+			if (ImGui::MenuItem("Open Folder")) {
+				std::string path = SelectFolder();
+				if (!path.empty())
+					FileNavigation::AddFolder(path.c_str());
+			}
+            if (ImGui::MenuItem("Save", "Ctrl+S")) {
+            	TabsManager::SaveFile();
+            }
+            if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S")) {
+            	Editor* editor=TabsManager::GetCurrentActiveTextEditor();
+            	if(editor){
+	            	std::string content=editor->GetFullText();
+	            	SaveFileAs(content);
+            	}
+            }
+            // if (ImGui::MenuItem("Close", "Ctrl+W")) {}
+            ImGui::Separator();
+            if (ImGui::MenuItem("Exit", "Alt+F4")) {
+            	Application::Close();
+            }
+            ImGui::EndMenu();
+        }
+
+        // Edit Menu
+        if (ImGui::BeginMenu("Edit"))
+        {
+            Editor* editor=TabsManager::GetCurrentActiveTextEditor();
+            if (ImGui::MenuItem("Undo", "Ctrl+Z") && editor) {
+            	editor->GetUndoMananger()->Undo(1,editor);
+            }
+            if (ImGui::MenuItem("Redo", "Ctrl+Y") && editor) {
+            	editor->GetUndoMananger()->Redo(1,editor);
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Cut", "Ctrl+X") && editor) {
+            	editor->Cut();
+            }
+            if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+            	editor->Copy();
+            }
+            if (ImGui::MenuItem("Paste", "Ctrl+V")) {
+            	editor->Paste();
+            }
+            if (ImGui::MenuItem("Select All", "Ctrl+A")) {
+            	editor->SelectAll();
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Toggle Comment", "Ctrl+/")) {
+            	editor->ToggleComments();
+            }
+            if (ImGui::BeginMenu("Line")) {
+                if (ImGui::MenuItem("Indent", "Tab")) {
+                	editor->InsertTab(false);
+                }
+                if (ImGui::MenuItem("Unindent", "Shift+Tab")) {
+                	editor->InsertTab(true);
+                }
+                if (ImGui::MenuItem("Swap Line Up", "Ctrl+Shift+Up")) {
+                	editor->SwapLines(true);
+                }
+                if (ImGui::MenuItem("Swap Line Down", "CtrlShift+Down"))
+                	editor->SwapLines(false);
+
+                ImGui::EndMenu();
+            }
+
+            ImGui::EndMenu();
+        }
+        // View Menu
+        if (ImGui::BeginMenu("Find"))
+        {
+            if(ImGui::MenuItem("Find...","Ctrl+F")){
+            	StatusBarManager::ShowFileSearchPanel();
+            }
+            // if(ImGui::MenuItem("Find Next")){}
+            // if(ImGui::MenuItem("Find Previous")){}
+            if(ImGui::MenuItem("Find in Folder..")){
+            	DirectoryFinder::Show();
+            }
+            // if(ImGui::MenuItem("Show Syntactic Error")){}
+            ImGui::EndMenu();
+        }
+
+        // View Menu
+        if (ImGui::BeginMenu("View"))
+        {
+			ImGui::MenuItem("Chat Window",0,&Get().mShowChatWindow);
+			ImGui::MenuItem("Terminal",0,&Get().mShowTerminal);
+			if(ImGui::MenuItem("Show Syntactic Error",0,&Get().mShowSyntacticError)){
+				if(Get().mShowSyntacticError)
+					TabsManager::GetCurrentActiveTextEditor()->ReparseEntireTree();
+			}
+            ImGui::Separator();
+            // if (ImGui::MenuItem("Show Line Numbers", "Ctrl+Shift+L")) {}
+            if (ImGui::MenuItem("Toggle Fullscreen", "F11")) {
+            	
+            }
+            ImGui::EndMenu();
+        }
+
+        // Tools Menu
+        // if (ImGui::BeginMenu("Tools"))
+        // {
+        //     if (ImGui::MenuItem("Build Project", "Ctrl+B")) {}
+        //     if (ImGui::MenuItem("Run", "Ctrl+R")) {}
+        //     ImGui::Separator();
+        //     if (ImGui::MenuItem("Open Terminal", "Ctrl+T")) {}
+        //     ImGui::EndMenu();
+        // }
+
+        // Help Menu
+        if (ImGui::BeginMenu("Help"))
+        {
+            if (ImGui::MenuItem("Documentation", "F1")) {}
+            if (ImGui::MenuItem("About", "Ctrl+I")) {
+            	// ImGui::OpenPopup("TxEdit");
+            }
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndMenuBar();
+	}
+}
+
+void CoreSystem::CacheDockingLayout(){
+	OpenGL::ScopedTimer timer("CoreSystem::CacheDockingLayout");
+	auto& folders=FileNavigation::GetFolders();
+	nlohmann::json j;
+	j["folders"] = folders;
+
+	const std::vector<FileTab>& tabs=TabsManager::GetAllTabs();
+	for(auto& tab:tabs)
+	{
+		j["tabs"].push_back({{"id", tab.id}, {"filepath", tab.filepath}});
+	}
+
+
+	std::ofstream file(GetCurrentWorkingDirectoryPath()/".cache/config.json");
+	file << j.dump(4); // Pretty print with indentation
+	file.close();
+}
+
+void CoreSystem::LoadDockingLayoutCache() {
+	OpenGL::ScopedTimer timer("CoreSystem::LoadDockingLayoutCache");
+    std::ifstream file(GetCurrentWorkingDirectoryPath()/".cache/config.json");
+    if (!file.is_open()) {
+        GL_WARN("No cached docking layout found.");
+        return;
+    }
+
+    nlohmann::json j;
+    file >> j;
+    file.close();
+
+    // Retrieve folders
+    if (j.contains("folders")) {
+        auto folders = j["folders"].get<std::vector<std::string>>();
+        for (const auto& folder : folders) {
+            FileNavigation::AddFolder(folder);
+        }
+    }
+
+    // Retrieve tabs
+    if (j.contains("tabs")) {
+        auto tabs = j["tabs"];
+        for (const auto& tab : tabs) {
+            std::string id = tab["id"].get<std::string>();
+            std::string filepath = tab["filepath"].get<std::string>();
+
+            TabsManager::InitializeTabFromCache(id,filepath); // Adjust if OpenFile requires only filepath or also accepts id
+        }
+    }
+}
+
 
 
 bool CoreSystem::Init() {

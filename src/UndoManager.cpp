@@ -83,6 +83,7 @@ void UndoManager::Undo(int aSteps,Editor* editor)
 	while(CanUndo() && aSteps-->0){
 		mUndoBuffer[--mUndoIndex].Undo(editor);
 	}
+	editor->ReparseEntireTree();
 }
 
 void UndoManager::Redo(int aSteps,Editor* editor)
@@ -90,6 +91,7 @@ void UndoManager::Redo(int aSteps,Editor* editor)
 	while(CanRedo() && aSteps-->0){
 		mUndoBuffer[mUndoIndex++].Redo(editor);
 	}
+	editor->ReparseEntireTree();
 }
 
 

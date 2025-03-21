@@ -246,7 +246,7 @@ def generate_llm_response(relevant_docs, user_query, memory,use_vector):
     # Initialize Gemini LLM
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.0-flash",
-        api_key="AIzaSyA7FTjQca-Zvt3DQkmmmu-ItWI6UuBRu7I"
+        api_key=""
     )
 
     input_data={}

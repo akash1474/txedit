@@ -52,6 +52,13 @@ private:
 	ImGuiID mDockspaceId;	
 
 public:
+	/**
+	 * @brief Shows the directory finder with a suitable start path.
+	 * 
+	 * Uses the current file's parent directory, the first added folder, 
+	 * or the current working directory if none are found.
+	 */
+	static void Show();
 	static void SetDockspaceId(ImGuiID aRightDockspaceId){Get().mDockspaceId=aRightDockspaceId;}
 	static void Find();
 	static void Setup(const std::string& aFolderPath,bool aOpenedFromExplorer = false);

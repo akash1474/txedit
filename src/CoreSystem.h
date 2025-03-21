@@ -24,7 +24,7 @@ public:
 	static ImGuiID GetLeftMainDockSpaceID(){ return Get().mLeftDockSpaceId;}
 	static ImGuiID GetRightMainDockSpaceID(){ return Get().mRightDockSpaceId;}
 	static void SetShowTerminal(bool value){Get().mShowTerminal=value;}
-
+	static bool ShowErrorMarkers(){return Get().mShowSyntacticError;}
 
 	CoreSystem(const CoreSystem&)=delete;
 
@@ -41,8 +41,11 @@ public:
 	static bool Init();
 	static bool InitImGui();
 	static void SetApplicationIcon(unsigned char* img,int length);
+	static void RenderMenuBar();
 	static void Draw();
 	static void Destroy();
+	static void CacheDockingLayout();
+	static void LoadDockingLayoutCache();
 
 	#ifdef GL_DEBUG
 	static void RenderDebugInfo();

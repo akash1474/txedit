@@ -10,7 +10,6 @@
 #include "Application.h"
 #include "TabsManager.h"
 #include "FileNavigation.h"
-#include "SubProcess.h"
 
 //Make sure Visual Leak Detector (VLD) is installed
 #ifdef DETECT_MEMORY_LEAKS_VLD
@@ -68,9 +67,9 @@ int GetTargetFPS(GLFWwindow* window) {
     	Application::SetFrameRate(60.0f);
 
     
-    if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) {
-        return 1;  // Minimized window: very low FPS
-    }
+    // if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) {
+    //     return 1;  // Minimized window: very low FPS
+    // }
     if (glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
         return 60; // Focused window: High FPS
     }
@@ -97,8 +96,8 @@ int main(int argc, char* argv[])
 		Application::HandleArguments(GetCommandLineW());
 
 #ifdef GL_DEBUG
-	FileNavigation::AddFolder("D:/Projects/c++/txedit");
-	TabsManager::OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
+	// FileNavigation::AddFolder("D:/Projects/c++/txedit");
+	// TabsManager::OpenFile("D:/Projects/c++/txedit/src/TextEditor.cpp");
 #endif
 	// TabsManager::OpenFile("C:/Program Files/lite-xl/data/core/dirwatch.lua");
 	// TabsManager::OpenFile("D:/Projects/c++/txedit/test/highlighting/test_python.py");

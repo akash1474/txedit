@@ -5,156 +5,156 @@
 #include "nlohmann/json.hpp"
 
 void ThemeManager::Init(){
-	Get().mCaptureToTokenType = {
-		{"default",TxTokenType::TxDefault},
-	    {"variable", TxTokenType::TxVariable},
-	    {"variable.builtin", TxTokenType::TxVariableBuiltin},
-	    {"variable.parameter", TxTokenType::TxVariableParameter},
-	    {"variable.parameter.builtin", TxTokenType::TxVariableParameterBuiltIn},
-	    {"variable.member", TxTokenType::TxVariableMember},
-	    
-	    {"constant", TxTokenType::TxConstant},
-	    {"constant.builtin", TxTokenType::TxConstantBuiltin},
-	    {"constant.macro", TxTokenType::TxConstantMacro},
-	    
-	    {"module", TxTokenType::TxModule},
-	    {"module.builtin", TxTokenType::TxModuleBuiltin},
-	    {"label", TxTokenType::TxLabel},
-	    
-	    {"string", TxTokenType::TxString},
-	    {"string.documentation", TxTokenType::TxStringDocumentation},
-	    {"string.regexp", TxTokenType::TxStringRegexp},
-	    {"string.escape", TxTokenType::TxStringEscape},
-	    {"string.special", TxTokenType::TxStringSpecial},
-	    {"string.special.symbol", TxTokenType::TxStringSpecialSymbol},
-	    {"string.special.url", TxTokenType::TxStringSpecialUrl},
-	    {"string.special.path", TxTokenType::TxStringSpecialPath},
-	    
-	    {"character", TxTokenType::TxCharacter},
-	    {"character.special", TxTokenType::TxCharacterSpecial},
-	    
-	    {"boolean", TxTokenType::TxBoolean},
-	    {"number", TxTokenType::TxNumber},
-	    {"number.float", TxTokenType::TxNumberFloat},
-	    
-	    {"type", TxTokenType::TxType},
-	    {"type.builtin", TxTokenType::TxTypeBuiltin},
-	    {"type.definition", TxTokenType::TxTypeDefinition},
+  Get().mCaptureToTokenType = {
+    {"default",TxTokenType::TxDefault},
+      {"variable", TxTokenType::TxVariable},
+      {"variable.builtin", TxTokenType::TxVariableBuiltin},
+      {"variable.parameter", TxTokenType::TxVariableParameter},
+      {"variable.parameter.builtin", TxTokenType::TxVariableParameterBuiltIn},
+      {"variable.member", TxTokenType::TxVariableMember},
+      
+      {"constant", TxTokenType::TxConstant},
+      {"constant.builtin", TxTokenType::TxConstantBuiltin},
+      {"constant.macro", TxTokenType::TxConstantMacro},
+      
+      {"module", TxTokenType::TxModule},
+      {"module.builtin", TxTokenType::TxModuleBuiltin},
+      {"label", TxTokenType::TxLabel},
+      
+      {"string", TxTokenType::TxString},
+      {"string.documentation", TxTokenType::TxStringDocumentation},
+      {"string.regexp", TxTokenType::TxStringRegexp},
+      {"string.escape", TxTokenType::TxStringEscape},
+      {"string.special", TxTokenType::TxStringSpecial},
+      {"string.special.symbol", TxTokenType::TxStringSpecialSymbol},
+      {"string.special.url", TxTokenType::TxStringSpecialUrl},
+      {"string.special.path", TxTokenType::TxStringSpecialPath},
+      
+      {"character", TxTokenType::TxCharacter},
+      {"character.special", TxTokenType::TxCharacterSpecial},
+      
+      {"boolean", TxTokenType::TxBoolean},
+      {"number", TxTokenType::TxNumber},
+      {"number.float", TxTokenType::TxNumberFloat},
+      
+      {"type", TxTokenType::TxType},
+      {"type.builtin", TxTokenType::TxTypeBuiltin},
+      {"type.definition", TxTokenType::TxTypeDefinition},
 
-	    {"attribute", TxTokenType::TxAttribute},
-	    {"attribute.builtin", TxTokenType::TxAttributeBuiltin},
-	    {"property", TxTokenType::TxProperty},
-	    
-	    {"function", TxTokenType::TxFunction},
-	    {"function.builtin", TxTokenType::TxFunctionBuiltin},
-	    {"function.call", TxTokenType::TxFunctionCall},
-	    {"function.macro", TxTokenType::TxFunctionMacro},
-	    {"function.method", TxTokenType::TxFunctionMethod},
-	    {"function.method.call", TxTokenType::TxFunctionMethodCall},
+      {"attribute", TxTokenType::TxAttribute},
+      {"attribute.builtin", TxTokenType::TxAttributeBuiltin},
+      {"property", TxTokenType::TxProperty},
+      
+      {"function", TxTokenType::TxFunction},
+      {"function.builtin", TxTokenType::TxFunctionBuiltin},
+      {"function.call", TxTokenType::TxFunctionCall},
+      {"function.macro", TxTokenType::TxFunctionMacro},
+      {"function.method", TxTokenType::TxFunctionMethod},
+      {"function.method.call", TxTokenType::TxFunctionMethodCall},
 
-	    {"constructor", TxTokenType::TxConstructor},
-	    {"operator", TxTokenType::TxOperator},
-	    
-	    {"keyword", TxTokenType::TxKeyword},
-	    {"keyword.coroutine", TxTokenType::TxKeywordCoroutine},
-	    {"keyword.function", TxTokenType::TxKeywordFunction},
-	    {"keyword.operator", TxTokenType::TxKeywordOperator},
-	    {"keyword.import", TxTokenType::TxKeywordImport},
-	    {"keyword.type", TxTokenType::TxKeywordType},
-	    {"keyword.modifier", TxTokenType::TxKeywordModifier},
-	    {"keyword.repeat", TxTokenType::TxKeywordRepeat},
-	    {"keyword.debug", TxTokenType::TxKeywordDebug},
-	    {"keyword.exception", TxTokenType::TxKeywordException},
+      {"constructor", TxTokenType::TxConstructor},
+      {"operator", TxTokenType::TxOperator},
+      
+      {"keyword", TxTokenType::TxKeyword},
+      {"keyword.coroutine", TxTokenType::TxKeywordCoroutine},
+      {"keyword.function", TxTokenType::TxKeywordFunction},
+      {"keyword.operator", TxTokenType::TxKeywordOperator},
+      {"keyword.import", TxTokenType::TxKeywordImport},
+      {"keyword.type", TxTokenType::TxKeywordType},
+      {"keyword.modifier", TxTokenType::TxKeywordModifier},
+      {"keyword.repeat", TxTokenType::TxKeywordRepeat},
+      {"keyword.debug", TxTokenType::TxKeywordDebug},
+      {"keyword.exception", TxTokenType::TxKeywordException},
 
-	    {"keyword.conditional", TxTokenType::TxKeywordConditional},
-	    {"keyword.conditional.ternary", TxTokenType::TxKeywordConditionalTernary},
+      {"keyword.conditional", TxTokenType::TxKeywordConditional},
+      {"keyword.conditional.ternary", TxTokenType::TxKeywordConditionalTernary},
 
-	    {"keyword.directive", TxTokenType::TxKeywordDirective},
-	    {"keyword.directive.define", TxTokenType::TxKeywordDirectiveDefine},
-	    
-	    {"punctuation.delimiter", TxTokenType::TxPunctuationDelimiter},
-	    {"punctuation.bracket", TxTokenType::TxPunctuationBracket},
-	    {"punctuation.special", TxTokenType::TxPunctuationSpecial},
-	    
-	    //Comment
-	    {"comment", TxTokenType::TxComment},
-	    {"comment.documentation", TxTokenType::TxCommentDocumentation},
-	    {"comment.error", TxTokenType::TxCommentError},
-	    {"comment.warning", TxTokenType::TxCommentWarning},
-	    {"comment.todo", TxTokenType::TxCommentTodo},
-	    {"comment.note", TxTokenType::TxCommentNote},
-	    
-	    //Markup
-	    {"markup.strong", TxTokenType::TxMarkupStrong},
-	    {"markup.italic", TxTokenType::TxMarkupItalic},
-	    {"markup.underline", TxTokenType::TxMarkupUnderline},
-	    {"markup.strikethrough", TxTokenType::TxMarkupStrikethrough},
+      {"keyword.directive", TxTokenType::TxKeywordDirective},
+      {"keyword.directive.define", TxTokenType::TxKeywordDirectiveDefine},
+      
+      {"punctuation.delimiter", TxTokenType::TxPunctuationDelimiter},
+      {"punctuation.bracket", TxTokenType::TxPunctuationBracket},
+      {"punctuation.special", TxTokenType::TxPunctuationSpecial},
+      
+      //Comment
+      {"comment", TxTokenType::TxComment},
+      {"comment.documentation", TxTokenType::TxCommentDocumentation},
+      {"comment.error", TxTokenType::TxCommentError},
+      {"comment.warning", TxTokenType::TxCommentWarning},
+      {"comment.todo", TxTokenType::TxCommentTodo},
+      {"comment.note", TxTokenType::TxCommentNote},
+      
+      //Markup
+      {"markup.strong", TxTokenType::TxMarkupStrong},
+      {"markup.italic", TxTokenType::TxMarkupItalic},
+      {"markup.underline", TxTokenType::TxMarkupUnderline},
+      {"markup.strikethrough", TxTokenType::TxMarkupStrikethrough},
 
-	    {"markup.heading", TxTokenType::TxMarkupHeading},
-	    {"markup.heading.1", TxTokenType::TxMarkupHeading1},
-	    {"markup.heading.2", TxTokenType::TxMarkupHeading2},
-	    {"markup.heading.3", TxTokenType::TxMarkupHeading3},
-	    {"markup.heading.4", TxTokenType::TxMarkupHeading4},
-	    {"markup.heading.5", TxTokenType::TxMarkupHeading5},
-	    {"markup.heading.6", TxTokenType::TxMarkupHeading6},
+      {"markup.heading", TxTokenType::TxMarkupHeading},
+      {"markup.heading.1", TxTokenType::TxMarkupHeading1},
+      {"markup.heading.2", TxTokenType::TxMarkupHeading2},
+      {"markup.heading.3", TxTokenType::TxMarkupHeading3},
+      {"markup.heading.4", TxTokenType::TxMarkupHeading4},
+      {"markup.heading.5", TxTokenType::TxMarkupHeading5},
+      {"markup.heading.6", TxTokenType::TxMarkupHeading6},
 
-	    {"markup.quote", TxTokenType::TxMarkupQuote},
-	    {"markup.match", TxTokenType::TxMarkupMath},
+      {"markup.quote", TxTokenType::TxMarkupQuote},
+      {"markup.match", TxTokenType::TxMarkupMath},
 
-	    {"markup.link", TxTokenType::TxMarkupLink},
-	    {"markup.link.label", TxTokenType::TxMarkupLinkLabel},
-	    {"markup.link.url", TxTokenType::TxMarkupLinkUrl},
+      {"markup.link", TxTokenType::TxMarkupLink},
+      {"markup.link.label", TxTokenType::TxMarkupLinkLabel},
+      {"markup.link.url", TxTokenType::TxMarkupLinkUrl},
 
-	    {"markup.raw", TxTokenType::TxMarkupRaw},
-	    {"markup.raw.block", TxTokenType::TxMarkupRawBlock},
+      {"markup.raw", TxTokenType::TxMarkupRaw},
+      {"markup.raw.block", TxTokenType::TxMarkupRawBlock},
 
-	    {"markup.list", TxTokenType::TxMarkupList},
-	    {"markup.list.checked", TxTokenType::TxMarkupListChecked},
-	    {"markup.list.unchecked", TxTokenType::TxMarkupListUnchecked},
+      {"markup.list", TxTokenType::TxMarkupList},
+      {"markup.list.checked", TxTokenType::TxMarkupListChecked},
+      {"markup.list.unchecked", TxTokenType::TxMarkupListUnchecked},
 
 
-	    //Diff
-	    {"diff.plus", TxTokenType::TxDiffPlus},
-	    {"diff.minus", TxTokenType::TxDiffMinus},
-	    {"diff.delta", TxTokenType::TxDiffDelta},
-	    
-	    //Tags
-	    {"tag", TxTokenType::TxTag},
-	    {"tag.builtin", TxTokenType::TxTagBuiltin},
-	    {"tag.attribute", TxTokenType::TxTagAttribute},
-	    {"tag.delimiter", TxTokenType::TxTagDelimiter},
+      //Diff
+      {"diff.plus", TxTokenType::TxDiffPlus},
+      {"diff.minus", TxTokenType::TxDiffMinus},
+      {"diff.delta", TxTokenType::TxDiffDelta},
+      
+      //Tags
+      {"tag", TxTokenType::TxTag},
+      {"tag.builtin", TxTokenType::TxTagBuiltin},
+      {"tag.attribute", TxTokenType::TxTagAttribute},
+      {"tag.delimiter", TxTokenType::TxTagDelimiter},
 
-	    // Non-highlighting captures
-	    {"none", TxTokenType::TxNone},
-	    {"conceal", TxTokenType::TxConceal},
-	    {"spell", TxTokenType::TxSpell},
-	    {"nospell", TxTokenType::TxNoSpell},
+      // Non-highlighting captures
+      {"none", TxTokenType::TxNone},
+      {"conceal", TxTokenType::TxConceal},
+      {"spell", TxTokenType::TxSpell},
+      {"nospell", TxTokenType::TxNoSpell},
 
-	    //Globals
-	    {"foreground", TxTokenType::TxForeground},
-	    {"background", TxTokenType::TxBackground},
-	    {"caret", TxTokenType::TxCaret},
-	    {"blockcaret", TxTokenType::TxBlockCaret},
-	    {"linehighlight", TxTokenType::TxLineHightlight},
-	    {"missspelling", TxTokenType::TxMissSpelling},
-	    {"selection", TxTokenType::TxSelection},
-	    {"selectioninactive", TxTokenType::TxSelectionInActive},
-	    {"highlight", TxTokenType::TxHighlight},
-	    {"findhighlight", TxTokenType::TxFindHighlight}
-	};
-	OpenGL::ScopedTimer timer("CoreSystem::Init");
-	const auto& path=TxEdit::GetDataDirectory()/"gruvbox.json";
-	Get().mCaptureToColor=LoadGruvboxColors(path.generic_string());
+      //Globals
+      {"foreground", TxTokenType::TxForeground},
+      {"background", TxTokenType::TxBackground},
+      {"caret", TxTokenType::TxCaret},
+      {"blockcaret", TxTokenType::TxBlockCaret},
+      {"linehighlight", TxTokenType::TxLineHightlight},
+      {"missspelling", TxTokenType::TxMissSpelling},
+      {"selection", TxTokenType::TxSelection},
+      {"selectioninactive", TxTokenType::TxSelectionInActive},
+      {"highlight", TxTokenType::TxHighlight},
+      {"findhighlight", TxTokenType::TxFindHighlight}
+  };
+  OpenGL::ScopedTimer timer("CoreSystem::Init");
+  const auto& path=TxEdit::GetDataDirectory()/"gruvbox.json";
+  Get().mCaptureToColor=LoadGruvboxColors(path.generic_string());
 
-	Get().mTokenToColor.resize((size_t)TxTokenType::TxSize);
-	// Populate from JSON
-	for (auto& [jsonKey, color] : Get().mCaptureToColor) {
-	    if (Get().mCaptureToTokenType.find(jsonKey) != Get().mCaptureToTokenType.end()) {
-	    	size_t idx=(size_t)Get().mCaptureToTokenType[jsonKey];
-	    	// GL_INFO("key:{}, color:{}, size:{}, idx:{}",jsonKey,color,Get().mTokenToColor.size(),idx);
-	        Get().mTokenToColor[idx] = color;
-	    }
-	}
+  Get().mTokenToColor.resize((size_t)TxTokenType::TxSize);
+  // Populate from JSON
+  for (auto& [jsonKey, color] : Get().mCaptureToColor) {
+      if (Get().mCaptureToTokenType.find(jsonKey) != Get().mCaptureToTokenType.end()) {
+        size_t idx=(size_t)Get().mCaptureToTokenType[jsonKey];
+        // GL_INFO("key:{}, color:{}, size:{}, idx:{}",jsonKey,color,Get().mTokenToColor.size(),idx);
+          Get().mTokenToColor[idx] = color;
+      }
+  }
 
 
 }

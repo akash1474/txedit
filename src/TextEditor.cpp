@@ -7,6 +7,7 @@
 #include "imgui_internal.h"
 #include "TextEditor.h"
 
+
 #include <cassert>
 #include <cstdint>
 #include <ctype.h>
@@ -26,6 +27,7 @@
 #include "imgui.h"
 #include "StatusBarManager.h"
 #include "TabsManager.h"
+#include "CoreSystem.h"
 
 #include "tree_sitter/api.h"
 #include "TokenType.h"
@@ -554,7 +556,7 @@ bool Editor::Draw()
 		float linePosX=mEditorPosition.x + mLineBarPadding + (mLineBarMaxCountWidth-GetNumberWidth(lineNo+1))*mCharacterSize.x;
 
 		// //Error Highlighting
-		if(mErrorMarkers[lineNo])
+		if(CoreSystem::ShowErrorMarkers() && mErrorMarkers[lineNo])
 		{
 			mEditorWindow->DrawList->AddRectFilled(
 				{mEditorPosition.x,mEditorPosition.y+(lineNo*mLineHeight)-scrollY},
@@ -1025,7 +1027,8 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	TSQueryCursor* cursor = ts_query_cursor_new();
 	ts_query_cursor_exec(cursor, mLanguageConfig->pQuery, ts_tree_root_node(tree));
     // GL_INFO("Duration:{}",timerx.ElapsedMillis());
-    mErrorMarkers.clear();
+    if(CoreSystem::ShowErrorMarkers())
+    	mErrorMarkers.clear();
 
     // const size_t start=0;
     // const size_t end=std::max((size_t)0,mLines.size());
@@ -1065,7 +1068,7 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 			    	Trie::Insert(aGlobalTokens,sourceCode.substr(startByte, endByte - startByte));
 			    }
 		    }
-		    if (std::string(ts_node_type(node)) == "ERROR" || std::string(ts_node_type(node)) == "MISSING")
+		    if (CoreSystem::ShowErrorMarkers() &&  std::string(ts_node_type(node)) == "ERROR" || std::string(ts_node_type(node)) == "MISSING")
 		    {
 		    	for(int i=startPoint.row;i<=endPoint.row;i++)
 		    		mErrorMarkers[i]=true;

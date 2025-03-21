@@ -55,7 +55,8 @@ TabsManager::~TabsManager(){
 	for(auto& tab:aTabs)
 		free(tab.editor);
 
-	Trie::Free(mTokenSuggestionsRoot);
+	if (mTokenSuggestionsRoot)
+		Trie::Free(mTokenSuggestionsRoot);
 }
 
 TabsManager::TabsManager(){
@@ -80,9 +81,26 @@ void TabsManager::OpenFileWithAtLineNumber(const std::string& aFilePath,int aLin
 	}
 }
 
+void TabsManager::InitializeTabFromCache(std::string aWindowId,std::string aFilePath){
+	if(!std::filesystem::exists(aFilePath))
+	{
+		GL_CRITICAL("TabsManager::OpenFile::Failed - Path doesn't exist - {}",aFilePath);
+		return;
+	}
+	GL_INFO("Opening File:{}",aFilePath);
+	std::filesystem::path path(aFilePath);
+	for(auto&tab:Get().mTabs) 
+		tab.isActive=false;
+
+	Get().mTabs.emplace_back(aFilePath,path.filename().generic_u8string(),false,true,true,aWindowId);
+	FileTab& aTab=Get().mTabs.back();
+	aTab.editor=new Editor();
+	aTab.editor->LoadFile(aFilePath.c_str());
+}
+
 FileTab* TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 {
-	if(!std::filesystem::exists(aFilePath))
+	if(!aFilePath.empty() && !std::filesystem::exists(aFilePath))
 	{
 		GL_CRITICAL("TabsManager::OpenFile::Failed - Path doesn't exist - {}",aFilePath);
 		return nullptr;
@@ -96,7 +114,7 @@ FileTab* TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 
 	if(aFilePath.empty())
 	{
-		Get().mTabs.emplace_back(aFilePath,"Untitled",aIsTemp,true,false,"Untitled##"+std::to_string((int)&Get()));
+		Get().mTabs.emplace_back(aFilePath,"Untitled",aIsTemp,true,false,"Untitled##"+std::to_string(now));
 		FileTab& aTab=Get().mTabs.back();
 		aTab.editor=new Editor();
 		aTab.editor->LoadFile(aFilePath.c_str());
@@ -267,6 +285,7 @@ void TabsManager::Render(){
 void TabsManager::SaveFile()
 {
 	FileTab* currTab=GetCurrentActiveTab();
+	if(!currTab) return;
 	std::string textContent=currTab->editor->GetText();
 
 	size_t size=textContent.size()-1;

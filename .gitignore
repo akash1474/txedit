@@ -17,3 +17,4 @@ packages/mINI
 .vs
 *.log
 __pycache__
+llmconfig.json

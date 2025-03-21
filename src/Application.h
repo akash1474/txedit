@@ -7,6 +7,8 @@ private:
 	GLFWwindow* mWindow{0};
 	int width = 1100;
 	int height = 650;
+	int winPosX=0,winPosY=0;
+	bool mIsFullScreenEnabled=false;
 	CoreSystem* mCoreSystem;
 	float mFrameRate;
 	double mFrameTime;
@@ -38,8 +40,10 @@ public:
 	static void HandleFPSCooldown();
 	static void EnableHighFPS(){Get().mEnableRunAtMaxRefreshRate=true;}
 	static bool RunAtMaxRefreshRate(){return Get().mRunAtMaxRefreshRate;}
+	static void ToggleFullScreen();
 
 	static void Draw();
+	static void Close();
 	static bool Init();
 	static bool InitImGui();
 	static bool InitFonts();
