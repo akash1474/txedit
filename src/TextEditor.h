@@ -149,6 +149,8 @@ public:
 	std::string GetFullText();
 
 	void ApplySyntaxHighlighting(const std::string &sourceCode);
+	void ParseTokens();
+
 
 	uint32_t GetLineLengthInBytes(int aLineIdx);
 	void PrintTree(const TSNode &node, const std::string &source_code,std::string& output, int indent = 0);
@@ -327,6 +329,7 @@ private:
 	Coordinates FindEndBracket(const Coordinates& coords);
 	void FindBracketMatch(const Coordinates& aCoords);
 	void HighlightBracket(const Coordinates& aCoords);
+	void FindBracketMatch();
 
 
 	void DeleteCharacter(Cursor& aCursor,bool aDeletePreviousCharacter,UndoRecord* uRecord=nullptr);
@@ -356,6 +359,18 @@ public:
 	void Paste();
 	void Cut();
 	void SelectAll();
+	/*
+	Swaps the current or selected lines with the line above or below.
+
+	@param up If true, moves the line(s) up; otherwise, moves them down.
+
+	Updates:
+	- Adjusts cursor and selection positions.
+	- Updates syntax highlighting.
+	- Keeps the cursor visible.
+
+	@note No-op if multiple cursors are active.
+	*/
 	void SwapLines(bool up = true);
 	
 	inline bool IsHighlightPresent()const

@@ -1,7 +1,9 @@
 #include "Log.h"
 #include "pch.h"
+#include <chrono>
 #include <cpr/cpr.h>
 #include <filesystem>
+#include <thread>
 #include "LLMChatManager.h"
 #include "nlohmann/json.hpp"
 
@@ -137,7 +139,8 @@ void LLMChatManager::CreateDefaultLLMConfigJson(){
 
 bool LLMChatManager::InitializeConnectionWithBackend(){
     try {
-        mMessageText="Initializing Server";
+        mMessageText="Initializing LLM";
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
         cpr::Session session;
         nlohmann::json config_json={};
         std::string configFileName="llmconfig.json";

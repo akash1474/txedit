@@ -1,7 +1,7 @@
 Feature:
-+ Added different menu bar items
++ Added Editor::UpdateBracketMatch
 
 
 BugFix:
-- Fixed MenuBar "Open File" function
+- Fixed wrong highlighting of bracket when lineswapping and autocompletion
 

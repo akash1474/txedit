@@ -13,10 +13,13 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <winuser.h>
 #include "imgui_md.h"
+#include "utils.h"
 #define IMSPINNER_DEMO
 #include "imspinner.h"
 #include "nlohmann/json.hpp"
+#include "StatusBarManager.h"
 
 ChatWindow::ChatWindow() : scrollToBottom(false) {
     mChatManager.SetBaseURL("localhost",8000);
@@ -410,7 +413,8 @@ void ChatWindow::HandleStream(){
 
 void ChatWindow::MakeRequest(std::string message){
     GL_INFO("Message[WORKER-THREAD]:{}",message);
-    if(message=="INIT"){
+    if(message=="INIT")
+    {
         if(!mChatManager.InitializeConnectionWithBackend())
             this->hasError=true;
 
@@ -459,7 +463,7 @@ void ChatWindow::LoadConversationHistory(){
 
     chatHistory.clear();
     for (const auto& obj : conversations) {
-        if(obj.contains("type") && obj["type"].is_string() && obj.contains("content") && obj["content"].is_string()){
+        if(obj.contains("type") && obj.contains("content")){
             const std::string& type=obj["type"];
             const std::string& content=obj["content"];
 
@@ -483,10 +487,12 @@ void ChatWindow::StartServer(){
     ZeroMemory(&mServerProcessInfo, sizeof(PROCESS_INFORMATION));
 
     // Command to start the Uvicorn server
-    const char* command = "cmd /C uvicorn scripts.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir scripts";
-
+    std::string command = "cmd /C uvicorn scripts.main:app --host 0.0.0.0 --port 8000 --reload --app-dir \"";
+    command+=GetExecutableDirectoryPath().generic_string()+"\"";
+    StatusBarManager::ShowNotification("Path",command.c_str());
+    GL_INFO("ChatWindow:{}",command);
     // Create the process
-    if (!CreateProcessA(NULL, const_cast<char*>(command), NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &mServerProcessInfo)) {
+    if (!CreateProcessA(NULL, const_cast<char*>(command.c_str()), NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &mServerProcessInfo)) {
         std::cerr << "Error: Failed to start the Python server!" << std::endl;
     } else {
         std::cout << "Python server started with PID: " << mServerProcessInfo.dwProcessId << std::endl;
@@ -499,8 +505,8 @@ void ChatWindow::StopServer(){
         TerminateProcess(mServerProcessInfo.hProcess, 0);
         CloseHandle(mServerProcessInfo.hProcess);
         CloseHandle(mServerProcessInfo.hThread);
-        // atexit([]() {
-        //     system("taskkill /F /IM python.exe /T");
-        // });
+        atexit([]() {
+            system("taskkill /F /IM python.exe /T");
+        });
     }
 }

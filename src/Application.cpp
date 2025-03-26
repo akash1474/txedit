@@ -200,7 +200,6 @@ void Application::HandleFPSCooldown(){
 
     if (Get().mEnableRunAtMaxRefreshRate) {
         last_scroll_time = std::chrono::high_resolution_clock::now();
-        GL_INFO("MAXJKl");
         Get().mRunAtMaxRefreshRate=true;
         Get().mEnableRunAtMaxRefreshRate=false;
         glfwSwapInterval(1);
@@ -312,7 +311,7 @@ void Application::HandleArguments(std::wstring commands)
 				TabsManager::OpenFile(path.generic_string());
 				// core->GetTextEditor()->LoadFile(path.generic_string().c_str());
 			} else if (fs::is_directory(path)) {
-				ShowMessage("PassedDir",path.generic_string().c_str());
+				// ShowMessage("PassedDir",path.generic_string().c_str());
 				GL_INFO("FOLDER:{}", path.generic_string());
 				FileNavigation::AddFolder(path.generic_string());
 			} else {

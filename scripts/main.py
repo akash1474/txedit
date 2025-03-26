@@ -246,7 +246,7 @@ def generate_llm_response(relevant_docs, user_query, memory,use_vector):
     # Initialize Gemini LLM
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.0-flash",
-        api_key=""
+        api_key="AIzaSyA7FTjQca-Zvt3DQkmmmu-ItWI6UuBRu7I"
     )
 
     input_data={}
@@ -353,7 +353,6 @@ async def generate_response(query, use_vector):
         yield json.dumps({"type": "response", "content": token.content, "done": False}) + "\n"
 
     # Finalize streaming
-    time.sleep(0.2);
     yield json.dumps({"type":"response" ,"content": "", "done": True}) + "\n"
     update_memory(query,response)
 

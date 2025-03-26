@@ -1103,6 +1103,7 @@ void Editor::Delete()
 }
 
 
+
 void Editor::SwapLines(bool up)
 {
 	if (mState.mCursors.size()>1)
@@ -1150,6 +1151,7 @@ void Editor::SwapLines(bool up)
 	aCursor.mSelectionEnd.mLine += value;
 	aCursor.mCursorPosition.mLine += value;
 	EnsureCursorVisible();
+	FindBracketMatch();
 }
 
 
@@ -1167,6 +1169,7 @@ void Editor::InsertTab(bool isShiftPressed)
         	ApplySuggestion(mSuggestions[iCurrentSuggestion],cursor);
 
         ClearSuggestions();
+        FindBracketMatch();
 		return;
 	}
 

@@ -4,6 +4,7 @@
 #include "LanguageConfig.h"
 #include "Log.h"
 #include "nlohmann/json.hpp"
+#include "Timer.h"
 
 class LanguageConfigManager{
 	std::unordered_map<TxEdit::Language, LanguageConfig> mLoadedLanguages;
@@ -19,6 +20,7 @@ public:
 
 // private:
 	static LanguageConfig* GetLanguageConfig(TxEdit::Language aLanguage){
+		OpenGL::ScopedTimer timer("LanguageConfigManager::GetLanguageConfig");
 		if(aLanguage==TxEdit::Language::None)
 			return nullptr;
 
@@ -36,7 +38,7 @@ public:
 		const std::string jsonFilePath=TxEdit::GetLanguageDataDirectoryPath(aLanguage)+"/config.json";
 		std::ifstream file(jsonFilePath);
 		if(!file.good()){
-
+			GL_CRITICAL("LanguageConfigManager::GetLanguageConfig - FileError:{}",jsonFilePath);
 			return nullptr;
 		}
 
@@ -51,6 +53,7 @@ public:
 
 
 	static bool LoadLanguageQuery(TxEdit::Language aLanguage,std::string& outQuery) {
+		OpenGL::ScopedTimer timer("LanguageConfig::LoadLanguageQuery");
 	    std::string path=TxEdit::GetLanguageDataDirectoryPath(aLanguage)+"/highlight.scm";
 
 	    if(!std::filesystem::exists(path)){

@@ -1,4 +1,3 @@
-#include "Coordinates.h"
 #include "pch.h"
 #include "imgui.h"
 #include "TextEditor.h"
@@ -89,6 +88,7 @@ void Editor::HandleKeyboardInputs()
 		        	ApplySuggestion(mSuggestions[iCurrentSuggestion],cursor);
 
 		        ClearSuggestions();
+		        FindBracketMatch();
 			}
 			else
 				InsertLineBreak();

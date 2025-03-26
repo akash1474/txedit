@@ -45,12 +45,16 @@ void Editor::HandleMouseInputs()
 			else if (doubleClick) 
 			{
 
-				if(!ctrl) SelectWordUnderCursor(mState.mCursors[mState.mCurrentCursorIdx]);
-				mLastClick = (float)ImGui::GetTime();
+				if(!ctrl) 
+					SelectWordUnderCursor(mState.mCursors[mState.mCurrentCursorIdx]);
 
+				mLastClick = (float)ImGui::GetTime();
 				mSelectionMode=SelectionMode::Word;
 
 				auto& aCursor=GetCurrentCursor();
+				std::string word=GetSelectedText();
+				GL_INFO("SelectedWord:{}",word);
+				FindAllOccurancesOfWord(word, 0, mLines.size()-1);
 				// Finding Index of Position same as currentLine to get next occurance
 				auto it = std::find_if(
 					mSearchState.mFoundPositions.begin(), mSearchState.mFoundPositions.end(),
@@ -68,9 +72,10 @@ void Editor::HandleMouseInputs()
 				}
 
 			}
-			else if(click && ctrl)
+			else if(ctrl && click)
 			{
 				DisableSearch();
+
 
 				Cursor aState;
 				aState.mCursorPosition=ScreenPosToCoordinates(ImGui::GetMousePos());
@@ -135,7 +140,8 @@ Cursor& Editor::GetCurrentCursor(){
 }
 
 void Editor::SelectWordUnderCursor(Cursor& aCursor){
-	if (mSelectionMode == SelectionMode::Line) mSelectionMode = SelectionMode::Normal;
+	if (mSelectionMode == SelectionMode::Line)
+		mSelectionMode = SelectionMode::Normal;
 	else
 		mSelectionMode = SelectionMode::Word;
 
@@ -161,7 +167,8 @@ void Editor::SelectWordUnderCursor(Cursor& aCursor){
 void Editor::SortCursorsFromTopToBottom()
 {
 	if(mState.mCursors.size()<2) return;
-	if(mState.mCursors[mState.mCursors.size()-2].mCursorPosition > mState.mCursors.back().mCursorPosition){
+	if(mState.mCursors[mState.mCursors.size()-2].mCursorPosition > mState.mCursors.back().mCursorPosition)
+	{
 
 		Cursor aCursor=mState.mCursors[mState.mCurrentCursorIdx];
 

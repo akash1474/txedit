@@ -824,6 +824,10 @@ void Editor::HighlightBracket(const Coordinates& aCoords){
 	mEditorWindow->DrawList->AddRect(start,{start.x+mCharacterSize.x+1,start.y+mLineHeight}, mGruvboxPalletDark[(size_t)Pallet::HighlightOne]);
 }
 
+void Editor::FindBracketMatch(){
+	const Cursor& aCursor=GetCurrentCursor();
+	FindBracketMatch(aCursor.mCursorPosition);
+}
 
 void Editor::FindBracketMatch(const Coordinates& aCoords)
 {
@@ -985,8 +989,53 @@ void Editor::WorkerThread()
         if (!needsUpdate_) {
             lock.unlock();
             ReparseEntireTree();
+            ParseTokens();
         }
     }
+}
+
+void Editor::ParseTokens()
+{
+	std::string sourceCode=GetFullText();
+	if(sourceCode.size() <2  || !mIsSyntaxHighlightingSupportForFile) return;
+	OpenGL::ScopedTimer timer("Editor::ParseToken");
+
+    TSParser* parser= ts_parser_new();
+    ts_parser_set_language(parser,mLanguageConfig->tsLanguage());
+
+    TSTree* tree = ts_parser_parse_string(parser, nullptr, sourceCode.c_str(), sourceCode.size());
+	Trie::Node* aGlobalTokens=TabsManager::GetTrieRootNode();
+	TSNode root=ts_tree_root_node(tree);
+
+    std::function<void(TSNode)> TraverseTree = [&](TSNode node) {
+        if (!ts_node_is_null(node)) {
+            const char* nodeType = ts_node_type(node);
+            
+            if (
+		   		strcmp(nodeType,"identifier")==0 || 
+		   		strcmp(nodeType, "type_identifier")==0 || 
+		   		strcmp(nodeType, "namespace_identifier")==0
+        	) {
+                uint32_t startByte = ts_node_start_byte(node);
+                uint32_t endByte = ts_node_end_byte(node);
+                std::string identifier = sourceCode.substr(startByte, endByte - startByte);
+                
+                // GL_INFO("Captured Identifier: {}", identifier);
+                Trie::Insert(aGlobalTokens, identifier);
+            }
+
+            uint32_t childCount = ts_node_child_count(node);
+            for (uint32_t i = 0; i < childCount; i++) {
+                TraverseTree(ts_node_child(node, i));
+            }
+        }
+    };
+
+    TraverseTree(ts_tree_root_node(tree));
+
+    // Get the start and end positions of the node
+    ts_tree_delete(tree);
+	ts_parser_delete(parser);
 }
 
 
@@ -1039,10 +1088,8 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 	// }
 
     // mSuggestions.clear();
-	static bool isFirst=true;
 	// 5. Highlight matching nodes
 	TSQueryMatch match;
-	Trie::Node* aGlobalTokens=TabsManager::GetTrieRootNode();
 	std::unordered_map<std::string, TxTokenType>& captureToToken=ThemeManager::GetCaptureToTokenMap();
 
 	while (ts_query_cursor_next_match(cursor, &match)) {
@@ -1061,14 +1108,6 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 		    TSPoint startPoint = ts_node_start_point(node);
 		    TSPoint endPoint = ts_node_end_point(node);
 
-		    if(isFirst){
-			    if(std::string(captureName)=="type.indentifier" || std::string(captureName)=="function.namespace" || std::string(captureName)=="function.call"){
-		    	    uint32_t startByte = ts_node_start_byte(node);
-				    uint32_t endByte = ts_node_end_byte(node);
-				    GL_INFO("Inserting:{}",std::string(captureName));
-			    	Trie::Insert(aGlobalTokens,sourceCode.substr(startByte, endByte - startByte));
-			    }
-		    }
 		    if (CoreSystem::ShowErrorMarkers() &&  std::string(ts_node_type(node)) == "ERROR" || std::string(ts_node_type(node)) == "MISSING")
 		    {
 		    	for(int i=startPoint.row;i<=endPoint.row;i++)
@@ -1093,7 +1132,6 @@ void Editor::ApplySyntaxHighlighting(const std::string &sourceCode)
 		    }
 		}
 	}
-	isFirst=false;
 
     // Get the start and end positions of the node
     ts_tree_delete(tree);
