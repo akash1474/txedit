@@ -1,15 +1,17 @@
-#include "GLFW/glfw3.h"
 #include "pch.h"
-#include "Log.h"
-#include "Timer.h"
-#include "resources/AppIcon.embed"
-#include "CoreSystem.h"
+
 #include <minwindef.h>
 #include <processenv.h>
 #include <wingdi.h>
-#include "Application.h"
-#include "TabsManager.h"
-#include "FileNavigation.h"
+
+#include "GLFW/glfw3.h"
+
+#include "resources/AppIcon.embed"
+
+#include "core/Log.h"
+#include "core/Timer.h"
+#include "core/CoreSystem.h"
+#include "core/Application.h"
 
 //Make sure Visual Leak Detector (VLD) is installed
 #ifdef DETECT_MEMORY_LEAKS_VLD

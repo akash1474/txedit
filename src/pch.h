@@ -33,9 +33,9 @@
 
 
 
-#include "FontAwesome6.h"
-#include "Log.h"
-#include "utils.h"
-#include "Timer.h"
+#include "external/FontAwesome6.h"
+#include "core/Log.h"
+#include "core/utils.h"
+#include "core/Timer.h"
 
 
