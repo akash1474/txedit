@@ -422,6 +422,7 @@ public:
 	std::string GetFileTypeName();
 
 	void LoadFile(const char* filepath);
+	void ReloadFileContents();
 	int GetSelectionMode() const { return (int)mSelectionMode; };
 
 	bool Render(bool* aIsOpen,std::string& aUUID,bool& aIsTemp);

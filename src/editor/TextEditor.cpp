@@ -120,6 +120,32 @@ void Editor::LoadFile(const char* filepath){
 	isFileLoaded=true;
 }
 
+void Editor::ReloadFileContents(){
+	OpenGL::ScopedTimer timer("Editor::ReloadFileContents");
+	this->ResetState();
+
+	std::ifstream file(this->mFilePath);
+	if(!file.good()){
+		GL_CRITICAL("Failed to ReadFile:{}",this->mFilePath);
+		return;
+	}
+
+
+	file.seekg(0, std::ios::end);
+	size_t fileSize = file.tellg();
+	file.seekg(0,std::ios::beg);
+	
+	std::string content(fileSize, ' ');
+	file.read(&content[0], fileSize);
+
+	//Trimming the spaces located at the last line at the end
+	while(content.size()>0 && content[content.size()-1]==' ')
+		content.pop_back();
+
+	StatusBarManager::ShowNotification("File Updated:",this->mFilePath.c_str(),StatusBarManager::NotificationType::Info);
+	this->SetBuffer(content);
+}
+
 void Editor::SetBuffer(const std::string& aFileBuffer)
 {
 	GL_INFO("Editor::SetBuffer");

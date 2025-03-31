@@ -366,14 +366,17 @@ void CoreSystem::RenderMenuBar(){
             if (ImGui::MenuItem("New File"))
 				TabsManager::OpenNewEmptyFile();
             if (ImGui::MenuItem("Open File...", "Ctrl+O")) {
-				std::string path=SelectFile();
+				const std::string path=SelectFile();
 				if(!path.empty())
 					TabsManager::OpenFile(path);
             }
 			if (ImGui::MenuItem("Open Folder")) {
-				std::string path = SelectFolder();
+				const std::string path = SelectFolder();
 				if (!path.empty())
-					FileNavigation::AddFolder(path.c_str());
+				{
+					const std::string folderPath=std::filesystem::path(path).generic_string();
+					FileNavigation::AddFolder(folderPath);
+				}
 			}
             if (ImGui::MenuItem("Save", "Ctrl+S")) {
             	TabsManager::SaveFile();

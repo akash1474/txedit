@@ -438,3 +438,10 @@ inline std::filesystem::path GetExecutableDirectoryPath()
 inline std::filesystem::path GetCurrentWorkingDirectoryPath(){
     return std::filesystem::current_path();
 }
+
+// Creates a unique by combining the base string with milliseconds since epoch
+inline std::string GetUIDWithBase(std::string baseString) {
+    return baseString + "##" + std::to_string(
+        (size_t)std::chrono::steady_clock::now().time_since_epoch().count()
+    ); // Temporary object (RVO applies)
+}

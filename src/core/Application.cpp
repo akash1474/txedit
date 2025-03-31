@@ -35,7 +35,8 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 	for (int i = 0; i < count; i++) {
 		if (std::filesystem::is_directory(paths[i])) {
 			GL_INFO("Folder: {}", paths[i]);
-			FileNavigation::AddFolder(paths[i]);
+			std::string folderPath=std::filesystem::path(paths[i]).generic_string();
+			FileNavigation::AddFolder(folderPath);
 		} else {
 			GL_INFO("File: {}", paths[i]);
 			TabsManager::OpenFile(paths[i]);

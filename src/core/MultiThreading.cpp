@@ -68,7 +68,7 @@ inline MultiThreading::ThreadPool::ThreadPool(size_t threads) : stop(false) {
 }
 
 template<class F, class... Args>
-auto MultiThreading::ThreadPool::enqueue(F&& f, Args&&... args) -> std::future<typename std::invoke_result<F, Args...>::type> {
+auto MultiThreading::ThreadPool::Enqueue(F&& f, Args&&... args) -> std::future<typename std::invoke_result<F, Args...>::type> {
     using return_type = typename std::invoke_result<F, Args...>::type;
     
     auto task = std::make_shared<std::packaged_task<return_type()>>(

@@ -28,6 +28,7 @@ class FileNavigation{
 	struct Entity{
 		std::string filename;
 		std::string path;
+		std::string uid;
 		bool is_directory=false;
 		bool is_explored=false;
 	};

@@ -113,7 +113,7 @@ FileTab* TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 
 	std::filesystem::path path(aFilePath);
 	auto now = std::chrono::steady_clock::now().time_since_epoch().count();
-	std::string uuid=path.filename().generic_u8string() + "##" +std::to_string(now);
+	const std::string uuid=GetUIDWithBase(path.filename().generic_u8string());
 	GL_INFO(uuid);
 
 	if(aFilePath.empty())
@@ -151,7 +151,13 @@ FileTab* TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 		// else
 		// {
 			GL_INFO("Added:{}",aFilePath);
-			Get().mTabs.emplace_back(aFilePath,path.filename().generic_u8string(),aIsTemp,true,true,uuid);
+			Get().mTabs.emplace_back(
+				aFilePath,path.filename().generic_u8string(), //filePath
+				aIsTemp, //isTemp
+				true, // isActive
+				true, // isSaved
+				uuid //uid
+			);
 			FileTab& aTab=Get().mTabs.back();
 			aTab.editor=new Editor();
 			aTab.editor->LoadFile(aFilePath.c_str());

@@ -1,8 +1,8 @@
 #include "pch.h"
 #include <chrono>
+#include <minwinbase.h>
 #include <thread>
 #include <winnt.h>
-
 #include "fs/DirectoryMonitor.h"
 #include "ui/FileNavigation.h"
 
@@ -107,6 +107,24 @@ void DirectoryMonitor::MonitorDirectory(HANDLE& hEvent,DirectoryWatch& aDirWatch
             std::wstring modPath(info->FileName, info->FileNameLength / sizeof(WCHAR));
             std::wstring filePath=aDirWatch.mDirectoryPath+L"/"+std::filesystem::path(modPath).generic_wstring();
 
+            // // Get process ID of the process modifying the file
+            // HANDLE hFile = CreateFileW(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+            // if (hFile != INVALID_HANDLE_VALUE) {
+            //     FileBasicInfo processInfo;
+            //     if (GetFileInformationByHandleEx(hFile, FileBasicInfo, &processInfo, sizeof(processInfo))) {
+            //         DWORD currentPID = GetCurrentProcessId();
+			// 		//Ignore the change if pid is same
+            //         processInfo.
+            //         if (processInfo.ProcessIdList[0] == currentPID) {
+			// 			GL_INFO("Ignoring the fileupdate")
+            //             CloseHandle(hFile);
+            //             continue;  
+            //         }
+            //     }
+            //     CloseHandle(hFile);
+            // }
+
+
             switch (info->Action) {
             case FILE_ACTION_MODIFIED:
                 FileNavigation::HandleEvent(DirectoryEvent::FileModified,filePath);
@@ -117,9 +135,9 @@ void DirectoryMonitor::MonitorDirectory(HANDLE& hEvent,DirectoryWatch& aDirWatch
             case FILE_ACTION_REMOVED:
                 FileNavigation::HandleEvent(DirectoryEvent::FileRemoved,filePath);
                 break;
-            case FILE_ACTION_RENAMED_OLD_NAME:
-                FileNavigation::HandleEvent(DirectoryEvent::FileRenamedOldName,filePath);
-                break;
+            // case FILE_ACTION_RENAMED_OLD_NAME:
+            //     FileNavigation::HandleEvent(DirectoryEvent::FileRenamedOldName,filePath);
+            //     break;
             case FILE_ACTION_RENAMED_NEW_NAME:
                 FileNavigation::HandleEvent(DirectoryEvent::FileRenamedNewName,filePath);
                 break;

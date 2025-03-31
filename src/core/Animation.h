@@ -7,9 +7,8 @@ class Animation{
 	float mDuration{0.0f};
 	bool mHasCompleted=false;
 	
-
 	inline float EaseOutQuadraticFn(float t) { return 1.0f - pow(1.0f - t, 4);}
-
+	
 public:
 	bool hasStarted=false;
 

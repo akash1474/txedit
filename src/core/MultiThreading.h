@@ -4,13 +4,11 @@
 #include <stdint.h>
 #include <vector>
 #include <queue>
-#include <memory>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <future>
 #include <functional>
-#include <stdexcept>
 #include "core/ImageTexture.h"
 
 
@@ -41,13 +39,13 @@ namespace MultiThreading {
 
 	class ThreadPool {
 	public:
-	    static ThreadPool& getInstance(size_t threads = std::thread::hardware_concurrency()) {
+	    static ThreadPool& GetInstance(size_t threads = std::thread::hardware_concurrency()) {
 	        static ThreadPool instance(threads);
 	        return instance;
 	    }
 	    
 	    template<class F, class... Args>
-	    auto enqueue(F&& f, Args&&... args) 
+	    auto Enqueue(F&& f, Args&&... args) 
 	        -> std::future<typename std::invoke_result<F, Args...>::type>;
 	    
 	    ~ThreadPool();

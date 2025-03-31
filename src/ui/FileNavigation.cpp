@@ -1,5 +1,7 @@
+#include "core/utils.h"
 #include "pch.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <winnt.h>
@@ -69,8 +71,16 @@ void FileNavigation::AddFolder(std::string aPath)
 		Init();
 	}
 
+	auto it=std::find(Get().mFolders.begin(),Get().mFolders.end(),aPath);
+	if(it!=Get().mFolders.end())
+	{
+		GL_WARN("Folder Already Present:{}",aPath);
+		return;
+	}
+
 	Get().mFolders.push_back(aPath);
 	Get().mDirectoryMonitor.AddDirectoryToWatchList(StringToWString(aPath));
+
 }
 
 // Load JSON and parse icon data
@@ -196,6 +206,14 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
 		                			if(std::filesystem::path(new_path).has_extension())
 		                			{
 		                				DirectoryHandler::RenameFile(old_path, new_path);
+		                				// std::filesystem::path filePath=std::filesystem::path(old_path);
+		                				// std::filesystem::path folderPath=filePath.parent_path();
+		                				
+		                				// auto& entities=Get().mDirectoryData[folderPath.generic_string()];
+		                				// for(auto& entity:entities)
+		                				// 	if(entity.filename==filePath.filename())
+		                				// 		entity.filename=std::filesystem::path(new_path).filename().generic_string();
+
 		                				StatusBarManager::ShowNotification("Renamed:",new_path,StatusBarManager::NotificationType::Success);
 		                			}
 		                			else
@@ -377,8 +395,9 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 	{
 		if(item.is_directory) 
 		{
+			// item.is_explored=true;
 			const char* icon = item.is_explored ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER;
-			oss << icon << " " << item.filename.c_str();
+			oss << icon << " " << item.uid.c_str();
 			if(ImGui::TreeNodeEx(oss.str().c_str(),ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_Selected))
 			{
 				std::stringstream wss;
@@ -408,8 +427,12 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 
 			if(CustomSelectable(item.filename,item.is_explored))
 			{
-				for(Entity& en:entities) 
-					en.is_explored=false;
+				// Highlighting the current file in file explorer and de-highlighting the rest
+				for (auto& [key, entities] : Get().mDirectoryData){
+					for(Entity& en:entities)
+						if(!en.is_directory)
+							en.is_explored=false;
+				}
 				
 				item.is_explored=true;
 
@@ -474,14 +497,18 @@ void FileNavigation::MarkFileAsOpen(const std::string &aOpenedFilePath){
 		ScanDirectory(directoryPath);
 
 	auto& entities=Get().mDirectoryData[directoryPath];
+	if(entities.empty()) 
+		return;
 
-	if(entities.empty()) return;
+	for (auto& [key, entities] : Get().mDirectoryData){
+		for(Entity& en:entities)
+			if(!en.is_directory)
+				en.is_explored=false;
+	}
 
 	for(auto& entity:entities)
 		if(!entity.is_directory && entity.path==aOpenedFilePath)
 			entity.is_explored=true;
-		else
-			entity.is_explored=false;
 }
 
 
@@ -503,9 +530,11 @@ void FileNavigation::ScanDirectory(const std::string& aDirectoryPath){
 					continue;
 			}
 
+			std::string uid=GetUIDWithBase(entity.path().filename().generic_u8string());
 			entities.push_back({
 				entity.path().filename().generic_u8string(),
 				entity.path().generic_string(),
+				uid,
 				entity.is_directory(),
 				false
 			});
@@ -551,15 +580,16 @@ void FileNavigation::HandleEvent(DirectoryEvent aEvent,std::wstring& aPayLoad){
 
 	switch(aEvent){
 	case DirectoryEvent::FileAdded:
-		break;
 	case DirectoryEvent::FileRemoved:
-		break;
 	case DirectoryEvent::FileRenamedOldName:
-		break;
 	case DirectoryEvent::FileRenamedNewName:
 		ScanDirectory(folderPath);
 		break;
 	case DirectoryEvent::FileModified:
+		FileTab* tab=TabsManager::GetTabWithFileName(path.filename().generic_string());
+		if(tab){
+			tab->editor->ReloadFileContents();
+		}
 		break;
 	}
 }
