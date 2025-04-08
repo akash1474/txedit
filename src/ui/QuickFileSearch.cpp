@@ -121,7 +121,7 @@ void QuickFileSearch::Render() {
 	            		Get().mRecentlyOpenedMatchedResults.push_back(Get().mMatchedResults[selectedIndex]);
 
 
-	            	TabsManager::OpenFile(path);
+	            	TabsManager::OpenTabWithFilePath(path);
 	            	CloseQuickSearch();
 	            	ImGui::CloseCurrentPopup();
 	            }

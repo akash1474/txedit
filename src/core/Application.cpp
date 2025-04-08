@@ -39,7 +39,7 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 			FileNavigation::AddFolder(folderPath);
 		} else {
 			GL_INFO("File: {}", paths[i]);
-			TabsManager::OpenFile(paths[i]);
+			TabsManager::OpenTabWithFilePath(paths[i]);
 		}
 	}
 }
@@ -314,7 +314,7 @@ void Application::HandleArguments(std::wstring commands)
 				GL_INFO("FILE:{}", path.generic_string());
 				Get().mCoreSystem->SetShowTerminal(false);
 				FileNavigation::ToggleSideBar();
-				TabsManager::OpenFile(path.generic_string());
+				TabsManager::OpenTabWithFilePath(path.generic_string());
 				// core->GetTextEditor()->LoadFile(path.generic_string().c_str());
 			} else if (fs::is_directory(path)) {
 				// ShowMessage("PassedDir",path.generic_string().c_str());

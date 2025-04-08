@@ -168,7 +168,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
             			}
             			else
             			{
-            				TabsManager::OpenFile(path);
+            				TabsManager::OpenTabWithFilePath(path);
             				StatusBarManager::ShowFileSearchPanel();
             			}
             		}
@@ -188,6 +188,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
 	                			}else{
 		                			if(DirectoryHandler::CreateFile(filePath)){
 		                				StatusBarManager::ShowNotification("Created",filePath,StatusBarManager::NotificationType::Success);
+		                				TabsManager::OpenTabWithFilePath(filePath);
 		                			}
 	                			}
                 			},
@@ -275,6 +276,7 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
     	            				StatusBarManager::ShowNotification("Deleted", path.c_str());
     	            			else
     	            				StatusBarManager::ShowNotification("Failed Deletion", path.c_str(),StatusBarManager::NotificationType::Error);
+
     	            		}
                 		}
                 		else
@@ -287,6 +289,8 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
     	            		}
 
                 		}
+    	            	const std::string parentDir=std::filesystem::path(path).parent_path().generic_string();
+    	            	ScanDirectory(parentDir);
                 		break;
             	}
             	ImGui::CloseCurrentPopup();
@@ -439,7 +443,7 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 				if(!std::filesystem::exists(item.path))
 					ScanDirectory(std::filesystem::path(item.path).parent_path().generic_string());
 
-				TabsManager::OpenFile(item.path);
+				TabsManager::OpenTabWithFilePath(item.path);
 
 			}
 			if(ImGui::IsItemHovered(0))
@@ -490,6 +494,7 @@ void FileNavigation::Render(){
 
 
 void FileNavigation::MarkFileAsOpen(const std::string &aOpenedFilePath){
+	GL_INFO("FileNavigation::MarkFileAsOpen - {}",aOpenedFilePath);
 	std::string	directoryPath=std::filesystem::path(aOpenedFilePath).parent_path().generic_string();
 
 	// scan if parent dir not in mDirectoryData
@@ -513,7 +518,7 @@ void FileNavigation::MarkFileAsOpen(const std::string &aOpenedFilePath){
 
 
 void FileNavigation::ScanDirectory(const std::string& aDirectoryPath){
-	GL_INFO("Updating:{}",aDirectoryPath);
+	GL_INFO("FileNavigation::ScanDirectory - {}",aDirectoryPath);
 
 	auto& entities=Get().mDirectoryData[aDirectoryPath];
 	entities.clear();

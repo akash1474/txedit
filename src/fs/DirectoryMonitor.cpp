@@ -1,3 +1,4 @@
+#include "core/utils.h"
 #include "pch.h"
 #include <chrono>
 #include <minwinbase.h>
@@ -6,6 +7,8 @@
 #include "fs/DirectoryMonitor.h"
 #include "ui/FileNavigation.h"
 
+std::mutex DirectoryMonitor::mFilesLock;
+std::set<std::wstring> DirectoryMonitor::mFilesBeingModified;
 DirectoryMonitor::DirectoryMonitor(){}
 
 DirectoryMonitor::~DirectoryMonitor() 
@@ -107,23 +110,11 @@ void DirectoryMonitor::MonitorDirectory(HANDLE& hEvent,DirectoryWatch& aDirWatch
             std::wstring modPath(info->FileName, info->FileNameLength / sizeof(WCHAR));
             std::wstring filePath=aDirWatch.mDirectoryPath+L"/"+std::filesystem::path(modPath).generic_wstring();
 
-            // // Get process ID of the process modifying the file
-            // HANDLE hFile = CreateFileW(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-            // if (hFile != INVALID_HANDLE_VALUE) {
-            //     FileBasicInfo processInfo;
-            //     if (GetFileInformationByHandleEx(hFile, FileBasicInfo, &processInfo, sizeof(processInfo))) {
-            //         DWORD currentPID = GetCurrentProcessId();
-			// 		//Ignore the change if pid is same
-            //         processInfo.
-            //         if (processInfo.ProcessIdList[0] == currentPID) {
-			// 			GL_INFO("Ignoring the fileupdate")
-            //             CloseHandle(hFile);
-            //             continue;  
-            //         }
-            //     }
-            //     CloseHandle(hFile);
-            // }
-
+            if (IsFileModifiedByOwnProcess(filePath))
+            {
+                DirectoryMonitor::UnregisterFileModification(filePath);
+                break;
+            }
 
             switch (info->Action) {
             case FILE_ACTION_MODIFIED:
@@ -152,4 +143,24 @@ void DirectoryMonitor::MonitorDirectory(HANDLE& hEvent,DirectoryWatch& aDirWatch
 
         } while (true);
     }
+}
+
+// Register a file that's about to be modified by our application
+void DirectoryMonitor::RegisterFileModification(const std::wstring& filePath) {
+    std::lock_guard<std::mutex> lock(mFilesLock);
+    GL_INFO("Registering:{}",ToUTF8(filePath));
+    mFilesBeingModified.insert(filePath);
+}
+
+// Unregister a file after our application finishes modifying it
+void DirectoryMonitor::UnregisterFileModification(const std::wstring& filePath) {
+    std::lock_guard<std::mutex> lock(mFilesLock);
+    GL_INFO("URegistering:{}",ToUTF8(filePath));
+    mFilesBeingModified.erase(filePath);
+}
+
+// Check if a file is currently being modified by our application
+bool DirectoryMonitor::IsFileModifiedByOwnProcess(const std::wstring& filePath) {
+    std::lock_guard<std::mutex> lock(mFilesLock);
+    return mFilesBeingModified.find(filePath) != mFilesBeingModified.end();
 }

@@ -368,7 +368,7 @@ void CoreSystem::RenderMenuBar(){
             if (ImGui::MenuItem("Open File...", "Ctrl+O")) {
 				const std::string path=SelectFile();
 				if(!path.empty())
-					TabsManager::OpenFile(path);
+					TabsManager::OpenTabWithFilePath(path);
             }
 			if (ImGui::MenuItem("Open Folder")) {
 				const std::string path = SelectFolder();

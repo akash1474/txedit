@@ -157,13 +157,10 @@ void Editor::SetBuffer(const std::string& aFileBuffer)
 		if (chr == '\r')
 			continue;
 
-		if (chr == '\n'){
+		if (chr == '\n')
 			mLines.emplace_back(Line());
-		}
 		else
-		{
 			mLines.back().emplace_back(chr, TxTokenType::TxDefault);
-		}
 	}
 
 	if (mLines.back().size() > 400)
@@ -173,17 +170,8 @@ void Editor::SetBuffer(const std::string& aFileBuffer)
 	mScrollToTop = true;
 
 	GL_INFO("FILE INFO --> Lines:{}", mLines.size());
-	// mUndoManager.Clear();
-	// GL_INFO("Extension:{}",);
 	std::string ext=std::filesystem::path(mFilePath).extension().generic_string();
-	// if(ext==".cpp" || ext==".h" || ext==".hpp" || ext==".c")
-	// // if(ext==".py")
-	// {
-	// 	mIsSyntaxHighlightingSupportForFile=true;
-	// 	ApplySyntaxHighlighting(aFileBuffer);
-	// }
-	// else 
-	// 	mIsSyntaxHighlightingSupportForFile=false;
+
 
 	mLanguageConfig=LanguageConfigManager::GetLanguageConfig(mHighlightType);
 	mIsSyntaxHighlightingSupportForFile= mLanguageConfig ?  true :false;
@@ -1463,6 +1451,11 @@ void Editor::FindAllOccurancesOfWord(std::string aWord,size_t aStartLineIdx,size
 
 	OpenGL::ScopedTimer timer("Editor::FindAllOccurancesOfWord");
 	mSearchState.mFoundPositions.clear();
+
+
+	if(aWord.size()==1 || aWord.empty())
+		return;
+
 
 
 	for(size_t i=aStartLineIdx;i<=aEndLineIdx;i++){

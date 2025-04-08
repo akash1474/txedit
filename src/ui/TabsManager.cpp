@@ -1,13 +1,13 @@
+#include "fs/DirectoryMonitor.h"
 #include "pch.h"
 
-#include <cstdint>
 #include <filesystem>
 
 #include "imgui.h"
 #include "imgui_internal.h"
 
 #include "core/Log.h"
-#include "external/FontAwesome6.h"
+#include "core/utils.h"
 
 #include "editor/Trie.h"
 #include "editor/TextEditor.h"
@@ -15,7 +15,7 @@
 #include "ui/FileNavigation.h"
 #include "ui/TabsManager.h"
 #include "ui/StatusBarManager.h"
-// #include "uuid_v4.h"
+
 
 Editor* TabsManager::GetCurrentActiveTextEditor(){
 	Editor* editor=nullptr;
@@ -47,11 +47,11 @@ FileTab* TabsManager::GetCurrentActiveTab()
 }
 
 Trie::Node* TabsManager::GetTrieRootNode(){
-		if(Get().mTokenSuggestionsRoot)
-			return Get().mTokenSuggestionsRoot;
-		
-		Get().mTokenSuggestionsRoot=new Trie::Node();
+	if(Get().mTokenSuggestionsRoot)
 		return Get().mTokenSuggestionsRoot;
+	
+	Get().mTokenSuggestionsRoot=new Trie::Node();
+	return Get().mTokenSuggestionsRoot;
 }
 
 TabsManager::~TabsManager(){
@@ -73,11 +73,11 @@ void TabsManager::SetNewTabsDockSpaceId(ImGuiID aDockSpaceId){
 }
 
 bool TabsManager::OpenNewEmptyFile(){
-	return OpenFile("",true);
+	return OpenTabWithFilePath("",true);
 }
 
 void TabsManager::OpenFileWithAtLineNumber(const std::string& aFilePath,int aLineNumber,int aStartIndex,int aEndIndex){
-	FileTab* openedTab=OpenFile(aFilePath);
+	FileTab* openedTab=OpenTabWithFilePath(aFilePath);
 	if(openedTab)
 	{
 		Get().mLineNumberToScroll=aLineNumber;
@@ -88,7 +88,7 @@ void TabsManager::OpenFileWithAtLineNumber(const std::string& aFilePath,int aLin
 void TabsManager::InitializeTabFromCache(std::string aWindowId,std::string aFilePath){
 	if(!std::filesystem::exists(aFilePath))
 	{
-		GL_CRITICAL("TabsManager::OpenFile::Failed - Path doesn't exist - {}",aFilePath);
+		GL_CRITICAL("TabsManager::OpenTabWithFilePath::Failed - Path doesn't exist - {}",aFilePath);
 		return;
 	}
 	GL_INFO("Opening File:{}",aFilePath);
@@ -102,11 +102,11 @@ void TabsManager::InitializeTabFromCache(std::string aWindowId,std::string aFile
 	aTab.editor->LoadFile(aFilePath.c_str());
 }
 
-FileTab* TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
+FileTab* TabsManager::OpenTabWithFilePath(std::string aFilePath,bool aIsTemp)
 {
 	if(!aFilePath.empty() && !std::filesystem::exists(aFilePath))
 	{
-		GL_CRITICAL("TabsManager::OpenFile::Failed - Path doesn't exist - {}",aFilePath);
+		GL_CRITICAL("TabsManager::OpenTabWithFilePath::Failed - Path doesn't exist - {}",aFilePath);
 		return nullptr;
 	}
 	GL_INFO("Opening File:{}",aFilePath);
@@ -185,8 +185,8 @@ FileTab* TabsManager::OpenFile(std::string aFilePath,bool aIsTemp)
 
 void TabsManager::Render(){
 	std::vector<FileTab>& tabs=Get().mTabs;
-	bool removeTab=false;
-	for(auto it=tabs.begin();it!=tabs.end();)
+	FileTab* aRemovedTab=nullptr;	
+	for(auto it=tabs.begin();it!=tabs.end();it++)
 	{
 
 		ImGui::SetNextWindowDockID(Get().mDockSpaceId, ImGuiCond_FirstUseEver);
@@ -206,6 +206,9 @@ void TabsManager::Render(){
 			it->winPtr=it->editor->GetImGuiWindowPtr();
 		}
 
+		if(!it->isOpen)
+			aRemovedTab=&(*it);
+
 		// if(ImGui::IsItemClicked(ImGuiMouseButton_Left) && ImGui::GetIO().MouseDoubleClicked[0])
 		// {
 		// 	it->isTemp=false;
@@ -215,45 +218,24 @@ void TabsManager::Render(){
 		// if(ImGui::IsItemHovered() && ImGui::IsItemClicked(ImGuiMouseButton_Right)) 
 		// 	ImGui::OpenPopup("##tab_menu");
 		
-		if(!it->isOpen)
-		{
-			bool wasDeletedTabFocused=it->isActive;
-			it=tabs.erase(it);
-
-			if(tabs.size()>0)
-			{
-				auto current=it;
-				size_t idx=std::distance(tabs.begin(),it);
-				if(idx>0)
-				{
-					current=it-1;
-					current->isActive=true;
-				}
-
-				current->isActive=true;
-				if(wasDeletedTabFocused){
-					ImGui::FocusWindow(current->winPtr);
-					FileNavigation::MarkFileAsOpen(current->filepath);
-				}
-			}
-
-		}
-		else
-		{
-			it++;
-		}
+		// if(!it->isOpen)
+		// 	CloseTab(&(*it));
+		// else
+			// it++;
 
 		// ImGui::SameLine(0.0f,0.0f);
 
 	}
+	if(aRemovedTab)
+		CloseTab(aRemovedTab);
 
 	ImGuiIO& io = ImGui::GetIO();
 
 	if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_S))
 		SaveFile();
 	else if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_N))
-		OpenFile("",true);
-	if(ImGui::IsKeyPressed(ImGuiKey_Escape))
+		OpenTabWithFilePath("",true);
+	if(ImGui::IsKeyPressed(ImGuiKey_Escape) && GetCurrentActiveTextEditor())
 		GetCurrentActiveTextEditor()->ClearSuggestions();
 
 	// static const char* names[] = { 
@@ -308,8 +290,11 @@ void TabsManager::SaveFile()
 
 		if(!savePath.empty())
 		{
-			currTab->isOpen=false;
-			OpenFile(savePath);
+			GL_INFO("SaveAs:{}",savePath);
+			// DirectoryMonitor::RegisterFileModification(StringToWString(savePath));
+			CloseTab(currTab);
+			OpenTabWithFilePath(savePath);
+			FileNavigation::MarkFileAsOpen(currTab->filepath);
 		}
 	}
 	else
@@ -320,7 +305,7 @@ void TabsManager::SaveFile()
 			GL_INFO("ERROR SAVING");
 			return;
 		}
-
+		DirectoryMonitor::RegisterFileModification(StringToWString(currTab->filepath));
 		file << textContent;
 		file.close();
 		StatusBarManager::ShowNotification("Saved",currTab->filepath.c_str(), StatusBarManager::NotificationType::Success);
@@ -332,5 +317,39 @@ void TabsManager::DisableSearchForAllTabs(){
 	for(auto& aTab:Get().mTabs)
 	{
 		aTab.editor->DisableSearch();
+	}
+}
+
+void TabsManager::CloseTab(FileTab *aTab){
+	GL_INFO("TabsManager::CloseTab - {}",aTab->filename);
+	aTab->isOpen=false;
+	auto& tabs=Get().mTabs;
+	for(auto it=tabs.begin();it!=tabs.end();)
+	{
+		if(it->isOpen)
+		{
+			it++;
+			continue;
+		}
+
+		bool wasDeletedTabFocused=it->isActive;
+		it=tabs.erase(it);
+
+		if(tabs.size()>0)
+		{
+			auto current=it;
+			size_t idx=std::distance(tabs.begin(),it);
+			if(idx>0)
+			{
+				current=it-1;
+				current->isActive=true;
+			}
+
+			current->isActive=true;
+			if(wasDeletedTabFocused){
+				ImGui::FocusWindow(current->winPtr);
+				FileNavigation::MarkFileAsOpen(current->filepath);
+			}
+		}
 	}
 }

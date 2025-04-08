@@ -44,7 +44,8 @@ public:
 
 	static void SetNewTabsDockSpaceId(ImGuiID aMainDockSpaceId);
 	static void InitializeTabFromCache(std::string aWindowId,std::string aFilePath);
-	static FileTab* OpenFile(std::string filepath,bool isTemp=true);
+	static FileTab* OpenTabWithFilePath(std::string filepath,bool isTemp=true);
+	static void CloseTab(FileTab* aTab);
 	static void OpenFileWithAtLineNumber(const std::string& aFilePath,int aLineNumber,int aStartIndex,int aEndIndex);
 	//Call when creating a new file
 	static bool OpenNewEmptyFile();

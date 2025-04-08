@@ -1,7 +1,10 @@
 Feature:
-+ Added Editor::UpdateBracketMatch
-
++ Added TabsManager::Close tab function for handling closing of tab
++ Changed TabsManager::OpenFile to TabsManager::OpenTabWithFilePath
++ Added support to update the file buffer when the file is modified externally
++ Added Register and UnRegister file modification functions to ignore the file reload when the file is modified my the txedit itself.
 
 BugFix:
-- Fixed wrong highlighting of bracket when lineswapping and autocompletion
+- Fixed nullptr access on TabsManager::GetCurrentTextEditor() in TabsManager::Render under Escape key binding.
+- 
 
