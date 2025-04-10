@@ -180,30 +180,34 @@ void QuickFileSearch::CloseQuickSearch()
 	Get().mIsOpen=false;
 }
 
+void QuickFileSearch::ShowQuickSearch(){
+    if(Get().mFiles.empty())
+    {
+    	Get().mRootDirectory=FileNavigation::GetFolders()[0];
+    	Get().mFiles=GetFilesInDirectory(Get().mRootDirectory,Get().mRootDirectory,3);
+    	Get().mMatchedResults.reserve(Get().mFiles.size());
+
+    	for (const auto& filename : Get().mFiles) 
+	    {
+	        Get().mMatchedResults.push_back({ filename, 0 });
+	    }
+    }
+
+    //Pushing recent files to mMatchedResults
+    if(!Get().mRecentlyOpenedMatchedResults.empty())
+    {
+    	Get().mMatchedResults.clear();
+    	for(auto& match:Get().mRecentlyOpenedMatchedResults)
+    		Get().mMatchedResults.push_back(match);
+    }
+
+    Get().mIsOpen=true;
+    GL_INFO(Get().mFiles.size());
+}
+
 void QuickFileSearch::EventListener(){
 	if (ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_P)) {
-        if(Get().mFiles.empty())
-        {
-        	Get().mRootDirectory=FileNavigation::GetFolders()[0];
-        	Get().mFiles=GetFilesInDirectory(Get().mRootDirectory,Get().mRootDirectory,3);
-        	Get().mMatchedResults.reserve(Get().mFiles.size());
-
-        	for (const auto& filename : Get().mFiles) 
-		    {
-		        Get().mMatchedResults.push_back({ filename, 0 });
-		    }
-        }
-
-        //Pushing recent files to mMatchedResults
-        if(!Get().mRecentlyOpenedMatchedResults.empty())
-        {
-        	Get().mMatchedResults.clear();
-        	for(auto& match:Get().mRecentlyOpenedMatchedResults)
-        		Get().mMatchedResults.push_back(match);
-        }
-
-        Get().mIsOpen=true;
-        GL_INFO(Get().mFiles.size());
+		ShowQuickSearch();
     }
 }
 

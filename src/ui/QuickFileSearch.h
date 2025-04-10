@@ -38,6 +38,7 @@ public:
     }
 
 	static void Render();
+	static void ShowQuickSearch();
 	static void EventListener();
 	static void CloseQuickSearch();
 

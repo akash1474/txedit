@@ -73,7 +73,8 @@ project "text_editor"
       "ws2_32",
       "crypt32",
       "wldap32",
-      "normaliz"
+      "normaliz",
+      "comctl32" -- for TaskDialogIndirect 
    }
 
    includedirs{
@@ -99,6 +100,8 @@ project "text_editor"
 
    filter "system:windows"
       systemversion "latest"
+      files { "src/app.manifest" } -- Path to your manifest file
+      linkoptions { "/MANIFEST:EMBED", "/MANIFESTINPUT:src/app.manifest" }
 
    filter "configurations:Debug"
        runtime "Debug"

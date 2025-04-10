@@ -51,7 +51,8 @@ public:
 	static bool OpenNewEmptyFile();
 	static void Render();
 
-	static void SaveFile();
+	// Uses Currently opened filetab if no FileTab* is passed
+	static void SaveFile(FileTab* aCurrentFileTab=nullptr);
 
 	static void DisableSearchForAllTabs();
 

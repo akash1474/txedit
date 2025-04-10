@@ -378,6 +378,9 @@ bool Editor::IsAlreadyCommented(int aStart,int aEnd,const std::string& commentSt
 }
 
 void Editor::ToggleComments(){
+	if(!mLanguageConfig)
+		return;
+
 	std::string aCommentStr=mLanguageConfig->commentSymbol;
 
 	// Ignore toggle if multiple cursors and any one has selection
@@ -1226,7 +1229,7 @@ void Editor::InsertTab(bool isShiftPressed)
 			if (isShiftPressed) {
 				UndoOperation uRemoved;
 				uRemoved.mType=UndoOperationType::Delete;
-				if (mLines[startLine][0].mChar == '\t'){
+				if (!mLines[startLine].empty() && mLines[startLine][0].mChar == '\t'){
 					mLines[startLine].erase(mLines[startLine].begin());
 					uRemoved.mStart=Coordinates(startLine, 0);
 					uRemoved.mEnd=Coordinates(startLine, mTabSize);

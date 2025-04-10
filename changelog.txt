@@ -1,10 +1,15 @@
 Feature:
-+ Added TabsManager::Close tab function for handling closing of tab
-+ Changed TabsManager::OpenFile to TabsManager::OpenTabWithFilePath
-+ Added support to update the file buffer when the file is modified externally
-+ Added Register and UnRegister file modification functions to ignore the file reload when the file is modified my the txedit itself.
++ Add Autosave/Ask to save before closing file.
++ Open file: Ctrl+O not working
++ Numpad side Enter do not work in editor
++ Using Comment toggle key binding doesnt work, automatically closes the application in non coding files(.txt).
++ Added a app.manifest file
+
+Change/Improvements
++ New File: Ctrl+N (Mention binding)
++ Close file tab: Ctrl+W (Add binding
++ Fuzzy Find File: Ctrl+P (Mention key binding)
 
 BugFix:
-- Fixed nullptr access on TabsManager::GetCurrentTextEditor() in TabsManager::Render under Escape key binding.
-- 
+- Fixed Unindentation seg fault
 

@@ -343,13 +343,28 @@ void CoreSystem::Render()
 
 	MultiThreading::ImageLoader::LoadImages();
 
-	if(ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_F))
+	if(ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_O))
+	{
+		const std::string path=SelectFile();
+		if(!path.empty())
+			TabsManager::OpenTabWithFilePath(path);
+	}	
+
+	if(ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyDown(ImGuiKey_ModShift) && ImGui::IsKeyPressed(ImGuiKey_F))
+	{
+		const std::string path = SelectFolder();
+		if (!path.empty())
+		{
+			const std::string folderPath=std::filesystem::path(path).generic_string();
+			FileNavigation::AddFolder(folderPath);
+		}
+	}
+
+	if(ImGui::IsKeyDown(ImGuiKey_ModCtrl)&& !ImGui::IsKeyDown(ImGuiKey_ModShift) && ImGui::IsKeyPressed(ImGuiKey_F))
 		StatusBarManager::ShowFileSearchPanel();
 
 	if(ImGui::IsKeyDown(ImGuiKey_ModShift) && ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_S))
-	{
 		DirectoryFinder::Show();
-	}
 
 
 	QuickFileSearch::EventListener();
@@ -363,14 +378,14 @@ void CoreSystem::RenderMenuBar(){
         // File Menu
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem("New File"))
+            if (ImGui::MenuItem("New File","Ctrl+N"))
 				TabsManager::OpenNewEmptyFile();
             if (ImGui::MenuItem("Open File...", "Ctrl+O")) {
 				const std::string path=SelectFile();
 				if(!path.empty())
 					TabsManager::OpenTabWithFilePath(path);
             }
-			if (ImGui::MenuItem("Open Folder")) {
+			if (ImGui::MenuItem("Open Folder","Ctrl+Shift+F")) {
 				const std::string path = SelectFolder();
 				if (!path.empty())
 				{
@@ -446,6 +461,9 @@ void CoreSystem::RenderMenuBar(){
         {
             if(ImGui::MenuItem("Find...","Ctrl+F")){
             	StatusBarManager::ShowFileSearchPanel();
+            }
+            if(ImGui::MenuItem("Fuzzy Find File...","Ctrl+P")){
+            	QuickFileSearch::ShowQuickSearch();
             }
             // if(ImGui::MenuItem("Find Next")){}
             // if(ImGui::MenuItem("Find Previous")){}

@@ -1,3 +1,4 @@
+#include "imgui_internal.h"
 #include "pch.h"
 #include "imgui.h"
 #include "editor/TextEditor.h"
@@ -80,7 +81,7 @@ void Editor::HandleKeyboardInputs()
 			Cut();
 		else if (ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGuiKey_A))
 			SelectAll();
-		else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGuiKey_Enter))
+		else if (!IsReadOnly() && !ctrl && !shift && !alt && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter)))
 		{
 			if(HasSuggestions())
 			{

@@ -1,7 +1,9 @@
-#include "fs/DirectoryMonitor.h"
 #include "pch.h"
 
+#include <commctrl.h>
 #include <filesystem>
+
+#include "fs/DirectoryMonitor.h"
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -182,6 +184,36 @@ FileTab* TabsManager::OpenTabWithFilePath(std::string aFilePath,bool aIsTemp)
 	return nullptr;
 }
 
+int ShowSavePrompt(HWND hwnd, const wchar_t* filename)
+{
+    TASKDIALOGCONFIG config = { sizeof(config) };
+    config.hwndParent = hwnd;
+    config.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION;
+    config.dwCommonButtons = 0;
+    config.pszWindowTitle = L"TxEdit";
+    config.pszMainIcon = TD_WARNING_ICON;
+
+    std::wstring mainInstruction = L"Do you want to save the changes you made to ";
+    mainInstruction += filename;
+    mainInstruction += L"?";
+
+    config.pszMainInstruction = mainInstruction.c_str();
+    config.pszContent = L"Your changes will be lost if you don't save them.";
+
+    TASKDIALOG_BUTTON buttons[] = {
+        { 1001, L"&Save" },
+        { 1002, L"&Don't Save" },
+        { 1003, L"&Cancel" }
+    };
+    config.pButtons = buttons;
+    config.cButtons = ARRAYSIZE(buttons);
+
+    int buttonPressed = 0;
+    TaskDialogIndirect(&config, &buttonPressed, nullptr, nullptr);
+
+    return buttonPressed;
+}
+
 
 void TabsManager::Render(){
 	std::vector<FileTab>& tabs=Get().mTabs;
@@ -226,8 +258,32 @@ void TabsManager::Render(){
 		// ImGui::SameLine(0.0f,0.0f);
 
 	}
-	if(aRemovedTab)
-		CloseTab(aRemovedTab);
+	if(ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyPressed(ImGuiKey_W)){
+		aRemovedTab=GetCurrentActiveTab();
+	}
+
+
+	if(aRemovedTab){
+		if(aRemovedTab->editor->IsBufferModified())
+		{
+		    int result = ShowSavePrompt(nullptr, StringToWString(aRemovedTab->filename).c_str());
+
+		    switch (result)
+		    {
+		    case 1001:
+		    	GL_INFO("Save");
+		    	SaveFile(aRemovedTab);
+		    case 1002:
+		    	CloseTab(aRemovedTab);
+		    	break;
+		    case 1003:
+		    	GL_INFO("Cancel"); 
+		    	break;
+		    }
+		}
+		else
+			CloseTab(aRemovedTab);
+	}
 
 	ImGuiIO& io = ImGui::GetIO();
 
@@ -265,6 +321,30 @@ void TabsManager::Render(){
 	// 	ImGui::EndPopup();
 	// }
 	// ImGui::PopStyleVar();
+    // Always center this window when appearing
+
+
+
+    // ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    // ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    // if (ImGui::BeginPopupModal("Unsaved Changes", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    // {
+    //     ImGui::Text("The file has been modified.\nDo you want to save your changes?");
+    //     ImGui::Separator();
+
+    //     if (ImGui::Button("Save", ImVec2(120, 0))) { 
+    //     	GL_INFO("Tab Closed");
+
+    //     	ImGui::CloseCurrentPopup(); 
+    //     }
+    //     ImGui::SetItemDefaultFocus();
+    //     ImGui::SameLine();
+    //     if (ImGui::Button("Cancel", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+    //     ImGui::EndPopup();
+    // }
+
+
 	if(Get().mLineNumberToScroll>-1)
 	{
 		GetCurrentActiveTextEditor()->ScrollToLineNumber(Get().mLineNumberToScroll);
@@ -274,42 +354,43 @@ void TabsManager::Render(){
 }
 
 
-void TabsManager::SaveFile()
+void TabsManager::SaveFile(FileTab* aCurrentFileTab)
 {
-	FileTab* currTab=GetCurrentActiveTab();
-	if(!currTab) return;
-	std::string textContent=currTab->editor->GetText();
+	if(!aCurrentFileTab)
+		aCurrentFileTab=GetCurrentActiveTab();
+
+	if(!aCurrentFileTab) return;
+	std::string textContent=aCurrentFileTab->editor->GetText();
 
 	size_t size=textContent.size()-1;
 	if(size>0 && textContent[size-1] == textContent[size])
 		textContent.pop_back();
 
-	if(currTab->filepath.empty())
+	if(aCurrentFileTab->filepath.empty())
 	{
 		std::string savePath=SaveFileAs(textContent);
 
 		if(!savePath.empty())
 		{
 			GL_INFO("SaveAs:{}",savePath);
-			// DirectoryMonitor::RegisterFileModification(StringToWString(savePath));
-			CloseTab(currTab);
+			CloseTab(aCurrentFileTab);
 			OpenTabWithFilePath(savePath);
-			FileNavigation::MarkFileAsOpen(currTab->filepath);
+			FileNavigation::MarkFileAsOpen(aCurrentFileTab->filepath);
 		}
 	}
 	else
 	{
-		std::ofstream file(currTab->filepath, std::ios::trunc);
+		std::ofstream file(aCurrentFileTab->filepath, std::ios::trunc);
 		if (!file.is_open()) 
 		{
 			GL_INFO("ERROR SAVING");
 			return;
 		}
-		DirectoryMonitor::RegisterFileModification(StringToWString(currTab->filepath));
+		DirectoryMonitor::RegisterFileModification(StringToWString(aCurrentFileTab->filepath));
 		file << textContent;
 		file.close();
-		StatusBarManager::ShowNotification("Saved",currTab->filepath.c_str(), StatusBarManager::NotificationType::Success);
-		currTab->editor->SetIsBufferModified(false);
+		StatusBarManager::ShowNotification("Saved",aCurrentFileTab->filepath.c_str(), StatusBarManager::NotificationType::Success);
+		aCurrentFileTab->editor->SetIsBufferModified(false);
 	}
 }
 
@@ -319,6 +400,8 @@ void TabsManager::DisableSearchForAllTabs(){
 		aTab.editor->DisableSearch();
 	}
 }
+
+
 
 void TabsManager::CloseTab(FileTab *aTab){
 	GL_INFO("TabsManager::CloseTab - {}",aTab->filename);

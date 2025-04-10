@@ -2,12 +2,13 @@
 #include "imgui.h"
 #include "math.h"
 
+
 class Animation{
 	float mTick{0.0f};
 	float mDuration{0.0f};
 	bool mHasCompleted=false;
 	
-	inline float EaseOutQuadraticFn(float t) { return 1.0f - pow(1.0f - t, 4);}
+	inline float EaseOutQuadraticFn(float t) { return float(1.0f - pow(1.0f - t, 4));}
 	
 public:
 	bool hasStarted=false;
