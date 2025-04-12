@@ -404,7 +404,7 @@ void Terminal::Draw()
 	if (!ImGui::ItemAdd(mBounds, id))
 		return;
 
-	if (ImGui::IsMouseDown(0) && mSelectionMode == SelectionMode::Word && (ImGui::GetMousePos().y > (mPosition.y + mWindow->Size.y))) {
+	if (ImGui::IsWindowFocused() && ImGui::IsMouseDragging(0) && mSelectionMode == SelectionMode::Word && (ImGui::GetMousePos().y > (mPosition.y + mWindow->Size.y))) {
 		ImGui::SetScrollY(ImGui::GetScrollY() + mLineHeight);
 		if (mState.mSelectionEnd.mLine < mLines.size() - 1) {
 			mState.mSelectionEnd.mLine++;
@@ -412,7 +412,7 @@ void Terminal::Draw()
 		}
 	}
 
-	if (ImGui::IsMouseDown(0) && mSelectionMode == SelectionMode::Word && (ImGui::GetMousePos().y < mPosition.y)) {
+	if (ImGui::IsWindowFocused() && ImGui::IsMouseDragging(0) && mSelectionMode == SelectionMode::Word && (ImGui::GetMousePos().y < mPosition.y)) {
 		ImGui::SetScrollY(ImGui::GetScrollY() - mLineHeight);
 		if (mState.mSelectionEnd.mLine > 0) {
 			mState.mSelectionEnd.mLine--;
@@ -815,15 +815,26 @@ void Terminal::PushHistory(std::string& cmd)
 	mHistoryIterator = mHistory.end();
 }
 
-void Terminal::PushHistoryCommand(bool keyUp)
+void Terminal::PushHistoryCommand(bool aPreviousCommand)
 {
-	if (keyUp && mHistoryIterator != mHistory.begin())
-		mHistoryIterator--;
-	else if (!keyUp && mHistoryIterator != --mHistory.end())
-		mHistoryIterator++;
+	if (
+		mHistory.empty() || 
+		(aPreviousCommand && mHistoryIterator==mHistory.begin()) ||
+		(!aPreviousCommand && mHistoryIterator==mHistory.end())
+	)
+		return;
 
-	mLines[mReadOnlyCoords.mLine].erase(GetCharacterIndex(mReadOnlyCoords));
+	if (aPreviousCommand)
+		--mHistoryIterator;
+	else
+		++mHistoryIterator;
+
+	if (mHistoryIterator == mHistory.end())
+		return;
+	size_t insertIndex = GetCharacterIndex(mReadOnlyCoords);
+	mLines[mReadOnlyCoords.mLine].erase(insertIndex);
 	mLines[mReadOnlyCoords.mLine] += *mHistoryIterator;
+
 	mState.mCursorPosition = GetCommandInsertPosition();
 	mScrollToBottom = true;
 }

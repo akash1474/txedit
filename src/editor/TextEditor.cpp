@@ -120,6 +120,38 @@ void Editor::LoadFile(const char* filepath){
 	isFileLoaded=true;
 }
 
+void Editor::ReplaceSpacesWithTabs(){
+	OpenGL::ScopedTimer timer("Editor::ReplaceSpacesWithTabs");
+	for (auto& iLine : mLines) {
+	    Line formattedLine;
+	    int spaceCount = 0;
+	    int i = 0;
+
+	    while (i < iLine.size() && iLine[i].mChar == ' ' | iLine[i].mChar=='\t') {
+	    	if(iLine[i].mChar=='\t')
+	    		spaceCount+=mTabSize;
+	    	else
+	        	spaceCount++;
+
+	        i++;
+	    }
+
+	    int tabCount = spaceCount / mTabSize;
+	    int remainingSpaces = spaceCount % mTabSize;
+
+	    for (int t = 0; t < tabCount; ++t)
+	        formattedLine.emplace_back('\t', TxTokenType::TxDefault);
+
+	    for (int s = 0; s < remainingSpaces; ++s)
+	        formattedLine.emplace_back(' ', TxTokenType::TxDefault);
+
+	    while (i < iLine.size())
+	        formattedLine.push_back(iLine[i++]);
+
+	    iLine = std::move(formattedLine);
+	}
+}
+
 void Editor::ReloadFileContents(){
 	OpenGL::ScopedTimer timer("Editor::ReloadFileContents");
 	this->ResetState();
@@ -165,6 +197,9 @@ void Editor::SetBuffer(const std::string& aFileBuffer)
 
 	if (mLines.back().size() > 400)
 		mLines.back().clear();
+
+
+	ReplaceSpacesWithTabs();
 
 	mTextChanged = true;
 	mScrollToTop = true;
@@ -303,21 +338,6 @@ bool Editor::Draw()
 
 	const ImGuiIO& io = ImGui::GetIO();
 
-	// if( ImGui::IsMouseDown(0) && mSelectionMode==SelectionMode::Word && (ImGui::GetMousePos().y>(mEditorPosition.y+mEditorWindow->Size.y))){
-	// 	ImGui::SetScrollY(ImGui::GetScrollY()+mLineHeight);
-	// 	if(mState.mSelectionEnd.mLine < mLines.size()-1){
-	// 		mState.mSelectionEnd.mLine++;
-	// 		mState.mCursorPosition.mLine++;
-	// 	}
-	// }
-
-	// if(ImGui::IsMouseDown(0) && mSelectionMode==SelectionMode::Word && (ImGui::GetMousePos().y<mEditorPosition.y)){
-	// 	ImGui::SetScrollY(ImGui::GetScrollY()-mLineHeight);
-	// 	if(mState.mSelectionEnd.mLine > 0){
-	// 		mState.mSelectionEnd.mLine--;
-	// 		mState.mCursorPosition.mLine--;
-	// 	}
-	// }
 
 
 
@@ -352,6 +372,22 @@ bool Editor::Draw()
 	int lineCount = (mEditorWindow->Size.y) / mLineHeight;
 	int end = std::min(start+lineCount+1,(int)mLines.size());
 	// GL_INFO("{} -- {}",start,end);
+
+	if(ImGui::IsWindowFocused() && ImGui::IsMouseDragging(0) && mSelectionMode==SelectionMode::Normal && (ImGui::GetMousePos().y>(mEditorPosition.y+mEditorWindow->Size.y))){
+		ImGui::SetScrollY(ImGui::GetScrollY()+mLineHeight);
+		if(aCursor.mSelectionEnd.mLine < mLines.size()-1){
+			aCursor.mSelectionEnd.mLine++;
+			aCursor.mCursorPosition.mLine++;
+		}
+	}
+
+	if(ImGui::IsWindowFocused() && ImGui::IsMouseDragging(0) && mSelectionMode==SelectionMode::Normal && (ImGui::GetMousePos().y<mEditorPosition.y)){
+		ImGui::SetScrollY(ImGui::GetScrollY()-mLineHeight);
+		if(aCursor.mSelectionEnd.mLine > 0){
+			aCursor.mSelectionEnd.mLine--;
+			aCursor.mCursorPosition.mLine--;
+		}
+	}
 
 	//Highlight Selections
 	if (HasSelection(aCursor)) {

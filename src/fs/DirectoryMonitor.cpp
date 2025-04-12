@@ -107,6 +107,9 @@ void DirectoryMonitor::MonitorDirectory(HANDLE& hEvent,DirectoryWatch& aDirWatch
         FILE_NOTIFY_INFORMATION* info = reinterpret_cast<FILE_NOTIFY_INFORMATION*>(nBuffer);
 
         do {
+			if (!info)
+				continue;
+
             std::wstring modPath(info->FileName, info->FileNameLength / sizeof(WCHAR));
             std::wstring filePath=aDirWatch.mDirectoryPath+L"/"+std::filesystem::path(modPath).generic_wstring();
 

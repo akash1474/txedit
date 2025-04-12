@@ -1,15 +1,6 @@
-Feature:
-+ Add Autosave/Ask to save before closing file.
-+ Open file: Ctrl+O not working
-+ Numpad side Enter do not work in editor
-+ Using Comment toggle key binding doesnt work, automatically closes the application in non coding files(.txt).
-+ Added a app.manifest file
-
-Change/Improvements
-+ New File: Ctrl+N (Mention binding)
-+ Close file tab: Ctrl+W (Add binding
-+ Fuzzy Find File: Ctrl+P (Mention key binding)
+Change/Improvements:
++ Support for auto scrolling during text selection
++ Support for replacing the spaces with tabs of n(continuous spaces)==mTabSize
 
 BugFix:
-- Fixed Unindentation seg fault
-
++ Terminal crash fixed when cycling through history commands.(due to end iterator dereferencing)

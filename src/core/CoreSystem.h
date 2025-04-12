@@ -17,7 +17,7 @@ class CoreSystem{
 	ChatWindow mChatWindow;
 	bool mShowChatWindow=false;
 	bool mShowTerminal=true;
-	bool mShowSyntacticError=true;
+	bool mShowSyntacticError=false;
 
 public:
 	static ImGuiID GetMainDockSpaceID(){ return Get().mDockSpaceId;}

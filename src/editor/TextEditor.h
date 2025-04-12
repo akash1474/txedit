@@ -351,6 +351,7 @@ private:
 	void RenderHighlight(const Highlight& aHighlight);
 	void RenderSuggestionBox(const std::vector<std::string>& suggestions, size_t& selectedIndex);
 	void ApplySuggestion(const std::string& aString,Cursor& aCursor);
+	void ReplaceSpacesWithTabs();
 
 	std::string mFileTypeName;
 public:
