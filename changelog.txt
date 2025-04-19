@@ -1,6 +1,7 @@
 Change/Improvements:
-+ Support for auto scrolling during text selection
-+ Support for replacing the spaces with tabs of n(continuous spaces)==mTabSize
++ Integrated WinReg lib for reading the executable dir path
++ Added support to cached the what UI Element are visible
 
 BugFix:
-+ Terminal crash fixed when cycling through history commands.(due to end iterator dereferencing)
++ Fixed ContextMenu not showing up on root directory folder in FileExplorer
++ Fixed FileNavigation::DirectoryScan crash due to reading of unicode encoded strings

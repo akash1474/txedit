@@ -217,6 +217,48 @@ void CoreSystem::RenderDebugInfo()
 #endif
 
 
+void CoreSystem::RenderAboutPopupWindow(){
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if (ImGui::BeginPopupModal("TxEdit", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::Text("TxEdit: A Lightweight IDE");
+        ImGui::Text("Built using C/C++, inspired by SublimeText.");
+        ImGui::Text("Purpose: Provide an IDE-like coding experience while being lightweight.");
+        ImGui::Text("Features:");
+		ImGui::BulletText("Ultra-fast boot time (<350 ms) and quick file loading (<100 ms)");
+		ImGui::BulletText("Lightweight IDE with ~10 MB binary size and ~30-150 MB RAM usage");
+		ImGui::BulletText("Built-in AI chat assistant powered by Google Gemini, with context-aware responses");
+		ImGui::BulletText("Real-time streaming of AI-generated responses inside the editor");
+		ImGui::BulletText("Intelligent file search with fuzzy matching and regex support");
+		ImGui::BulletText("Real-time syntax highlighting using Tree-sitter AST parsing");
+		ImGui::BulletText("Multi-threaded file and image loading using Producer-Consumer pattern");
+		ImGui::BulletText("Automatic project-wide file monitoring via Windows API");
+		ImGui::BulletText("Integrated terminal using Windows ConPTY API for live shell access");
+		ImGui::BulletText("Fast and intelligent auto-completion using a Trie-based engine");
+		ImGui::BulletText("Real-time bracket matching using a stack-based algorithm");
+		ImGui::BulletText("Multi-cursor editing with support for triple-click and block selection");
+		ImGui::BulletText("Dynamic UI with animated status bar, notifications, and tab management");
+		ImGui::BulletText("Modular architecture for clean separation of components and easy maintainability");
+
+        // Display a warning for the current development state
+        // ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: Still under development, may contain bugs!");
+
+        ImGui::Separator();
+
+        // More information
+        ImGui::Text("License: MIT License");
+        ImGui::Text("Development Branch: 'dev'");
+
+        // Close the popup
+        if (ImGui::Button("Close"))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();  // End popup
+    }
+}
 
 
 
@@ -285,38 +327,13 @@ void CoreSystem::Render()
 
 
 	RenderMenuBar();
+	if(Get().mShowAboutWindow)
+	{
+        ImGui::OpenPopup("TxEdit");
+        Get().mShowAboutWindow=false;
+	}
 
-    // if (ImGui::BeginPopup("TxEdit"))
-    // {
-    //     ImGui::Begin("TxEdit: Minimalistic Text Editor");
-    //     ImGui::Text("TxEdit: Minimalistic Text Editor");
-    //     ImGui::Text("Built using C/C++, inspired by SublimeText.");
-    //     ImGui::Text("Purpose: Provide an IDE-like coding experience.");
-    //     ImGui::Text("Features:");
-    //     ImGui::BulletText("Advanced Key Bindings (Inspired by Sublime Text)");
-    //     ImGui::BulletText("Minimal UI with directory tree and text editor pane");
-    //     ImGui::BulletText("Copy-Paste support");
-    //     ImGui::BulletText("Multi-cursor support (Ctrl+D to select multiple instances)");
-
-    //     // Display a warning for the current development state
-    //     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: Still under development, may contain bugs!");
-
-    //     ImGui::Separator();
-
-    //     // More information
-    //     ImGui::Text("License: MIT License");
-    //     ImGui::Text("Development Branch: 'dev'");
-
-    //     // Close the popup
-    //     if (ImGui::Button("Close"))
-    //     {
-    //         ImGui::CloseCurrentPopup();
-    //     }
-
-    //     ImGui::End();
-    //     ImGui::EndPopup();  // End popup
-    // }
-
+	RenderAboutPopupWindow();
 
 	ImGui::End();
 
@@ -325,7 +342,7 @@ void CoreSystem::Render()
 	RenderDebugInfo();
 #endif
 
-	if (FileNavigation::IsOpen())
+	if (Get().mShowFileNavigation)
 		FileNavigation::Render();
 
 
@@ -478,6 +495,7 @@ void CoreSystem::RenderMenuBar(){
         if (ImGui::BeginMenu("View"))
         {
 			ImGui::MenuItem("Chat Window",0,&Get().mShowChatWindow);
+			ImGui::MenuItem("File Explorer",0,&Get().mShowFileNavigation);
 			ImGui::MenuItem("Terminal",0,&Get().mShowTerminal);
 			if(ImGui::MenuItem("Show Syntactic Error",0,&Get().mShowSyntacticError)){
 				if(Get().mShowSyntacticError)
@@ -505,8 +523,8 @@ void CoreSystem::RenderMenuBar(){
         if (ImGui::BeginMenu("Help"))
         {
             if (ImGui::MenuItem("Documentation", "F1")) {}
-            if (ImGui::MenuItem("About", "Ctrl+I")) {
-            	// ImGui::OpenPopup("TxEdit");
+            if (ImGui::MenuItem("About")) {
+            	Get().mShowAboutWindow=true;
             }
             ImGui::EndMenu();
         }
@@ -520,6 +538,13 @@ void CoreSystem::CacheDockingLayout(){
 	auto& folders=FileNavigation::GetFolders();
 	nlohmann::json j;
 	j["folders"] = folders;
+
+	j["view"]={
+		{"terminal",Get().mShowTerminal},
+		{"chatWindow",Get().mShowChatWindow},
+		{"syntaxError",Get().mShowSyntacticError},
+		{"fileExplorer",Get().mShowFileNavigation}
+	};
 
 	const std::vector<FileTab>& tabs=TabsManager::GetAllTabs();
 	for(auto& tab:tabs)
@@ -544,6 +569,15 @@ void CoreSystem::LoadDockingLayoutCache() {
     nlohmann::json j;
     file >> j;
     file.close();
+
+    if(j.contains("view") && j["view"].is_object()){
+        const auto& view = j["view"];
+
+        Get().mShowChatWindow = view.value("chatWindow", Get().mShowChatWindow);
+        Get().mShowSyntacticError = view.value("syntaxError", Get().mShowSyntacticError);
+        Get().mShowTerminal = view.value("terminal", Get().mShowTerminal);
+        Get().mShowFileNavigation = view.value("fileExplorer", Get().mShowFileNavigation);
+    }
 
     // Retrieve folders
     if (j.contains("folders")) {
@@ -600,23 +634,21 @@ void CoreSystem::InitFonts()
 	const float font_size = GetFontSize();
 	// io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf",font_size+3,&font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size, &font_config);
-	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeSolid, IM_ARRAYSIZE(FontAwesomeSolid), (font_size + 4.0f) * 2.0f / 3.0f, &icon_config,
-	                               icons_ranges);
+	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeSolid, IM_ARRAYSIZE(FontAwesomeSolid), (font_size + 4.0f) * 2.0f / 3.0f, &icon_config,icons_ranges);
 
 	// io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeuii.ttf",font_size+3,&font_config);
 	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLItalic, IM_ARRAYSIZE(JetBrainsMonoNLItalic), font_size + 2.0f, &font_config);
 
 	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size, &font_config);
-	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeRegular, IM_ARRAYSIZE(FontAwesomeRegular), (font_size + 4.0f) * 2.0f / 3.0f,
-	                               &icon_config, icons_ranges);
+	io.Fonts->AddFontFromMemoryTTF((void*)FontAwesomeRegular, IM_ARRAYSIZE(FontAwesomeRegular), (font_size + 4.0f) * 2.0f / 3.0f,&icon_config, icons_ranges);
 	
 	std::filesystem::path appDir=GetExecutableDirectoryPath();
 	std::string fontDir=(appDir/"assets/fonts").generic_string();
-    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Regular.ttf").c_str(), 24 );
-    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Bold.ttf").c_str(), 28 );
-    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Bold.ttf").c_str(), 36 );
-    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Bold.ttf").c_str(), 32 );
-    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Medium.ttf").c_str(), 24 );
+    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Regular.ttf").c_str(), 24 ,&font_config);
+    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Bold.ttf").c_str(), 28 ,&font_config);
+    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Bold.ttf").c_str(), 36 ,&font_config);
+    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Bold.ttf").c_str(), 32 ,&font_config);
+    io.Fonts->AddFontFromFileTTF( (fontDir + "/AROneSans-Medium.ttf").c_str(), 24 ,&font_config);
 
 	io.Fonts->AddFontFromMemoryTTF((void*)JetBrainsMonoNLRegular, IM_ARRAYSIZE(JetBrainsMonoNLRegular), font_size, &font_config);
 }

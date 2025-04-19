@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "userenv.h"
 #include <commdlg.h>
+#include "external/WinReg.hpp"
 
 enum class Fonts{
     JetBrainsMonoNLRegular,
@@ -420,18 +421,43 @@ inline std::string GetUserDirectory(const char* app_folder=nullptr){
 //     return "None";
 // }
 
+inline std::string GetRegistryKey(std::wstring aKey){
+    winreg::RegKey root;
+    static std::wstring sRegDir=L"SOFTWARE\\BlankSoftwares\\TxEdit";
+
+    winreg::RegResult result = root.TryOpen(HKEY_LOCAL_MACHINE, sRegDir, KEY_READ);
+
+    if (result.Failed()) {
+        GL_ERROR("Registry key('HKEY_LOCAL_MACHINE\\SOFTWARE\\BlankSoftwares\\TxEdit') does not exist");
+        return "";
+    }
+
+    if (!root.ContainsValue(aKey))
+        GL_ERROR("'{}' value was not found in 'HKEY_LOCAL_MACHINE\\SOFTWARE\\BlankSoftwares\\TxEdit'");
+
+    std::string pathValue = std::filesystem::path(ToUTF8(root.GetStringValue(aKey))).generic_string();
+    return pathValue;
+}
+
 inline std::filesystem::path GetExecutableDirectoryPath()
 {
-    char path[MAX_PATH];
-    GetModuleFileNameA(NULL, path, MAX_PATH);
-    // path contains txedit.exe so we do parent_path to get the directory
-    std::filesystem::path executablePath = std::filesystem::path(path).parent_path();
 #ifdef GL_DEBUG
-    // as in debug the executable is located inside the bin dir
-    return executablePath.parent_path(); 
+    char path[MAX_PATH];
+    GetModuleFileNameA(NULL, path, MAX_PATH);// path contains txedit.exe
+    std::filesystem::path executablePath = std::filesystem::path(path).parent_path();
+    return executablePath.parent_path();// in debug the executable located under bin dir 
 #else
-    GL_INFO("DataDirectory:{}",executablePath.generic_string());
-    return executablePath;
+    std::string regExecutablePath=GetRegistryKey(L"Path");
+    if(!regExecutablePath.empty())
+    {
+        // GL_INFO("ExecutablePath:{}",regExecutablePath);
+        return regExecutablePath;
+    }
+
+    char path[MAX_PATH];
+    GetModuleFileNameA(NULL, path, MAX_PATH); // path contains txedit.exe
+    return std::filesystem::path(path).parent_path();
+    // GL_INFO("DataDirectory:{}",executablePath.generic_string());
 #endif
 }
 

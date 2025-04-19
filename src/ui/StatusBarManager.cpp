@@ -7,6 +7,7 @@
 
 #include "ui/StatusBarManager.h"
 #include "ui/TabsManager.h"
+#include "core/CoreSystem.h"
 #include "ui/FileNavigation.h"
 
 
@@ -86,8 +87,10 @@ void StatusBarManager::Render(ImVec2& size,const ImGuiViewport* viewport){
 
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(6.0f,4.0f));
 		ImGui::PushStyleColor(ImGuiCol_Button,ImGui::GetStyle().Colors[ImGuiCol_Border]);
+
 		if(ImGui::Button(ICON_FA_BARS)) 
-			FileNavigation::ToggleSideBar();
+			CoreSystem::ToggleShowFileExporer();
+
 		ImGui::PopStyleVar();
 		ImGui::PopStyleColor();
 

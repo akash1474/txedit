@@ -25,15 +25,26 @@ enum class DirectoryEvent{
 
 
 class FileNavigation{
-	struct Entity{
-		std::string filename;
-		std::string path;
-		std::string uid;
-		bool is_directory=false;
-		bool is_explored=false;
+	struct Entity {
+	    std::string filename;
+	    std::string path;
+	    std::string uid;
+	    bool is_directory = false;
+	    bool is_explored = false;
+
+	    // Constructor
+	    Entity(const std::string& filename,
+	           const std::string& path,
+	           const std::string& uid,
+	           bool is_directory = false,
+	           bool is_explored = false)
+	        : filename(filename),
+	          path(path),
+	          uid(uid),
+	          is_directory(is_directory),
+	          is_explored(is_explored) {}
 	};
 
-	bool mIsOpen=true;
 	bool mAreIconsLoaded=false;
 	std::vector<std::string> mFolders;
 	std::unordered_map<std::string, IconData> mIconDatabase;
@@ -42,7 +53,7 @@ class FileNavigation{
 	bool mHoveringThisFrame{0};
 
 	std::unordered_map<std::string,std::vector<Entity>> mDirectoryData;
-	static void ShowContextMenu(std::string& path,bool isFolder=false);
+	static void ShowContextMenu(std::string& path,bool isFolder=false,bool isRootDir=false);
 	static void RenderFolderItems(std::string path,bool isRoot=false);
 
 	FileNavigation();
@@ -67,9 +78,6 @@ public:
 
 	static void AddFolder(std::string aPath);
 	static std::vector<std::string>& GetFolders(){ return Get().mFolders;}
-
-	static void ToggleSideBar(){Get().mIsOpen=!Get().mIsOpen;}
-	static const bool IsOpen(){return Get().mIsOpen;}
 
 	static void HandleEvent(DirectoryEvent aEvent,std::wstring& aPayLoad);
 	static void LoadIconData(const std::string& aJsonPath);

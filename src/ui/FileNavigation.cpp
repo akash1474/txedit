@@ -27,11 +27,7 @@
 #include "fs/DirectoryFinder.h"
 
 
-
-
-
 FileNavigation::FileNavigation(){};
-
 
 FileNavigation::~FileNavigation(){ 
 	Get().mDirectoryMonitor.Stop();
@@ -80,7 +76,6 @@ void FileNavigation::AddFolder(std::string aPath)
 
 	Get().mFolders.push_back(aPath);
 	Get().mDirectoryMonitor.AddDirectoryToWatchList(StringToWString(aPath));
-
 }
 
 // Load JSON and parse icon data
@@ -139,7 +134,7 @@ std::pair<const std::string,IconData>* FileNavigation::GetIconForExtension(const
 }
 
 
-void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
+void FileNavigation::ShowContextMenu(std::string& path,bool isFolder,bool isRootDir){
     static int selected=-1;
 
     if (ImGui::BeginPopup(path.c_str()))
@@ -150,6 +145,8 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
 	    	options[6]=ICON_FA_CARET_RIGHT"  Delete File";
 	    	options[0]=ICON_FA_CARET_RIGHT"  Find in File";
 	    }
+	    if(isFolder && isRootDir)
+	    	options[6]="Remove Folder from Project";
 
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(6.0f,6.0f));
         for (int i = 0; i < IM_ARRAYSIZE(options); i++)
@@ -270,18 +267,27 @@ void FileNavigation::ShowContextMenu(std::string& path,bool isFolder){
                 	case 6:
                 		GL_INFO("Delete Folder");
                 		if(!isFolder)
-                		{ 
-    	            		if(std::filesystem::exists(path)&&!std::filesystem::is_directory(path)){
+                		{
+    	            		if(std::filesystem::exists(path) && !std::filesystem::is_directory(path)){
     	            			if(DirectoryHandler::DeleteFile(path))
     	            				StatusBarManager::ShowNotification("Deleted", path.c_str());
     	            			else
     	            				StatusBarManager::ShowNotification("Failed Deletion", path.c_str(),StatusBarManager::NotificationType::Error);
-
     	            		}
                 		}
                 		else
                 		{
-    	            		if(std::filesystem::exists(path)&&std::filesystem::is_directory(path)){
+                			if(isRootDir)
+                			{
+                				auto it=std::find(Get().mFolders.begin(),Get().mFolders.end(),path);
+                				if(it!=Get().mFolders.end())
+                				{
+                					Get().mFolders.erase(it);
+                				}
+                				break;
+                			}
+    	            		else if(std::filesystem::exists(path) && std::filesystem::is_directory(path))
+    	            		{
     	            			if(DirectoryHandler::DeleteFolder(path))
     	            				StatusBarManager::ShowNotification("Deleted", path.c_str());
     	            			else
@@ -371,11 +377,14 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 
 		if(ImGui::TreeNodeEx(folderName.c_str(),ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			ShowContextMenu(path,true);
     		RenderFolderItems(path);
     		ImGui::TreePop();
+    	}else{
+    		if(ImGui::IsMouseDown(ImGuiMouseButton_Right))
+    			ImGui::OpenPopup(path.c_str());
+
+	    	ShowContextMenu(path,true,true);
     	}
-//		ShowContextMenu(path,true);
     	ImGui::PopStyleVar(2);
 
     	return;
@@ -410,7 +419,6 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 					Get().mCurrentEntity=&item;
 					Get().mHoveringThisFrame=true;
 				}
-				// ShowContextMenu(item.path,item.is_directory); //Explored Folder
 				RenderFolderItems(item.path,false);
 				ImGui::TreePop();
 			}
@@ -421,8 +429,6 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 					Get().mHoveringThisFrame=true;
 				}
 			}
-
-			// ShowContextMenu(item.path,item.is_directory); // UnExplored Folder
 			oss.str("");
 		}
 		else
@@ -452,8 +458,6 @@ void FileNavigation::RenderFolderItems(std::string path,bool isRoot)
 				Get().mHoveringThisFrame=true;
 			}
 			ImGui::PopFont();
-			// ShowContextMenu(item.path);
-			
 		}
 	}
 }
@@ -527,6 +531,7 @@ void FileNavigation::ScanDirectory(const std::string& aDirectoryPath){
 	{
 		for(const auto& entity:std::filesystem::directory_iterator(aDirectoryPath))
 		{
+			GL_INFO("Entity:{}",ToUTF8(entity.path().filename()));
 			if(!entity.is_directory())
 			{
 				//Ignoring the binary type files that are not viewable in editors
@@ -536,13 +541,13 @@ void FileNavigation::ScanDirectory(const std::string& aDirectoryPath){
 			}
 
 			std::string uid=GetUIDWithBase(entity.path().filename().generic_u8string());
-			entities.push_back({
+			entities.emplace_back(
 				entity.path().filename().generic_u8string(),
-				entity.path().generic_string(),
+				entity.path().generic_u8string(),
 				uid,
 				entity.is_directory(),
 				false
-			});
+			);
 		}
 	}
 	catch(...)

@@ -313,7 +313,7 @@ void Application::HandleArguments(std::wstring commands)
 			if (fs::is_regular_file(path)) {
 				GL_INFO("FILE:{}", path.generic_string());
 				Get().mCoreSystem->SetShowTerminal(false);
-				FileNavigation::ToggleSideBar();
+				CoreSystem::ToggleShowFileExporer();
 				TabsManager::OpenTabWithFilePath(path.generic_string());
 				// core->GetTextEditor()->LoadFile(path.generic_string().c_str());
 			} else if (fs::is_directory(path)) {

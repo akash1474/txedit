@@ -12,6 +12,7 @@ project "ImGui"
 	}
 
 	links{"glfw"}
+	-- defines{"IMGUI_USE_WCHAR32"}
 	
 	includedirs{".","../glfw/include"}
 

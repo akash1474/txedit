@@ -15,9 +15,12 @@ class CoreSystem{
 	ImGuiID mRightDockSpaceId=-1;
 	ImGuiID mDockSpaceId=-1;
 	ChatWindow mChatWindow;
+
 	bool mShowChatWindow=false;
 	bool mShowTerminal=true;
 	bool mShowSyntacticError=false;
+	bool mShowAboutWindow=false;
+	bool mShowFileNavigation=true;
 
 public:
 	static ImGuiID GetMainDockSpaceID(){ return Get().mDockSpaceId;}
@@ -25,6 +28,7 @@ public:
 	static ImGuiID GetRightMainDockSpaceID(){ return Get().mRightDockSpaceId;}
 	static void SetShowTerminal(bool value){Get().mShowTerminal=value;}
 	static bool ShowErrorMarkers(){return Get().mShowSyntacticError;}
+	static void ToggleShowFileExporer(){Get().mShowFileNavigation=!Get().mShowFileNavigation;}
 
 	CoreSystem(const CoreSystem&)=delete;
 
@@ -42,10 +46,12 @@ public:
 	static bool InitImGui();
 	static void SetApplicationIcon(unsigned char* img,int length);
 	static void RenderMenuBar();
+	static void RenderAboutPopupWindow();
 	static void Draw();
 	static void Destroy();
 	static void CacheDockingLayout();
 	static void LoadDockingLayoutCache();
+	static void EventListeners();
 
 	#ifdef GL_DEBUG
 	static void RenderDebugInfo();

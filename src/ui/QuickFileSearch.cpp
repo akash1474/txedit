@@ -1,3 +1,4 @@
+#include "editor/TextEditor.h"
 #include "pch.h"
 #include "imgui.h"
 
